@@ -1,0 +1,30 @@
+# Зависимости
+node_modules/
+
+# Сборка фронтенда
+frontend/dist/
+
+# Локальная база данных SQLite (у каждого своя)
+*.db
+*.db-journal
+*.sqlite
+
+# Загруженные пользователями файлы
+backend/uploads/
+
+# Секреты и локальные настройки окружения
+.env
+.env.local
+*.local
+
+# Логи
+*.log
+npm-debug.log*
+
+# Системные файлы ОС
+.DS_Store
+Thumbs.db
+
+# Временные файлы редакторов
+*.swp
+*~

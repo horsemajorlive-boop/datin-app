@@ -1,0 +1,1468 @@
+/* ================= Каркас приложения ================= */
+
+/* Приложение — узкая колонка по центру (как экран телефона). */
+.app {
+  max-width: 480px;
+  margin: 0 auto;
+  height: 100dvh;              /* вся высота экрана (dvh корректно работает на мобильных) */
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Область контента — растягивается на всё свободное место над навигацией. */
+.app__body {
+  flex: 1;
+  min-height: 0;               /* нужно, чтобы вложенный скролл работал во flex */
+  position: relative;
+}
+
+/* ================= Экраны ================= */
+
+.screen {
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+/* Экран с колодой не скроллится и без внутренних отступов. */
+.screen--deck {
+  padding: 0;
+  overflow: hidden;
+  position: relative; /* чтобы подсказка про премиум позиционировалась от этого экрана */
+}
+
+.screen__title {
+  font-size: 22px;
+  margin-bottom: 16px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+/* ================= Колода карточек ================= */
+
+.deck {
+  height: 100%;
+  padding: 16px 16px 0;
+  display: flex;
+  flex-direction: column;
+  position: relative; /* чтобы "салют" из сердечек позиционировался от колоды */
+}
+
+/* ================= "Салют" при лайке ================= */
+
+.likefx {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 88px; /* чуть выше кнопок действий */
+  height: 1px;
+  z-index: 45;
+  pointer-events: none;
+}
+
+.likefx__p {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: likefx-float var(--dur) ease-out var(--delay) forwards;
+}
+
+@keyframes likefx-float {
+  0% {
+    transform: translate(-50%, 0) scale(0.3);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--dx)), -240px) scale(1);
+    opacity: 0;
+  }
+}
+
+/* Область, где лежит стопка карточек. */
+.deck__stack {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Каждая карточка занимает всю область стопки и лежит поверх соседей. */
+.deck__slot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.25s ease;
+}
+
+.deck__empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* Кнопки под колодой (лайк / пропуск). */
+.deck__actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 0 20px;
+}
+
+/* ================= Карточка анкеты ================= */
+
+.card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;          /* отключаем прокрутку браузера — свайп ловим сами */
+}
+
+.card:active {
+  cursor: grabbing;
+}
+
+/* Неподвижная карточка на экране "Профиль". */
+.card--static {
+  height: 420px;
+  cursor: default;
+  margin-bottom: 16px;
+}
+
+.card__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;           /* фото заполняет карточку без искажений */
+}
+
+/* Затемнение снизу, чтобы белый текст был читаем поверх любого фото. */
+.card__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.85) 0%,
+    rgba(0, 0, 0, 0.25) 45%,
+    transparent 70%
+  );
+}
+
+.card__info {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 20px;
+  z-index: 2;
+}
+
+.card__info h2 {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.card__city {
+  margin: 4px 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 15px;
+}
+
+.card__bio {
+  margin: 8px 0 12px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.9);
+  /* обрезаем длинный текст до 2 строк с "..." (полный текст — в "Подробнее") */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Ряд интересов на карточке в колоде — компактнее, чем в анкете. */
+.card__info .ichips {
+  margin-bottom: 12px;
+}
+
+.card__info .ichip {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.card__more {
+  background: rgba(255, 255, 255, 0.16);
+  border: none;
+  color: #fff;
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+/* Штампы "ЛАЙК" / "НЕТ" при перетаскивании. */
+.card__stamp {
+  position: absolute;
+  top: 26px;
+  padding: 6px 16px;
+  border: 3px solid;
+  border-radius: 10px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.card__stamp--like {
+  left: 20px;
+  color: var(--like);
+  border-color: var(--like);
+  transform: rotate(-15deg);
+}
+
+.card__stamp--nope {
+  right: 20px;
+  color: var(--nope);
+  border-color: var(--nope);
+  transform: rotate(15deg);
+}
+
+/* ================= Листалка фотографий ================= */
+
+.carousel {
+  position: absolute;
+  inset: 0;
+}
+
+/* Лёгкое затемнение у верхнего края — чтобы полоски были видны на любом фото. */
+.carousel::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.45), transparent);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.carousel__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none; /* касания проходят "сквозь" картинку на карточку/зоны */
+  user-select: none;
+}
+
+/* Полоски-индикаторы сверху (как в сторис). */
+.carousel__bars {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  gap: 4px;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.carousel__bar {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.4);
+  transition: background 0.2s ease;
+}
+
+.carousel__bar.is-active {
+  background: #fff;
+}
+
+/* Невидимые зоны тапа слева/справа (рисуются только когда переданы onPrev/onNext). */
+.carousel__zone {
+  position: absolute;
+  top: 0;
+  bottom: 22%; /* нижняя часть остаётся под текст и кнопки */
+  width: 45%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  z-index: 3;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.carousel__zone--left {
+  left: 0;
+}
+
+.carousel__zone--right {
+  right: 0;
+}
+
+/* ================= Круглые кнопки ================= */
+
+.btn {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  background: var(--surface);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s ease;
+}
+
+.btn:active {
+  transform: scale(0.9);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.btn:disabled:active {
+  transform: none;
+}
+
+.btn--like {
+  color: var(--like);
+}
+
+.btn--nope {
+  color: var(--nope);
+}
+
+/* Кнопка "Вернуть" — поменьше и золотистая (намёк на премиум). */
+.btn--sm {
+  width: 48px;
+  height: 48px;
+  font-size: 20px;
+}
+
+.btn--undo {
+  color: #f5c518;
+}
+
+/* Всплывающая подсказка про премиум. */
+.paywall-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 100px;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.88);
+  color: #fff;
+  font-size: 13px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  white-space: nowrap;
+  z-index: 40;
+  animation: fade-in 0.2s ease;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Широкая кнопка (в анкете и профиле). */
+.btn-wide {
+  width: 100%;
+  margin-top: 16px;
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-wide:disabled {
+  background: var(--surface);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+/* ================= Нижняя навигация ================= */
+
+.nav {
+  display: flex;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  padding-bottom: env(safe-area-inset-bottom); /* отступ под "чёлку"/жест-бар */
+}
+
+.nav__item {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  color: var(--muted);
+  padding: 9px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.nav__item.is-active {
+  color: var(--accent);
+}
+
+.nav__icon {
+  font-size: 19px;
+}
+
+/* ================= Всплывающая анкета (шторка) ================= */
+
+.sheet {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-end;
+  z-index: 50;
+}
+
+.sheet__card {
+  background: var(--surface);
+  width: 100%;
+  border-radius: 24px 24px 0 0;
+  max-height: 92%;
+  overflow-y: auto;
+  animation: slide-up 0.25s ease;
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.sheet__media {
+  position: relative;
+  width: 100%;
+  height: 340px;
+  flex-shrink: 0;
+}
+
+.sheet__body {
+  padding: 20px;
+}
+
+.sheet__body h2 {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.sheet__body p {
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+/* ================= Чипы интересов ================= */
+
+.ichips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* Базовый чип: эмодзи + текст, акцентная заливка. */
+.ichip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  white-space: nowrap;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 79, 129, 0.22),
+    rgba(255, 79, 129, 0.08)
+  );
+  border: 1px solid rgba(255, 79, 129, 0.35);
+}
+
+.ichip__emoji {
+  font-size: 15px;
+  line-height: 1;
+}
+
+/* "+N скрытых" — нейтральный. */
+.ichip--more {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: var(--muted);
+}
+
+/* ================= Выбор интересов (редактор) ================= */
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.picker__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Список подсказок ограничиваем по высоте и делаем прокручиваемым. */
+.picker__row--suggestions {
+  max-height: 172px;
+  overflow-y: auto;
+}
+
+.picker__input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--text);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.picker__input:focus {
+  border-color: var(--accent);
+}
+
+.picker__input:disabled {
+  opacity: 0.6;
+}
+
+/* Чипы-кнопки в редакторе. */
+.ichip--picked,
+.ichip--add {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.ichip__x {
+  font-size: 10px;
+  opacity: 0.75;
+  margin-left: 2px;
+}
+
+/* Подсказки — нейтральные, пока не выбраны. */
+.ichip--add {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--text);
+}
+
+.ichip__plus {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-left: 2px;
+}
+
+/* ================= Сетка "Симпатий" ================= */
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.grid__cell img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 14px;
+}
+
+.grid__cell span {
+  display: block;
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+/* ================= Список "Мэтчей" ================= */
+
+.matchlist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.matchlist__item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.matchlist__item:active {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.matchlist__photo {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.matchlist__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.matchlist__name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.matchlist__hint {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.matchlist__chevron {
+  font-size: 22px;
+  color: var(--muted);
+  padding-right: 6px;
+}
+
+/* обрезаем длинный текст предпросмотра сообщения в одну строку */
+.matchlist__hint {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ================= Вкладка "Чат" ================= */
+
+.chattab {
+  display: flex;
+  height: 100%;
+}
+
+.chattab__empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Узкая колонка мэтчей слева. */
+.rail {
+  width: 72px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+}
+
+.rail__item {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.rail__item img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.rail__item.is-active {
+  opacity: 1;
+  border-color: var(--accent);
+}
+
+/* Точка "ещё не переписывались" — вверху справа. */
+.rail__dot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--surface);
+}
+
+/* Точка "в сети" — внизу справа. */
+.rail__online {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--like);
+  border: 2px solid var(--surface);
+}
+
+/* Правая часть — переписка. */
+.chatpane {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative; /* якорь для выбора реакций */
+}
+
+.chat__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+}
+
+.chat__tools {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+
+.chat__tool {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 8px;
+  opacity: 0.55;
+}
+
+.chat__tool.is-on {
+  opacity: 1;
+  background: rgba(255, 79, 129, 0.18);
+}
+
+.chat__avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.chat__peer {
+  display: flex;
+  flex-direction: column;
+}
+
+.chat__name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.chat__status {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.chat__status.is-online {
+  color: var(--like);
+}
+
+.chat__status.is-activity {
+  color: var(--accent);
+}
+
+.chat__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chat__empty {
+  margin: auto;
+  max-width: 260px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.chat__msg {
+  position: relative;
+  max-width: 76%;
+  padding: 9px 13px 7px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  cursor: pointer;
+}
+
+.chat__msg.is-picking {
+  outline: 2px solid var(--accent);
+}
+
+/* Реакция-эмодзи, "приклеенная" к нижнему краю пузыря. */
+.chat__reaction {
+  position: absolute;
+  bottom: -10px;
+  right: 8px;
+  background: var(--surface);
+  border: 2px solid var(--bg);
+  border-radius: 999px;
+  padding: 0 4px;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.chat__msg--me .chat__reaction {
+  right: auto;
+  left: 8px;
+}
+
+/* Прозрачная подложка: тап "мимо" закрывает выбор реакции. */
+.chat__pickerbg {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* Ряд эмодзи для выбора реакции. */
+.chat__picker {
+  position: absolute;
+  left: 50%;
+  top: 66px;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  gap: 2px;
+  padding: 6px 8px;
+  background: var(--surface);
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  animation: react-pop 0.15s ease;
+}
+
+@keyframes react-pop {
+  from {
+    transform: translateX(-50%) scale(0.7);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.chat__pickbtn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.chat__pickbtn:active {
+  transform: scale(1.35);
+}
+
+.chat__msg--me {
+  align-self: flex-end;
+  background: var(--accent);
+  color: #fff;
+  border-bottom-right-radius: 5px;
+}
+
+.chat__msg--them {
+  align-self: flex-start;
+  background: var(--surface);
+  border-bottom-left-radius: 5px;
+}
+
+.chat__text {
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat__time {
+  font-size: 10px;
+  opacity: 0.7;
+  align-self: flex-end;
+}
+
+/* Сообщение-эмодзи и сообщение-фото — без "плашки". */
+.chat__msg--bare {
+  background: none !important;
+  padding: 2px;
+}
+
+.chat__bigemoji {
+  font-size: 44px;
+  line-height: 1.1;
+}
+
+.chat__photo {
+  display: block;
+  max-width: 200px;
+  width: 100%;
+  border-radius: 14px;
+}
+
+/* Индикатор "печатает" — три прыгающие точки. */
+.chat__typing {
+  flex-direction: row;
+  gap: 4px;
+  padding: 12px 14px;
+}
+
+.chat__typing span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: typing-bounce 1.2s infinite ease-in-out;
+}
+
+.chat__typing span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.chat__typing span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes typing-bounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.chat__inputbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+}
+
+/* Кнопки "эмодзи" и "фото" в строке ввода. */
+.chat__inbtn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  padding: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* Панель выбора эмодзи для набора сообщения. */
+.emojipick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 8px 10px;
+  max-height: 168px;
+  overflow-y: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg);
+}
+
+.emojipick__btn {
+  background: none;
+  border: none;
+  font-size: 22px;
+  padding: 5px;
+  border-radius: 8px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.emojipick__btn:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.chat__input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 10px 16px;
+  color: var(--text);
+  font-size: 15px;
+  outline: none;
+}
+
+.chat__input:focus {
+  border-color: var(--accent);
+}
+
+.chat__send {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.chat__send:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ================= ИИ-помощник (подсказки) ================= */
+
+.wingman {
+  padding: 8px 12px 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg);
+}
+
+.wingman__label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.wingman__list {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-top: 6px;
+}
+
+.wingman__chip {
+  flex-shrink: 0;
+  max-width: 230px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: rgba(255, 79, 129, 0.14);
+  border: 1px solid rgba(255, 79, 129, 0.3);
+  color: var(--text);
+  padding: 8px 13px;
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* ================= Планировщик встречи ================= */
+
+.planner {
+  padding: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg);
+}
+
+.planner__title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.planner__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.chipbtn {
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text);
+  padding: 6px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chipbtn.is-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.planner__preview {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 6px 0 12px;
+}
+
+.planner__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.planner__actions .btn-wide {
+  margin-top: 0;
+}
+
+/* ================= Форма редактирования ================= */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 24px;
+}
+
+/* Одно поле формы: подпись сверху, ввод снизу. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field > span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--text);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.field input:focus,
+.field textarea:focus {
+  border-color: var(--accent);
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 90px;
+  font-family: inherit;
+}
+
+.field__hint {
+  align-self: flex-end;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Предпросмотр фото. */
+.form__preview {
+  width: 120px;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.form__error {
+  color: var(--nope);
+  font-size: 14px;
+}
+
+/* Сетка фотографий в редакторе. */
+.photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.photos__item {
+  position: relative;
+  width: 100px;
+  height: 132px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.photos__item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photos__remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.photos__badge {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.photos__add {
+  width: 100px;
+  height: 132px;
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.photos__add:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.form__actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* Второстепенная (прозрачная) вариация широкой кнопки. */
+.btn-wide--ghost {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text);
+}
+
+/* ================= Экран мэтча ================= */
+
+.match {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: radial-gradient(
+    circle at 50% 38%,
+    rgba(255, 79, 129, 0.35),
+    rgba(15, 15, 20, 0.97) 70%
+  );
+  backdrop-filter: blur(3px);
+  animation: fade-in 0.25s ease;
+}
+
+.match__content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 360px;
+  padding: 24px;
+  text-align: center;
+}
+
+.match__title {
+  font-size: 34px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  background: linear-gradient(90deg, #ff4f81, #ff9a5a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.match__subtitle {
+  color: var(--muted);
+  margin-bottom: 28px;
+}
+
+.match__avatars {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.match__avatar {
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.match__avatar:first-of-type {
+  transform: rotate(-6deg);
+}
+
+.match__avatar:last-of-type {
+  transform: rotate(6deg);
+  margin-left: -16px;
+}
+
+.match__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.match__ph {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.match__badge {
+  font-size: 30px;
+  z-index: 3;
+  margin: 0 -8px;
+  animation: match-pop 0.5s ease 0.15s both;
+}
+
+@keyframes match-pop {
+  from {
+    transform: scale(0);
+  }
+  60% {
+    transform: scale(1.3);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.match .btn-wide {
+  margin-top: 12px;
+}
+
+/* Фоновый "дождь" из сердечек. */
+.match__hearts {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.match__heart {
+  position: absolute;
+  top: -40px;
+  left: var(--x);
+  font-size: var(--s);
+  animation: match-fall var(--d) linear var(--delay) infinite;
+}
+
+@keyframes match-fall {
+  0% {
+    transform: translateY(0) rotate(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(115vh) rotate(360deg);
+    opacity: 0.9;
+  }
+}
