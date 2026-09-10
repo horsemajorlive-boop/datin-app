@@ -7,7 +7,7 @@ import PhotoGrid from '../components/PhotoGrid';
 import { HOUSING, CAR, EMPLOYMENT } from '../data/lifestyle';
 import { SMOKING, DRINKING, HEIGHT_RANGE, WEIGHT_RANGE } from '../data/health';
 
-// Экран редактирования анкеты — форма с загрузкой фото.
+// Экран редактирования анкеты — форма из сгруппированных секций.
 //
 // Props:
 //   profile  — текущая анкета (чем заполнить поля)
@@ -21,10 +21,18 @@ const GENDERS = [
   { code: 'm', label: 'Мужчина' },
 ];
 
-export default function EditProfileScreen({ profile, onSave, onCancel }) {
-  // form.interests теперь массив — им управляет компонент InterestPicker.
-  const [form, setForm] = useState({ ...profile });
+// Секция формы: заголовок-ярлык + панель с полями.
+function Section({ title, children }) {
+  return (
+    <div className="form__section">
+      <h3 className="form__section-head">{title}</h3>
+      <div className="form__panel">{children}</div>
+    </div>
+  );
+}
 
+export default function EditProfileScreen({ profile, onSave, onCancel }) {
+  const [form, setForm] = useState({ ...profile });
   const [error, setError] = useState('');
 
   function updateField(field, value) {
@@ -74,137 +82,142 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
     <div className="screen">
       <h1 className="screen__title">Редактирование анкеты</h1>
 
-      <form className="form" onSubmit={handleSubmit}>
-        <div className="field">
-          <span>Фото (до {MAX_PHOTOS}, первое — главное)</span>
+      <form className="form form--sections" onSubmit={handleSubmit}>
+        <Section title={`Фото · до ${MAX_PHOTOS}, первое главное`}>
           <PhotoGrid
             photos={form.photos}
             onChange={(next) => updateField('photos', next)}
             max={MAX_PHOTOS}
           />
-        </div>
+        </Section>
 
-        <label className="field">
-          <span>Имя</span>
-          <input
-            value={form.name ?? ''}
-            onChange={(e) => updateField('name', e.target.value)}
-            maxLength={30}
-            placeholder="Как вас зовут"
-          />
-        </label>
+        <Section title="Основное">
+          <label className="field">
+            <span>Имя</span>
+            <input
+              value={form.name ?? ''}
+              onChange={(e) => updateField('name', e.target.value)}
+              maxLength={30}
+              placeholder="Как вас зовут"
+            />
+          </label>
 
-        <label className="field">
-          <span>Возраст</span>
-          <input
-            type="number"
-            value={form.age ?? ''}
-            onChange={(e) => updateField('age', e.target.value)}
-            onBlur={(e) => {
-              // не даём указать младше 18
-              const n = Number(e.target.value);
-              if (e.target.value !== '' && n < 18) updateField('age', 18);
-            }}
-            min={18}
-            max={100}
-            placeholder="Только с 18 лет"
-          />
-        </label>
+          <label className="field">
+            <span>Возраст</span>
+            <input
+              type="number"
+              value={form.age ?? ''}
+              onChange={(e) => updateField('age', e.target.value)}
+              onBlur={(e) => {
+                const n = Number(e.target.value);
+                if (e.target.value !== '' && n < 18) updateField('age', 18);
+              }}
+              min={18}
+              max={100}
+              placeholder="Только с 18 лет"
+            />
+          </label>
 
-        <div className="field">
-          <span>Пол</span>
-          <div className="choice">
-            {GENDERS.map((g) => (
-              <button
-                key={g.code}
-                type="button"
-                className={`chipbtn ${form.gender === g.code ? 'is-on' : ''}`}
-                onClick={() => updateField('gender', g.code)}
-              >
-                {g.label}
-              </button>
-            ))}
+          <div className="field">
+            <span>Пол</span>
+            <div className="choice">
+              {GENDERS.map((g) => (
+                <button
+                  key={g.code}
+                  type="button"
+                  className={`chipbtn ${form.gender === g.code ? 'is-on' : ''}`}
+                  onClick={() => updateField('gender', g.code)}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="field">
-          <span>Город</span>
-          <CityInput
-            value={form.city ?? ''}
-            onChange={(v) => updateField('city', v)}
-            placeholder="Начните вводить, напр. Екатер"
+          <div className="field">
+            <span>Город</span>
+            <CityInput
+              value={form.city ?? ''}
+              onChange={(v) => updateField('city', v)}
+              placeholder="Начните вводить, напр. Екатер"
+            />
+          </div>
+        </Section>
+
+        <Section title="О себе">
+          <label className="field">
+            <span>Пара слов о себе</span>
+            <textarea
+              rows={4}
+              value={form.bio ?? ''}
+              onChange={(e) => updateField('bio', e.target.value)}
+              maxLength={300}
+              placeholder="Чем занимаетесь, что ищете, что важно"
+            />
+            <span className="field__hint">{(form.bio ?? '').length}/300</span>
+          </label>
+        </Section>
+
+        <Section title="Быт">
+          <ChoiceRow
+            label="Жильё"
+            options={HOUSING}
+            value={form.housing || ''}
+            onChange={(v) => updateField('housing', v)}
           />
-        </div>
-
-        <label className="field">
-          <span>О себе</span>
-          <textarea
-            rows={4}
-            value={form.bio ?? ''}
-            onChange={(e) => updateField('bio', e.target.value)}
-            maxLength={300}
-            placeholder="Пара слов о себе, чем занимаетесь, что ищете"
+          <ChoiceRow
+            label="Автомобиль"
+            options={CAR}
+            value={form.car || ''}
+            onChange={(v) => updateField('car', v)}
           />
-          <span className="field__hint">{(form.bio ?? '').length}/300</span>
-        </label>
+          <ChoiceRow
+            label="Работа"
+            options={EMPLOYMENT}
+            value={form.employment || ''}
+            onChange={(v) => updateField('employment', v)}
+          />
+        </Section>
 
-        <ChoiceRow
-          label="Жильё"
-          options={HOUSING}
-          value={form.housing || ''}
-          onChange={(v) => updateField('housing', v)}
-        />
-        <ChoiceRow
-          label="Автомобиль"
-          options={CAR}
-          value={form.car || ''}
-          onChange={(v) => updateField('car', v)}
-        />
-        <ChoiceRow
-          label="Работа"
-          options={EMPLOYMENT}
-          value={form.employment || ''}
-          onChange={(v) => updateField('employment', v)}
-        />
+        <Section title="Здоровье">
+          <RangeRow
+            label="Рост"
+            unit="см"
+            min={HEIGHT_RANGE.min}
+            max={HEIGHT_RANGE.max}
+            defaultValue={HEIGHT_RANGE.default}
+            value={form.height ?? null}
+            onChange={(v) => updateField('height', v)}
+          />
+          <RangeRow
+            label="Вес"
+            unit="кг"
+            min={WEIGHT_RANGE.min}
+            max={WEIGHT_RANGE.max}
+            defaultValue={WEIGHT_RANGE.default}
+            value={form.weight ?? null}
+            onChange={(v) => updateField('weight', v)}
+          />
+          <ChoiceRow
+            label="Курение"
+            options={SMOKING}
+            value={form.smoking || ''}
+            onChange={(v) => updateField('smoking', v)}
+          />
+          <ChoiceRow
+            label="Алкоголь"
+            options={DRINKING}
+            value={form.drinking || ''}
+            onChange={(v) => updateField('drinking', v)}
+          />
+        </Section>
 
-        <RangeRow
-          label="Рост"
-          unit="см"
-          min={HEIGHT_RANGE.min}
-          max={HEIGHT_RANGE.max}
-          defaultValue={HEIGHT_RANGE.default}
-          value={form.height ?? null}
-          onChange={(v) => updateField('height', v)}
-        />
-        <RangeRow
-          label="Вес"
-          unit="кг"
-          min={WEIGHT_RANGE.min}
-          max={WEIGHT_RANGE.max}
-          defaultValue={WEIGHT_RANGE.default}
-          value={form.weight ?? null}
-          onChange={(v) => updateField('weight', v)}
-        />
-        <ChoiceRow
-          label="Курение"
-          options={SMOKING}
-          value={form.smoking || ''}
-          onChange={(v) => updateField('smoking', v)}
-        />
-        <ChoiceRow
-          label="Алкоголь"
-          options={DRINKING}
-          value={form.drinking || ''}
-          onChange={(v) => updateField('drinking', v)}
-        />
-
-        <div className="field">
-          <span>Интересы</span>
+        <Section title="Интересы">
           <InterestPicker
             value={form.interests}
             onChange={(next) => updateField('interests', next)}
           />
-        </div>
+        </Section>
 
         {error && <p className="form__error">{error}</p>}
 

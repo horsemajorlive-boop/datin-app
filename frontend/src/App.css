@@ -1692,6 +1692,37 @@
   padding-bottom: 24px;
 }
 
+/* Форма из секций — расстояние между секциями больше. */
+.form--sections {
+  gap: 22px;
+}
+
+.form__section-head {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--faint);
+  margin: 0 0 10px 2px;
+}
+
+/* Панель секции — карточка с полями внутри. */
+.form__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Кнопки-заглушки внутри полей (напр. «Указать рост») — без лишнего отступа. */
+.form__panel .field .btn-wide {
+  margin-top: 2px;
+}
+
 /* Одно поле формы: подпись сверху, ввод снизу. */
 .field {
   display: flex;
