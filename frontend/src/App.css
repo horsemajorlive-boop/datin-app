@@ -715,6 +715,51 @@
   margin-top: 0;
 }
 
+/* Блок совместимости по интересам. */
+.sheet__match {
+  margin-top: 22px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+}
+
+.sheet__match-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.sheet__match-top b {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+}
+
+.sheet__match-sub {
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.sheet__match-bar {
+  margin-top: 10px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--fill-2);
+  overflow: hidden;
+}
+
+.sheet__match-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
 .sheet__report {
   display: block;
   margin: 26px auto 0;
@@ -728,6 +773,12 @@
 
 .sheet__report:active {
   color: var(--accent);
+}
+
+.picker__count {
+  align-self: flex-start;
+  text-align: left;
+  margin: 2px 0 4px;
 }
 
 /* ================= Чипы интересов ================= */

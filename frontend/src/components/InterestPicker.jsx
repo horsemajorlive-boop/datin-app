@@ -1,47 +1,25 @@
-import { useState } from 'react';
 import { INTEREST_CATEGORIES, interestIconKey } from '../data/interests';
 import { InterestIcon } from './interestIcons';
 
-// Выбор интересов для редактора анкеты — по разделам.
+// Выбор интересов — только из каталога, свои варианты вводить нельзя.
 //
 // Props:
 //   value    — массив выбранных интересов (строки)
 //   onChange — вызвать с новым массивом
 
-const MAX_INTERESTS = 10;
+const MAX_INTERESTS = 15;
 
 export default function InterestPicker({ value, onChange }) {
-  const [text, setText] = useState('');
-
   const has = (name) => value.some((v) => v.toLowerCase() === name.toLowerCase());
-
-  function add(raw) {
-    const name = raw.trim();
-    if (!name || value.length >= MAX_INTERESTS || has(name)) return;
-    onChange([...value, name]);
-    setText('');
-  }
-
-  function remove(name) {
-    onChange(value.filter((v) => v !== name));
-  }
+  const isFull = value.length >= MAX_INTERESTS;
 
   function toggle(name) {
-    if (has(name)) remove(name);
-    else add(name);
-  }
-
-  function handleKeyDown(e) {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      add(text);
-    }
-    if (e.key === 'Backspace' && text === '' && value.length > 0) {
-      remove(value[value.length - 1]);
+    if (has(name)) {
+      onChange(value.filter((v) => v.toLowerCase() !== name.toLowerCase()));
+    } else if (!isFull) {
+      onChange([...value, name]);
     }
   }
-
-  const isFull = value.length >= MAX_INTERESTS;
 
   return (
     <div className="picker">
@@ -52,7 +30,7 @@ export default function InterestPicker({ value, onChange }) {
               type="button"
               key={name}
               className="ichip ichip--picked"
-              onClick={() => remove(name)}
+              onClick={() => toggle(name)}
             >
               <InterestIcon iconKey={interestIconKey(name)} />
               {name}
@@ -62,15 +40,9 @@ export default function InterestPicker({ value, onChange }) {
         </div>
       )}
 
-      <input
-        className="picker__input"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={handleKeyDown}
-        maxLength={24}
-        placeholder={isFull ? 'Достаточно интересов' : 'Свой вариант, затем Enter'}
-        disabled={isFull}
-      />
+      <p className="field__hint picker__count">
+        {isFull ? 'Достаточно интересов' : `Выбрано ${value.length} из ${MAX_INTERESTS}`}
+      </p>
 
       <div className="picker__cats">
         {INTEREST_CATEGORIES.map((cat) => (
@@ -95,10 +67,6 @@ export default function InterestPicker({ value, onChange }) {
           </div>
         ))}
       </div>
-
-      <p className="field__hint">
-        {value.length}/{MAX_INTERESTS}
-      </p>
     </div>
   );
 }

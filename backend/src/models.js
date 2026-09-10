@@ -223,7 +223,7 @@ export function saveProfile(userId, data) {
     bio: String(data.bio ?? '').slice(0, 500),
     gender: ['f', 'm'].includes(data.gender) ? data.gender : '',
     interests: JSON.stringify(
-      Array.isArray(data.interests) ? data.interests.slice(0, 12) : []
+      Array.isArray(data.interests) ? data.interests.slice(0, 15) : []
     ),
     height: intInRange(data.height, 120, 230),
     weight: intInRange(data.weight, 35, 250),

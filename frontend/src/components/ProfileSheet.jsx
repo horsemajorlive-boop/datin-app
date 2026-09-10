@@ -11,11 +11,17 @@ import { useCarousel } from '../lib/useCarousel';
 // Всплывающее окно ("шторка") с полной анкетой.
 //
 // Props:
-//   profile    — какую анкету показать (или null — тогда ничего не рисуем)
-//   onClose    — закрыть окно
-//   onResolved — вызвать после жалобы/блокировки (родитель обновит ленту)
+//   profile     — какую анкету показать (или null — тогда ничего не рисуем)
+//   myInterests — интересы текущего пользователя (для блока совместимости)
+//   onClose     — закрыть окно
+//   onResolved  — вызвать после жалобы/блокировки (родитель обновит ленту)
 
-export default function ProfileSheet({ profile, onClose, onResolved }) {
+export default function ProfileSheet({
+  profile,
+  myInterests = [],
+  onClose,
+  onResolved,
+}) {
   // Хук вызываем ВСЕГДА и до любого return — таково правило хуков в React.
   const photo = useCarousel(profile?.photos.length ?? 0);
   const [showReport, setShowReport] = useState(false);
@@ -25,6 +31,15 @@ export default function ProfileSheet({ profile, onClose, onResolved }) {
   const hasLifestyle =
     profile.housing || profile.car || profile.employment ||
     profile.height || profile.weight || profile.smoking || profile.drinking;
+
+  // Совместимость по интересам.
+  const theirs = profile.interests || [];
+  const mineSet = new Set(myInterests.map((i) => i.toLowerCase()));
+  const common = theirs.filter((i) => mineSet.has(i.toLowerCase()));
+  // коэффициент Дайса: насколько пересекаются два набора интересов
+  const total = myInterests.length + theirs.length;
+  const matchPct =
+    total > 0 ? Math.round((2 * common.length * 100) / total) : 0;
 
   return (
     <div className="sheet" onClick={onClose}>
@@ -64,6 +79,24 @@ export default function ProfileSheet({ profile, onClose, onResolved }) {
             <section className="sheet__section">
               <h3>Интересы</h3>
               <InterestChips interests={profile.interests} />
+            </section>
+          )}
+
+          {common.length > 0 && (
+            <section className="sheet__match">
+              <div className="sheet__match-top">
+                <span>Совпадение интересов</span>
+                <b>{matchPct}%</b>
+              </div>
+              <p className="sheet__match-sub">
+                {common.length === 1
+                  ? 'Один общий интерес'
+                  : `Общих интересов: ${common.length}`}{' '}
+                — {common.join(', ')}
+              </p>
+              <div className="sheet__match-bar">
+                <span style={{ width: `${Math.max(matchPct, 4)}%` }} />
+              </div>
             </section>
           )}
 

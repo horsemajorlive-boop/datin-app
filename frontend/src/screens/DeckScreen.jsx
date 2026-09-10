@@ -21,6 +21,7 @@ export default function DeckScreen({
   onSwipe,
   onUndoSwipe,
   onBlockOrReport,
+  myInterests,
 }) {
   const [opened, setOpened] = useState(null);
   const [locked, setLocked] = useState(false);
@@ -56,6 +57,7 @@ export default function DeckScreen({
 
       <ProfileSheet
         profile={opened}
+        myInterests={myInterests}
         onClose={() => setOpened(null)}
         onResolved={() => {
           setOpened(null);

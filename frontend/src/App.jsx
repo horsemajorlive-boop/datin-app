@@ -366,6 +366,7 @@ export default function App() {
             onSwipe={handleSwipe}
             onUndoSwipe={handleUndoSwipe}
             onBlockOrReport={refreshAfterBlock}
+            myInterests={me?.interests || []}
           />
         )}
         {tab === 'likes' && <LikesScreen liked={likes} />}
