@@ -1,7 +1,9 @@
-import ChatRail from '../components/ChatRail';
+import MatchesScreen from './MatchesScreen';
 import ChatPane from '../components/ChatPane';
 
-// Вкладка "Чат": слева колонка мэтчей, справа переписка.
+// Вкладка "Чат" (мобильная раскладка в одну колонку):
+//   - ничего не выбрано -> список диалогов на всю ширину;
+//   - выбран мэтч       -> переписка на всю ширину, «‹ назад» в шапке.
 //
 // Props:
 //   matches      — [{ matchId, profile, lastMessage }]
@@ -10,10 +12,8 @@ import ChatPane from '../components/ChatPane';
 //   myProfile    — своя анкета (для ИИ-помощника)
 //   activeChat   — анкета выбранного собеседника (или null)
 //   activeChatId — matchId выбранного чата (или null)
-//   onSelectChat — выбрать чат: onSelectChat(matchId)
-//   onSend       — отправить сообщение: onSend({ type, text?, photo? })
-//   onReact      — реакция: onReact(messageId, emoji)
-//   onTyping     — сообщить, что я печатаю: onTyping(kind)
+//   onSelectChat — выбрать чат / вернуться к списку: onSelectChat(matchId | null)
+//   onSend, onReact, onTyping, onLeftChat — проброс в ChatPane
 
 export default function ChatTab({
   matches,
@@ -28,42 +28,32 @@ export default function ChatTab({
   onTyping,
   onLeftChat,
 }) {
-  if (matches.length === 0) {
+  // Открыт конкретный диалог — показываем переписку целиком.
+  if (activeChat) {
     return (
-      <div className="screen">
-        <h1 className="screen__title">Чат</h1>
-        <p className="muted">
-          Пока не с кем переписываться. Появится мэтч — появится и чат.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="chattab">
-      <ChatRail
-        matches={matches}
-        messages={messages}
-        activeId={activeChatId}
-        onSelect={onSelectChat}
-      />
-
-      {activeChat ? (
+      <div className="chattab">
         <ChatPane
           match={activeChat}
           messages={messages[activeChatId] || []}
           activity={activities[activeChatId]}
           myProfile={myProfile}
+          onBack={() => onSelectChat(null)}
           onSend={onSend}
           onReact={onReact}
           onTyping={onTyping}
           onLeftChat={onLeftChat}
         />
-      ) : (
-        <div className="chattab__empty">
-          Выберите мэтч слева, чтобы начать переписку
-        </div>
-      )}
-    </div>
+      </div>
+    );
+  }
+
+  // Иначе — список диалогов (тот же, что на вкладке «Мэтчи»).
+  return (
+    <MatchesScreen
+      matches={matches}
+      onOpenChat={onSelectChat}
+      title="Сообщения"
+      emptyText="Пока не с кем переписываться. Появится мэтч — появится и чат."
+    />
   );
 }

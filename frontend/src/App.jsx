@@ -394,6 +394,8 @@ export default function App() {
       <BottomNav
         active={tab}
         onChange={(t) => {
+          // повторный тап по «Чат» из открытой переписки — назад к списку
+          if (t === 'chat' && tab === 'chat') setActiveChatId(null);
           setTab(t);
           if (t !== 'me') setProfileView('view'); // ушли из профиля — сбрасываем подэкран
         }}

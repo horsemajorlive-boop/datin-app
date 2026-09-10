@@ -15,6 +15,7 @@ import {
   IconImage,
   IconSend,
   IconMore,
+  IconChevronLeft,
 } from './icons';
 
 // Правая часть вкладки "Чат" — сама переписка.
@@ -53,6 +54,7 @@ export default function ChatPane({
   messages,
   myProfile,
   activity,
+  onBack,
   onSend,
   onReact,
   onTyping,
@@ -124,6 +126,16 @@ export default function ChatPane({
   return (
     <div className="chatpane">
       <header className="chat__header">
+        {onBack && (
+          <button
+            type="button"
+            className="chat__back"
+            onClick={onBack}
+            aria-label="К списку"
+          >
+            <IconChevronLeft />
+          </button>
+        )}
         <div className="chat__peer">
           <span className="chat__avatar-wrap">
             <img src={match.photos[0]} alt={match.name} />
