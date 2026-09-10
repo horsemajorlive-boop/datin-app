@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import PhotoCarousel from './PhotoCarousel';
 import InterestChips from './InterestChips';
-import LifestyleChips from './LifestyleChips';
-import HealthChips from './HealthChips';
 import VerifiedBadge from './VerifiedBadge';
+import { IconChevronLeft } from './icons';
 import { useCarousel } from '../lib/useCarousel';
 
 // Одна карточка анкеты в колоде.
@@ -92,20 +91,19 @@ export default function ProfileCard({ profile, active, onSwipe, onOpen }) {
 
       <div className="card__info">
         <h2>
-          {profile.name}, {profile.age}
+          <span className="card__name">
+            {profile.name} <span className="card__age">{profile.age}</span>
+          </span>
           {profile.verified && <VerifiedBadge />}
         </h2>
-        <p className="card__city">{profile.city}</p>
-        <p className="card__bio">{profile.bio}</p>
-        <HealthChips profile={profile} />
-        <LifestyleChips profile={profile} short />
+        {profile.city && <p className="card__city">{profile.city}</p>}
         <InterestChips interests={profile.interests} limit={3} />
         <button
           className="card__more"
           onPointerDown={(e) => e.stopPropagation()} /* не запускать жест карточки */
           onClick={onOpen}
         >
-          Подробнее
+          Подробнее <IconChevronLeft />
         </button>
       </div>
     </div>

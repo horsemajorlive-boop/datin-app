@@ -169,20 +169,43 @@ export function IconFlag() {
   );
 }
 
-// "Золотая галочка" — заливка цветом currentColor, галочка белая.
-// Форма-звёздочка (по мотивам значков верификации).
+export function IconHome() {
+  return (
+    <svg {...base}>
+      <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />
+    </svg>
+  );
+}
+
+export function IconCar() {
+  return (
+    <svg {...base}>
+      <path d="M5 11l1.5-4.5A2 2 0 0 1 8.4 5h7.2a2 2 0 0 1 1.9 1.5L19 11" />
+      <path d="M3 11h18v6a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" />
+      <path d="M6.5 14.5h.01M17.5 14.5h.01" />
+    </svg>
+  );
+}
+
+export function IconBriefcase() {
+  return (
+    <svg {...base}>
+      <rect x="3" y="7" width="18" height="13" rx="2" />
+      <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 12.5h18" />
+    </svg>
+  );
+}
+
+// Галочка верификации — залитый кружок цветом currentColor, галочка белая.
 export function IconVerified() {
   return (
     <svg viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" fill="currentColor" />
       <path
-        fill="currentColor"
-        d="M12 1.5l2.6 2.1 3.3-.5 1 3.2 3 1.6-1.3 3.1 1.3 3.1-3 1.6-1 3.2-3.3-.5L12 22.5l-2.6-2.1-3.3.5-1-3.2-3-1.6 1.3-3.1L2.1 9.9l3-1.6 1-3.2 3.3.5L12 1.5z"
-      />
-      <path
-        d="M8 12.2l2.6 2.6L16 9.4"
+        d="M7.5 12.4l3 3L16.5 9"
         fill="none"
         stroke="#fff"
-        strokeWidth="2.2"
+        strokeWidth="2.4"
         strokeLinecap="round"
         strokeLinejoin="round"
       />

@@ -24,7 +24,7 @@
 .screen {
   height: 100%;
   overflow-y: auto;
-  padding: 16px;
+  padding: 18px 16px 24px;
 }
 
 /* Экран с колодой не скроллится и без внутренних отступов. */
@@ -35,8 +35,9 @@
 }
 
 .screen__title {
-  font-size: 19px;
-  font-weight: 600;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   margin-bottom: 18px;
 }
 
@@ -81,7 +82,7 @@
 
 .deck {
   height: 100%;
-  padding: 16px 16px 0;
+  padding: 10px 10px 0;
   display: flex;
   flex-direction: column;
   position: relative; /* чтобы "салют" из сердечек позиционировался от колоды */
@@ -90,16 +91,16 @@
 /* Кнопка фильтров — плавает в правом верхнем углу над колодой. */
 .deck__filter {
   position: absolute;
-  top: 22px;
-  right: 22px;
+  top: 20px;
+  right: 20px;
   z-index: 20;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(0, 0, 0, 0.32);
   color: #fff;
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -206,8 +207,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 20px;
-  padding: 18px 0 22px;
+  gap: 22px;
+  padding: 16px 0 20px;
 }
 
 /* ================= Карточка анкеты ================= */
@@ -216,10 +217,10 @@
   position: relative;
   width: 100%;
   height: 100%;
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   overflow: hidden;
   background: var(--surface);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-lg);
   cursor: grab;
   user-select: none;
   touch-action: none;          /* отключаем прокрутку браузера — свайп ловим сами */
@@ -231,9 +232,11 @@
 
 /* Неподвижная карточка на экране "Профиль". */
 .card--static {
-  height: 420px;
+  height: auto;
+  aspect-ratio: 4 / 5;
+  max-height: 58vh;
   cursor: default;
-  margin-bottom: 16px;
+  margin-bottom: 4px;
 }
 
 .card__photo {
@@ -250,9 +253,9 @@
   inset: 0;
   background: linear-gradient(
     to top,
-    rgba(0, 0, 0, 0.85) 0%,
-    rgba(0, 0, 0, 0.25) 45%,
-    transparent 70%
+    rgba(0, 0, 0, 0.72) 0%,
+    rgba(0, 0, 0, 0.28) 30%,
+    transparent 52%
   );
 }
 
@@ -261,76 +264,72 @@
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 20px;
+  padding: 18px 20px 22px;
   z-index: 2;
   color: #fff; /* всегда поверх тёмного фото — в любой теме */
 }
 
 .card__info h2 {
-  font-size: 24px;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 25px;
+  font-weight: 700;
   letter-spacing: -0.02em;
   color: #fff;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35);
+}
+
+.card__age {
+  font-weight: 400;
+  opacity: 0.92;
 }
 
 .card__city {
-  margin: 3px 0 0;
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 14px;
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13.5px;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
 }
 
-.card__bio {
-  margin: 8px 0 12px;
-  font-size: 14px;
-  line-height: 1.45;
-  color: rgba(255, 255, 255, 0.9);
-  /* обрезаем длинный текст до 2 строк с "..." (полный текст — в "Подробнее") */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* Ряды чипов на карточке в колоде — компактнее, чем в анкете. */
+/* Один ряд чипов интересов на карточке — «матовое стекло». */
 .card__info .ichips {
-  margin: 0 0 7px;
-  gap: 6px;
+  margin: 12px 0 0;
+  gap: 7px;
 }
 
 .card__info .ichip {
-  padding: 4px 9px;
-  font-size: 11.5px;
+  padding: 5px 11px;
+  font-size: 12px;
   color: #fff;
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px);
 }
 
 .card__info .ichip > svg {
-  width: 12px;
-  height: 12px;
-  opacity: 0.85;
-}
-
-/* на фото-оверлее чипы здоровья держим светлыми, а не приглушёнными */
-.card__info .ichip--plain {
-  color: #fff;
-}
-
-/* последний ряд чипов — отступ до кнопки "Подробнее" */
-.card__info .ichips:last-of-type {
-  margin-bottom: 12px;
+  display: none; /* на карточке чипы без иконок — чище */
 }
 
 .card__more {
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: #fff;
-  padding: 8px 15px;
-  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 14px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.92);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  backdrop-filter: blur(6px);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.4);
+}
+
+.card__more svg {
+  width: 15px;
+  height: 15px;
+  transform: rotate(180deg); /* IconChevronLeft -> смотрит вправо */
 }
 
 /* Штампы "ЛАЙК" / "НЕТ" при перетаскивании. */
@@ -439,30 +438,32 @@
 /* ================= Круглые кнопки колоды ================= */
 
 .btn {
-  width: 56px;
-  height: 56px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
-  border: 1px solid var(--line-2);
+  border: 1px solid var(--line);
   cursor: pointer;
-  background: var(--surface-2);
+  background: var(--surface);
   color: var(--text);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .btn svg {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
 }
 
 .btn:active {
-  transform: scale(0.92);
+  transform: scale(0.9);
 }
 
 .btn:disabled {
-  opacity: 0.35;
+  opacity: 0.5;
+  box-shadow: none;
   cursor: default;
 }
 
@@ -470,25 +471,27 @@
   transform: none;
 }
 
+/* Лайк — заливной акцент, главная кнопка. */
 .btn--like {
-  color: var(--accent);
-  border-color: rgba(255, 77, 109, 0.45);
-  background: var(--accent-soft);
+  color: #fff;
+  border-color: transparent;
+  background: var(--accent);
+  box-shadow: 0 6px 18px var(--accent-soft), var(--shadow-sm);
 }
 
 .btn--nope {
   color: var(--muted);
 }
 
-/* Кнопка "Вернуть" — меньше и приглушённая (намёк на премиум). */
+/* Кнопка "Вернуть" — чуть меньше, приглушённая. */
 .btn--sm {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
 }
 
 .btn--sm svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
 }
 
 .btn--undo {
@@ -526,20 +529,22 @@
 .btn-wide {
   width: 100%;
   margin-top: 16px;
-  padding: 13px;
+  padding: 14px;
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   background: var(--accent);
   color: #fff;
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 600;
   letter-spacing: -0.01em;
   cursor: pointer;
-  transition: transform 0.12s ease, opacity 0.15s ease;
+  box-shadow: 0 6px 18px var(--accent-soft);
+  transition: transform 0.12s ease, opacity 0.15s ease, box-shadow 0.15s ease;
 }
 
 .btn-wide:active {
   transform: scale(0.985);
+  box-shadow: 0 3px 10px var(--accent-soft);
 }
 
 .btn-wide:disabled {
@@ -563,19 +568,19 @@
   background: none;
   border: none;
   color: var(--faint);
-  padding: 8px 0 7px;
+  padding: 9px 0 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: color 0.15s ease;
 }
 
 .nav__item.is-active {
-  color: var(--text);
+  color: var(--accent);
 }
 
 .nav__icon {
@@ -596,19 +601,23 @@
 .sheet {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
   display: flex;
   align-items: flex-end;
   z-index: 50;
+  animation: fade-in 0.2s ease;
 }
 
 .sheet__card {
+  position: relative;
   background: var(--surface);
   width: 100%;
-  border-radius: 20px 20px 0 0;
-  max-height: 92%;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  max-height: 94%;
   overflow-y: auto;
-  animation: slide-up 0.25s ease;
+  box-shadow: var(--shadow-lg);
+  animation: slide-up 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes slide-up {
@@ -620,25 +629,105 @@
   }
 }
 
+/* Фото сверху — пропорции портрета, не режем в тонкую полосу. */
 .sheet__media {
   position: relative;
   width: 100%;
-  height: 340px;
+  aspect-ratio: 4 / 5;
+  max-height: 54vh;
   flex-shrink: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.sheet__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.sheet__close svg {
+  width: 17px;
+  height: 17px;
 }
 
 .sheet__body {
-  padding: 20px;
+  padding: 20px 20px 24px;
 }
 
-.sheet__body h2 {
-  font-size: 21px;
-  margin-bottom: 4px;
+.sheet__name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
-.sheet__body p {
-  margin: 8px 0;
-  line-height: 1.5;
+.sheet__age {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.sheet__city {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.sheet__bio {
+  margin-top: 12px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.sheet__section {
+  margin-top: 22px;
+}
+
+.sheet__section h3 {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--faint);
+  margin-bottom: 10px;
+}
+
+.sheet__section .ichips {
+  margin-top: 8px;
+}
+
+.sheet__section .ichips:first-of-type {
+  margin-top: 0;
+}
+
+.sheet__report {
+  display: block;
+  margin: 26px auto 0;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.sheet__report:active {
+  color: var(--accent);
 }
 
 /* ================= Чипы интересов ================= */
@@ -650,12 +739,12 @@
   margin-top: 12px;
 }
 
-/* Базовый чип: линейная иконка + текст, нейтральный, плоский. */
+/* Базовый чип: линейная иконка + текст, нейтральный. */
 .ichip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 11px;
+  padding: 7px 12px;
   border-radius: var(--radius-pill);
   font-size: 12.5px;
   font-weight: 500;
@@ -669,13 +758,7 @@
   width: 14px;
   height: 14px;
   flex-shrink: 0;
-  opacity: 0.75;
-}
-
-/* эмодзи в чипах образа жизни (жильё/авто/работа) — там оставляем эмодзи */
-.ichip__emoji {
-  font-size: 14px;
-  line-height: 1;
+  color: var(--muted);
 }
 
 /* "+N скрытых" — ещё тише. */
@@ -1780,6 +1863,7 @@
   background: transparent;
   border: 1px solid var(--line-2);
   color: var(--text);
+  box-shadow: none;
 }
 
 /* ================= Экран мэтча ================= */
@@ -2134,24 +2218,40 @@
 /* Строка статуса верификации в своём профиле. */
 .verify-row {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 16px;
-  padding: 12px 14px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 20px;
+  padding: 13px 15px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   background: var(--surface);
+  box-shadow: var(--shadow-sm);
   font-size: 13px;
   color: var(--muted);
+  text-align: left;
+}
+
+.verify-row--btn {
+  cursor: pointer;
+  justify-content: space-between;
+}
+
+.verify-row--btn:active {
+  transform: scale(0.99);
+}
+
+.verify-row__cta {
+  flex-shrink: 0;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 13px;
 }
 
 .verify-row--ok {
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
   color: var(--text);
-  border-color: rgba(244, 196, 48, 0.35);
-  background: rgba(244, 196, 48, 0.08);
+  border-color: rgba(217, 154, 0, 0.4);
+  background: rgba(217, 154, 0, 0.09);
 }
 
 .verify-row--ok svg {
@@ -2161,8 +2261,55 @@
   flex-shrink: 0;
 }
 
-.verify-row .btn-wide {
-  margin-top: 4px;
+/* Свой bio на экране профиля. */
+.myprofile__bio {
+  margin-top: 14px;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+/* Компактный список действий (напр. блок «Модерация» у админа). */
+.plist {
+  margin-top: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.plist__head {
+  padding: 10px 15px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--faint);
+}
+
+.plist__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 13px 15px;
+  border: none;
+  border-top: 1px solid var(--line);
+  background: none;
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.plist__row:active {
+  background: var(--fill);
+}
+
+.plist__chev {
+  color: var(--faint);
+  font-size: 18px;
+  line-height: 1;
 }
 
 /* Экран верификации. */

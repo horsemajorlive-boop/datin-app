@@ -13,6 +13,7 @@ import { useCarousel } from '../lib/useCarousel';
 //   onEdit         — переключиться в режим редактирования
 //   onVerify       — открыть экран верификации
 //   onModerate     — открыть очередь модерации (только у админа)
+//   onOpenReports  — открыть жалобы (только у админа)
 //   onOpenSettings — открыть настройки
 
 function VerificationRow({ profile, onVerify }) {
@@ -31,19 +32,18 @@ function VerificationRow({ profile, onVerify }) {
       </div>
     );
   }
+  const rejected = profile.verificationStatus === 'rejected';
   return (
-    <div className="verify-row">
+    <button className="verify-row verify-row--btn" onClick={onVerify}>
       <span>
-        {profile.verificationStatus === 'rejected'
-          ? 'Заявка отклонена. Можно отправить новое фото.'
-          : 'Пройдите верификацию — получите золотую галочку.'}
+        {rejected
+          ? 'Заявка отклонена — можно отправить новое фото'
+          : 'Пройдите верификацию и получите галочку'}
       </span>
-      <button className="btn-wide btn-wide--ghost" onClick={onVerify}>
-        {profile.verificationStatus === 'rejected'
-          ? 'Отправить заново'
-          : 'Пройти верификацию'}
-      </button>
-    </div>
+      <span className="verify-row__cta">
+        {rejected ? 'Отправить' : 'Пройти'}
+      </span>
+    </button>
   );
 }
 
@@ -55,7 +55,6 @@ export default function MyProfileScreen({
   onOpenReports,
   onOpenSettings,
 }) {
-  // Хук — до любого return.
   const photo = useCarousel(profile.photos.length);
 
   const header = (
@@ -71,7 +70,6 @@ export default function MyProfileScreen({
     </div>
   );
 
-  // Считаем анкету "пустой", если не заполнено имя.
   if (!profile.name) {
     return (
       <div className="screen">
@@ -101,33 +99,48 @@ export default function MyProfileScreen({
         <div className="card__overlay" />
         <div className="card__info">
           <h2>
-            {profile.name}, {profile.age}
+            <span className="card__name">
+              {profile.name} <span className="card__age">{profile.age}</span>
+            </span>
             {profile.verified && <VerifiedBadge />}
           </h2>
           {profile.city && <p className="card__city">{profile.city}</p>}
-          {profile.bio && <p className="card__bio">{profile.bio}</p>}
         </div>
       </div>
 
-      <HealthChips profile={profile} />
-      <LifestyleChips profile={profile} />
-      <InterestChips interests={profile.interests} />
+      {profile.bio && <p className="myprofile__bio">{profile.bio}</p>}
+
+      <section className="sheet__section">
+        <h3>О себе</h3>
+        <HealthChips profile={profile} />
+        <LifestyleChips profile={profile} />
+      </section>
+
+      {profile.interests?.length > 0 && (
+        <section className="sheet__section">
+          <h3>Интересы</h3>
+          <InterestChips interests={profile.interests} />
+        </section>
+      )}
 
       <VerificationRow profile={profile} onVerify={onVerify} />
 
       <button className="btn-wide" onClick={onEdit}>
-        Редактировать
+        Редактировать анкету
       </button>
 
       {profile.isAdmin && (
-        <>
-          <button className="btn-wide btn-wide--ghost" onClick={onModerate}>
-            Модерация верификаций
+        <div className="plist">
+          <div className="plist__head">Модерация</div>
+          <button className="plist__row" onClick={onModerate}>
+            <span>Верификации</span>
+            <span className="plist__chev">›</span>
           </button>
-          <button className="btn-wide btn-wide--ghost" onClick={onOpenReports}>
-            Жалобы
+          <button className="plist__row" onClick={onOpenReports}>
+            <span>Жалобы</span>
+            <span className="plist__chev">›</span>
           </button>
-        </>
+        </div>
       )}
     </div>
   );
