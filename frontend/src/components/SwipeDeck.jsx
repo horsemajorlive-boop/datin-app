@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import ProfileCard from './ProfileCard';
 import LikeFx from './LikeFx';
-import { IconX, IconHeart, IconRotateCcw } from './icons';
+import EmptyState from './EmptyState';
+import { IconX, IconHeart, IconRotateCcw, IconSearch } from './icons';
 import { isPremium } from '../premium';
 
 // "Колода" карточек. Помнит:
@@ -84,9 +85,11 @@ export default function SwipeDeck({
           ))
         ) : (
           <div className="deck__empty">
-            Анкеты закончились 🫠
-            <br />
-            Загляните позже
+            <EmptyState
+              icon={<IconSearch />}
+              title="Анкеты закончились"
+              text="Вы просмотрели всех, кто подходит под фильтры. Загляните позже или измените их в настройках поиска."
+            />
           </div>
         )}
       </div>

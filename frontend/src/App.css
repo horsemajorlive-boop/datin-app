@@ -83,6 +83,70 @@
   color: var(--muted);
 }
 
+/* ================= Пустые экраны ================= */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 12vh 24px 24px;
+}
+
+/* Внутри колоды центрируется своим родителем — большой отступ не нужен. */
+.deck__empty .empty {
+  padding: 24px;
+}
+
+.empty__icon {
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  margin-bottom: 18px;
+}
+
+.empty__icon svg {
+  width: 30px;
+  height: 30px;
+}
+
+.empty__title {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.empty__text {
+  margin: 0;
+  max-width: 300px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.empty__action {
+  margin-top: 22px;
+  padding: 12px 22px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.empty__action:active {
+  transform: scale(0.97);
+}
+
 /* ================= Колода карточек ================= */
 
 .deck {

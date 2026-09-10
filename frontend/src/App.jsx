@@ -379,6 +379,7 @@ export default function App() {
             people={incoming}
             onLike={(p) => handleIncomingDecision(p, 'like')}
             onPass={(p) => handleIncomingDecision(p, 'pass')}
+            onBrowse={() => setTab('deck')}
           />
         )}
         {tab === 'chat' && (
@@ -390,6 +391,7 @@ export default function App() {
             activeChat={activeChat}
             activeChatId={activeChatId}
             onSelectChat={setActiveChatId}
+            onBrowse={() => setTab('deck')}
             onSend={handleSend}
             onReact={handleReact}
             onTyping={handleTyping}

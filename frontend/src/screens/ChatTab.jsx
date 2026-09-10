@@ -13,6 +13,7 @@ import ChatPane from '../components/ChatPane';
 //   activeChat   — анкета выбранного собеседника (или null)
 //   activeChatId — matchId выбранного чата (или null)
 //   onSelectChat — выбрать чат / вернуться к списку: onSelectChat(matchId | null)
+//   onBrowse     — уйти на вкладку «Поиск» (кнопка в пустом состоянии)
 //   onSend, onReact, onTyping, onLeftChat — проброс в ChatPane
 
 export default function ChatTab({
@@ -23,6 +24,7 @@ export default function ChatTab({
   activeChat,
   activeChatId,
   onSelectChat,
+  onBrowse,
   onSend,
   onReact,
   onTyping,
@@ -53,7 +55,8 @@ export default function ChatTab({
       matches={matches}
       onOpenChat={onSelectChat}
       title="Сообщения"
-      emptyText="Пока не с кем переписываться. Появится мэтч — появится и чат."
+      emptyText="Пока не с кем переписываться. Появится мэтч — начнётся и переписка."
+      onBrowse={onBrowse}
     />
   );
 }
