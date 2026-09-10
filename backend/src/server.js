@@ -16,6 +16,11 @@ import { requireAdmin, isAdmin, bootstrapEnvAdmins } from './admin.js';
 import * as model from './models.js';
 import { scheduleBotReply } from './bot.js';
 import { attachRealtime, emitMessage, emitReaction, emitMatch } from './realtime.js';
+import {
+  notifyNewMatch,
+  notifyNewLike,
+  notifyNewMessage,
+} from './notifications.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const UPLOAD_DIR = path.join(here, '..', 'uploads');
@@ -191,8 +196,13 @@ app.post('/api/swipes', (req, res) => {
   const result = model.recordSwipe(req.user.id, targetId, direction);
   res.json(result);
 
-  // Новый мэтч — сообщаем обоим по WebSocket (список мэтчей обновится сам).
-  if (result.match) emitMatch([req.user.id, targetId]);
+  if (result.match) {
+    // Новый мэтч — сообщаем обоим по WebSocket (список мэтчей обновится сам).
+    emitMatch([req.user.id, targetId]);
+    notifyNewMatch(req.user.id, targetId);
+  } else if (direction === 'like') {
+    notifyNewLike(req.user.id, targetId);
+  }
 });
 
 // Отмена свайпа ("вернуть"): { targetId }
@@ -264,8 +274,9 @@ app.post('/api/matches/:id/messages', (req, res) => {
   if (msg === null) return res.status(403).json({ error: 'not your match' });
   res.status(201).json(msg);
 
-  // Доставляем сообщение собеседнику мгновенно.
+  // Доставляем сообщение собеседнику мгновенно + пуш, если он не в приложении.
   emitMessage(matchId, msg, req.user.id);
+  notifyNewMessage(matchId, req.user.id);
 
   // Демо: если собеседник — сид-бот (id >= 900000), он ответит через пару секунд.
   const partner = model.partnerOf(matchId, req.user.id);

@@ -179,6 +179,39 @@ export default function SettingsScreen({
         </div>
       </div>
 
+      {/* УВЕДОМЛЕНИЯ */}
+      <div className="set-group">
+        <div className="set-group__head">Уведомления в Telegram</div>
+
+        <div className="set-row">
+          <span className="set-row__text">Новые мэтчи</span>
+          <Switch
+            checked={profile.notifyMatches}
+            disabled={savingSetting}
+            onChange={(on) => patchSetting({ notifyMatches: on })}
+          />
+        </div>
+        <div className="set-row">
+          <span className="set-row__text">Сообщения</span>
+          <Switch
+            checked={profile.notifyMessages}
+            disabled={savingSetting}
+            onChange={(on) => patchSetting({ notifyMessages: on })}
+          />
+        </div>
+        <div className="set-row">
+          <span className="set-row__text">
+            Симпатии
+            <small>Когда кто-то добавил вас в симпатии</small>
+          </span>
+          <Switch
+            checked={profile.notifyLikes}
+            disabled={savingSetting}
+            onChange={(on) => patchSetting({ notifyLikes: on })}
+          />
+        </div>
+      </div>
+
       {/* ПРИВАТНОСТЬ */}
       <div className="set-group">
         <div className="set-group__head">Приватность</div>

@@ -61,6 +61,9 @@ function emptyProfile(userId) {
     photos: [],
     isVisible: true,
     showOnline: true,
+    notifyMatches: true,
+    notifyMessages: true,
+    notifyLikes: true,
     termsAcceptedAt: null,
     onboarded: false,
     verified: false,
@@ -117,12 +120,19 @@ export function getFullProfile(userId, { forOther = false } = {}) {
 
   const userRow = db
     .prepare(
-      `SELECT terms_accepted_at, verified_at, show_online FROM users WHERE id = ?`
+      `SELECT terms_accepted_at, verified_at, show_online,
+              notify_matches, notify_messages, notify_likes
+         FROM users WHERE id = ?`
     )
     .get(userId);
   const termsAcceptedAt = userRow?.terms_accepted_at ?? null;
   const verifiedAt = userRow?.verified_at ?? null;
   const showOnline = (userRow?.show_online ?? 1) === 1;
+  const notify = {
+    notifyMatches: (userRow?.notify_matches ?? 1) === 1,
+    notifyMessages: (userRow?.notify_messages ?? 1) === 1,
+    notifyLikes: (userRow?.notify_likes ?? 1) === 1,
+  };
 
   let { online, lastSeen } = presence(userId);
   if (forOther && !showOnline) {
@@ -142,6 +152,7 @@ export function getFullProfile(userId, { forOther = false } = {}) {
     verifiedAt,
     verificationStatus,
     showOnline,
+    ...notify,
   };
 
   if (!row) {
@@ -746,13 +757,35 @@ export function updateSettings(userId, patch = {}) {
       u: userId,
     });
   }
-  if (typeof patch.showOnline === 'boolean') {
-    db.prepare(`UPDATE users SET show_online = :v WHERE id = :u`).run({
-      v: patch.showOnline ? 1 : 0,
-      u: userId,
-    });
+  const userCols = {
+    showOnline: 'show_online',
+    notifyMatches: 'notify_matches',
+    notifyMessages: 'notify_messages',
+    notifyLikes: 'notify_likes',
+  };
+  for (const [key, col] of Object.entries(userCols)) {
+    if (typeof patch[key] === 'boolean') {
+      db.prepare(`UPDATE users SET ${col} = :v WHERE id = :u`).run({
+        v: patch[key] ? 1 : 0,
+        u: userId,
+      });
+    }
   }
   return getFullProfile(userId);
+}
+
+// Быстрая проверка настроек уведомлений (для модуля notifications).
+export function getNotifyPrefs(userId) {
+  const r = db
+    .prepare(
+      `SELECT notify_matches, notify_messages, notify_likes FROM users WHERE id = ?`
+    )
+    .get(userId);
+  return {
+    matches: (r?.notify_matches ?? 1) === 1,
+    messages: (r?.notify_messages ?? 1) === 1,
+    likes: (r?.notify_likes ?? 1) === 1,
+  };
 }
 
 // Полное удаление аккаунта. Возвращает имена файлов, которые роут должен

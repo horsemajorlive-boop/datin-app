@@ -3,6 +3,7 @@
 
 import { addMessage } from './models.js';
 import { emitMessage, emitTyping } from './realtime.js';
+import { notifyNewMessage } from './notifications.js';
 
 const REPLIES = [
   'Привет! Рад(а), что мы мэтчнулись 🙂',
@@ -46,7 +47,10 @@ export function scheduleBotReply(matchId, botId) {
 
       try {
         const msg = addMessage(matchId, botId, payload);
-        if (msg) emitMessage(matchId, msg, botId);
+        if (msg) {
+          emitMessage(matchId, msg, botId);
+          notifyNewMessage(matchId, botId);
+        }
       } catch {
         // мэтч мог быть удалён (отмена свайпа) — тогда просто ничего не делаем
       }

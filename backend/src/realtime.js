@@ -24,6 +24,9 @@ import { matchUsers, matchPartners, partnerOf, touchUser } from './models.js';
 const DEV_AUTH = process.env.ALLOW_DEV_AUTH === 'true';
 const clients = new Map();
 
+// Открыт ли у пользователя сейчас хотя бы один WebSocket (т.е. приложение открыто).
+export const isConnected = (userId) => clients.has(Number(userId));
+
 export function attachRealtime(httpServer) {
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 

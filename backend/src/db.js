@@ -81,4 +81,13 @@ try {
   /* колонка уже существует — ок */
 }
 
+for (const col of ['notify_matches', 'notify_messages', 'notify_likes']) {
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN ${col} INTEGER NOT NULL DEFAULT 1`);
+    console.log(`[db] миграция: добавлена колонка users.${col}`);
+  } catch {
+    /* колонка уже существует — ок */
+  }
+}
+
 console.log('[db] готова:', DB_PATH);
