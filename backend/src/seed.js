@@ -4,6 +4,8 @@
 import { db } from './db.js';
 import { upsertUser, saveProfile, setPhotos, recordSwipe } from './models.js';
 
+const MINUTE = 60 * 1000;
+
 // id для тестовых "ботов" — большие числа, чтобы не пересечься с реальными.
 const BOTS = [
   {
@@ -83,6 +85,12 @@ for (const bot of BOTS) {
   upsertUser({ id: bot.id, first_name: bot.first_name, username: null });
   saveProfile(bot.id, bot.profile);
   setPhotos(bot.id, bot.photos.map(photoUrl));
+
+  // Присутствие: те, кто "лайкнул вас", — сейчас онлайн; остальные заходили недавно.
+  const lastSeen = bot.likesYou
+    ? Date.now()
+    : Date.now() - Math.round((5 + Math.random() * 175)) * MINUTE;
+  db.prepare(`UPDATE users SET last_seen_at = ? WHERE id = ?`).run(lastSeen, bot.id);
 
   if (bot.likesYou) {
     // бот лайкает dev-пользователя; сам dev-пользователь ещё не свайпал,

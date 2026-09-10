@@ -1,33 +1,31 @@
 import { useEffect, useState } from 'react';
 import SwipeDeck from '../components/SwipeDeck';
 import ProfileSheet from '../components/ProfileSheet';
-import { profiles } from '../data/profiles';
 
 // Экран "Поиск": колода карточек + всплывающая анкета.
 //
 // Props:
-//   onLike     — сообщить приложению, что анкету лайкнули
-//   onUndoLike — сообщить, что лайк отменён (кнопка "Вернуть")
+//   feed         — массив анкет с сервера
+//   onSwipe      — onSwipe(profile, 'like' | 'pass')
+//   onUndoSwipe  — onUndoSwipe(profile) — откат на сервере
 
-export default function DeckScreen({ onLike, onUndoLike }) {
-  const [opened, setOpened] = useState(null); // какая анкета открыта подробно
-  const [locked, setLocked] = useState(false); // показывать ли подсказку про премиум
+export default function DeckScreen({ feed, onSwipe, onUndoSwipe }) {
+  const [opened, setOpened] = useState(null);
+  const [locked, setLocked] = useState(false);
 
-  // Когда показали подсказку — прячем её через 2.5 секунды.
   useEffect(() => {
     if (!locked) return;
     const timer = setTimeout(() => setLocked(false), 2500);
-    return () => clearTimeout(timer); // убираем таймер, если компонент исчез раньше
+    return () => clearTimeout(timer);
   }, [locked]);
 
   return (
     <div className="screen screen--deck">
       <SwipeDeck
-        profiles={profiles}
-        onLike={onLike}
-        onNope={() => {}}
+        profiles={feed}
+        onSwipe={onSwipe}
+        onUndo={onUndoSwipe}
         onOpen={setOpened}
-        onUndoLike={onUndoLike}
         onPremiumLocked={() => setLocked(true)}
       />
 

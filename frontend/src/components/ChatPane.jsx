@@ -5,6 +5,7 @@ import EmojiPicker from './EmojiPicker';
 import { getSuggestions } from '../lib/wingman';
 import { fileToCompressedDataUrl } from '../lib/image';
 import { formatLastSeen } from '../lib/relativeTime';
+import { api } from '../api';
 
 // Правая часть вкладки "Чат" — сама переписка.
 //
@@ -85,10 +86,12 @@ export default function ChatPane({
     e.target.value = ''; // сброс, чтобы можно было выбрать тот же файл снова
     if (!file) return;
     try {
+      // 1. сжимаем на клиенте, 2. грузим на сервер, 3. шлём сообщение со ссылкой
       const dataUrl = await fileToCompressedDataUrl(file);
-      onSend({ type: 'photo', photo: dataUrl });
-    } catch {
-      // молча игнорируем нечитаемый файл
+      const { url } = await api.post('/upload', { dataUrl });
+      onSend({ type: 'photo', photo: url });
+    } catch (err) {
+      console.error('не удалось отправить фото', err);
     }
   }
 

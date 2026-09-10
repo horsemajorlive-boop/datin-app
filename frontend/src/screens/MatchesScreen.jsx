@@ -1,12 +1,17 @@
-// Экран "Мэтчи" — список тех, с кем симпатия взаимна.
-// Тап по строке открывает чат.
+// Экран "Мэтчи" — список тех, с кем симпатия взаимна. Тап открывает чат.
 //
 // Props:
-//   matches    — массив анкет (взаимные симпатии)
-//   messages   — объект со всеми чатами: { [matchId]: [сообщения] }
-//   onOpenChat — открыть чат с анкетой: onOpenChat(profile)
+//   matches    — [{ matchId, profile, lastMessage: { type, text, fromMe } | null }]
+//   onOpenChat — открыть чат: onOpenChat(matchId)
 
-export default function MatchesScreen({ matches, messages, onOpenChat }) {
+function previewText(last) {
+  if (!last) return 'Вы мэтчнулись — напишите первым';
+  const body =
+    last.type === 'photo' ? '📷 Фото' : last.type === 'emoji' ? last.text : last.text;
+  return (last.fromMe ? 'Вы: ' : '') + body;
+}
+
+export default function MatchesScreen({ matches, onOpenChat }) {
   if (matches.length === 0) {
     return (
       <div className="screen">
@@ -23,35 +28,26 @@ export default function MatchesScreen({ matches, messages, onOpenChat }) {
       <h1 className="screen__title">Мэтчи ({matches.length})</h1>
 
       <div className="matchlist">
-        {matches.map((person) => {
-          const thread = messages[person.id] || [];
-          const last = thread[thread.length - 1];
-          // текст последнего сообщения (или подсказка, если переписки ещё нет)
-          const preview = last
-            ? (last.from === 'me' ? 'Вы: ' : '') + last.text
-            : 'Вы мэтчнулись — напишите первым';
-
-          return (
-            <button
-              className="matchlist__item"
-              key={person.id}
-              onClick={() => onOpenChat(person)}
-            >
-              <img
-                className="matchlist__photo"
-                src={person.photos[0]}
-                alt={person.name}
-              />
-              <div className="matchlist__info">
-                <span className="matchlist__name">
-                  {person.name}, {person.age}
-                </span>
-                <span className="matchlist__hint">{preview}</span>
-              </div>
-              <span className="matchlist__chevron">›</span>
-            </button>
-          );
-        })}
+        {matches.map(({ matchId, profile, lastMessage }) => (
+          <button
+            className="matchlist__item"
+            key={matchId}
+            onClick={() => onOpenChat(matchId)}
+          >
+            <img
+              className="matchlist__photo"
+              src={profile.photos[0]}
+              alt={profile.name}
+            />
+            <div className="matchlist__info">
+              <span className="matchlist__name">
+                {profile.name}, {profile.age}
+              </span>
+              <span className="matchlist__hint">{previewText(lastMessage)}</span>
+            </div>
+            <span className="matchlist__chevron">›</span>
+          </button>
+        ))}
       </div>
     </div>
   );

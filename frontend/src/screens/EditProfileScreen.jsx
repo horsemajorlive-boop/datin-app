@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { fileToCompressedDataUrl } from '../lib/image';
+import { api } from '../api';
 import InterestPicker from '../components/InterestPicker';
 
 // Экран редактирования анкеты — форма с загрузкой фото.
@@ -39,10 +40,16 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
       const room = MAX_PHOTOS - form.photos.length; // сколько ещё можно добавить
       const picked = files.slice(0, room);
 
-      // Сжимаем все выбранные файлы параллельно и ждём, пока все будут готовы.
-      const dataUrls = await Promise.all(picked.map(fileToCompressedDataUrl));
+      // Для каждого файла: сжать на клиенте -> загрузить на сервер -> получить ссылку.
+      const urls = await Promise.all(
+        picked.map(async (file) => {
+          const dataUrl = await fileToCompressedDataUrl(file);
+          const res = await api.post('/upload', { dataUrl });
+          return res.url;
+        })
+      );
 
-      setForm((f) => ({ ...f, photos: [...f.photos, ...dataUrls] }));
+      setForm((f) => ({ ...f, photos: [...f.photos, ...urls] }));
     } catch (err) {
       setPhotoError(err.message || 'Не удалось загрузить фото');
     } finally {

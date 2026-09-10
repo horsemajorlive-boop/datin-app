@@ -21,6 +21,12 @@ export function initTelegram() {
   tg.expand(); // разворачиваем окно на весь экран
 }
 
+// Подписанная строка initData для авторизации на сервере.
+// Пустая строка — значит мы не в Telegram (тогда api.js использует dev-заглушку).
+export function getInitData() {
+  return getTelegram()?.initData || '';
+}
+
 // Возвращает текущего пользователя.
 export function getCurrentUser() {
   const tgUser = getTelegram()?.initDataUnsafe?.user;

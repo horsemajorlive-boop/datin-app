@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 import { requireAuth } from './auth.js';
 import * as model from './models.js';
+import { scheduleBotReply } from './bot.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const UPLOAD_DIR = path.join(here, '..', 'uploads');
@@ -68,6 +69,11 @@ app.post('/api/swipes/undo', (req, res) => {
   res.json({ ok: true });
 });
 
+// Кого я лайкнул (вкладка "Симпатии")
+app.get('/api/likes', (req, res) => {
+  res.json(model.getMyLikes(req.user.id));
+});
+
 // Список мэтчей
 app.get('/api/matches', (req, res) => {
   res.json(model.getMatches(req.user.id));
@@ -82,9 +88,14 @@ app.get('/api/matches/:id/messages', (req, res) => {
 
 // Отправить сообщение: { type, text?, photo? }
 app.post('/api/matches/:id/messages', (req, res) => {
-  const msg = model.addMessage(Number(req.params.id), req.user.id, req.body || {});
+  const matchId = Number(req.params.id);
+  const msg = model.addMessage(matchId, req.user.id, req.body || {});
   if (msg === null) return res.status(403).json({ error: 'not your match' });
   res.status(201).json(msg);
+
+  // Демо: если собеседник — сид-бот (id >= 900000), он ответит через пару секунд.
+  const partner = model.partnerOf(matchId, req.user.id);
+  if (partner && partner >= 900000) scheduleBotReply(matchId, partner);
 });
 
 // Реакция на сообщение: { emoji }

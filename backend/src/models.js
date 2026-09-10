@@ -29,6 +29,7 @@ export function upsertUser(tgUser) {
 // Пустая анкета (когда пользователь ещё ничего не заполнил).
 function emptyProfile(userId) {
   return {
+    id: userId,
     userId,
     name: '',
     age: null,
@@ -38,6 +39,18 @@ function emptyProfile(userId) {
     interests: [],
     photos: [],
     isVisible: true,
+  };
+}
+
+const ONLINE_WINDOW_MS = 90 * 1000; // "в сети", если активность была не позже 90 сек назад
+
+// Присутствие пользователя из users.last_seen_at.
+function presence(userId) {
+  const u = db.prepare(`SELECT last_seen_at FROM users WHERE id = ?`).get(userId);
+  const lastSeen = u?.last_seen_at ?? null;
+  return {
+    lastSeen,
+    online: lastSeen != null && Date.now() - lastSeen < ONLINE_WINDOW_MS,
   };
 }
 
@@ -51,9 +64,12 @@ export function getFullProfile(userId) {
     .all(userId)
     .map((p) => p.url);
 
-  if (!row) return { ...emptyProfile(userId), photos };
+  const { online, lastSeen } = presence(userId);
+
+  if (!row) return { ...emptyProfile(userId), photos, online, lastSeen };
 
   return {
+    id: userId,
     userId,
     name: row.name,
     age: row.age,
@@ -63,7 +79,17 @@ export function getFullProfile(userId) {
     interests: JSON.parse(row.interests || '[]'),
     isVisible: !!row.is_visible,
     photos,
+    online,
+    lastSeen,
   };
+}
+
+// Отметить пользователя "был онлайн сейчас".
+export function touchUser(userId) {
+  db.prepare(`UPDATE users SET last_seen_at = ? WHERE id = ?`).run(
+    Date.now(),
+    userId
+  );
 }
 
 export function saveProfile(userId, data) {
@@ -107,8 +133,26 @@ export function setPhotos(userId, urls) {
   }
 }
 
-// ---------- Лента (кого показывать в поиске) ----------
+// ---------- Лента и симпатии ----------
 
+// Превращает строки анкет в объекты для фронтенда (+ подтягивает фото).
+function hydrateProfiles(rows) {
+  const photosStmt = db.prepare(
+    `SELECT url FROM photos WHERE user_id = ? ORDER BY position`
+  );
+  return rows.map((r) => ({
+    id: r.user_id,
+    name: r.name,
+    age: r.age,
+    city: r.city,
+    bio: r.bio,
+    gender: r.gender,
+    interests: JSON.parse(r.interests || '[]'),
+    photos: photosStmt.all(r.user_id).map((p) => p.url),
+  }));
+}
+
+// Кого показывать в поиске: видимые, не я, с заполненным именем, ещё не свайпнутые.
 export function getFeed(userId, limit = 20) {
   const rows = db
     .prepare(
@@ -124,21 +168,21 @@ export function getFeed(userId, limit = 20) {
         LIMIT :limit`
     )
     .all({ me: userId, limit });
+  return hydrateProfiles(rows);
+}
 
-  const photosStmt = db.prepare(
-    `SELECT url FROM photos WHERE user_id = ? ORDER BY position`
-  );
-
-  return rows.map((r) => ({
-    id: r.user_id,
-    name: r.name,
-    age: r.age,
-    city: r.city,
-    bio: r.bio,
-    gender: r.gender,
-    interests: JSON.parse(r.interests || '[]'),
-    photos: photosStmt.all(r.user_id).map((p) => p.url),
-  }));
+// Кого я лайкнул (вкладка "Симпатии").
+export function getMyLikes(userId) {
+  const rows = db
+    .prepare(
+      `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests
+         FROM swipes s
+         JOIN profiles p ON p.user_id = s.target_id
+        WHERE s.actor_id = :me AND s.direction = 'like'
+        ORDER BY s.created_at DESC`
+    )
+    .all({ me: userId });
+  return hydrateProfiles(rows);
 }
 
 // ---------- Свайпы и мэтчи ----------
@@ -192,8 +236,8 @@ export function undoSwipe(actorId, targetId) {
 
 // ---------- Мэтчи и переписка ----------
 
-// Проверка: состоит ли пользователь в этом мэтче. Возвращает id собеседника или null.
-function partnerId(matchId, userId) {
+// Состоит ли пользователь в этом мэтче. Возвращает id собеседника или null.
+export function partnerOf(matchId, userId) {
   const m = db
     .prepare(`SELECT user_a, user_b FROM matches WHERE id = ?`)
     .get(matchId);
@@ -237,7 +281,7 @@ export function getMatches(userId) {
 }
 
 export function getMessages(matchId, userId) {
-  if (partnerId(matchId, userId) === null) return null; // не участник — нет доступа
+  if (partnerOf(matchId, userId) === null) return null; // не участник — нет доступа
   const rows = db
     .prepare(
       `SELECT id, sender_id, type, text, photo_url, reaction, created_at
@@ -257,7 +301,8 @@ export function getMessages(matchId, userId) {
 }
 
 export function addMessage(matchId, senderId, { type = 'text', text, photo }) {
-  if (partnerId(matchId, senderId) === null) return null;
+  if (partnerOf(matchId, senderId) === null) return null;
+  touchUser(senderId); // отправил сообщение — значит был онлайн
   const info = db
     .prepare(
       `INSERT INTO messages (match_id, sender_id, type, text, photo_url, created_at)
@@ -292,7 +337,7 @@ export function setReaction(messageId, userId, emoji) {
   const msg = db
     .prepare(`SELECT match_id, reaction FROM messages WHERE id = ?`)
     .get(messageId);
-  if (!msg || partnerId(msg.match_id, userId) === null) return null;
+  if (!msg || partnerOf(msg.match_id, userId) === null) return null;
 
   const next = msg.reaction === emoji ? null : emoji; // тот же эмодзи — снять
   db.prepare(`UPDATE messages SET reaction = ? WHERE id = ?`).run(

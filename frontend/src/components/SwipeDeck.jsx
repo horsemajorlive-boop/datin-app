@@ -8,18 +8,17 @@ import { isPremium } from '../premium';
 //   - history : список уже сделанных свайпов [{ profile, direction }] — нужен для "Вернуть"
 //
 // Props:
-//   profiles        — массив всех анкет
-//   onLike / onNope — вызвать при лайке / пропуске
+//   profiles        — массив анкет (лента с сервера)
+//   onSwipe         — onSwipe(profile, 'like' | 'pass')
+//   onUndo          — onUndo(profile) — откат последнего свайпа на сервере
 //   onOpen          — открыть полную анкету
-//   onUndoLike      — отменить лайк (убрать анкету из "Симпатий")
 //   onPremiumLocked — сообщить, что функция "Вернуть" недоступна без премиума
 
 export default function SwipeDeck({
   profiles,
-  onLike,
-  onNope,
+  onSwipe,
+  onUndo,
   onOpen,
-  onUndoLike,
   onPremiumLocked,
 }) {
   const [index, setIndex] = useState(0);
@@ -30,12 +29,9 @@ export default function SwipeDeck({
     const current = profiles[index];
     if (!current) return;
 
-    if (direction === 'right') {
-      onLike(current);
-      setLikeFx((n) => n + 1); // запускаем сердечки
-    } else {
-      onNope(current);
-    }
+    const kind = direction === 'right' ? 'like' : 'pass';
+    onSwipe(current, kind);
+    if (kind === 'like') setLikeFx((n) => n + 1); // запускаем сердечки
 
     // запоминаем ход, чтобы его можно было отменить
     setHistory((h) => [...h, { profile: current, direction }]);
@@ -52,9 +48,7 @@ export default function SwipeDeck({
     }
 
     const last = history[history.length - 1];
-
-    // если отменяем лайк — надо убрать анкету из "Симпатий"
-    if (last.direction === 'right') onUndoLike?.(last.profile);
+    onUndo?.(last.profile); // сообщаем серверу отменить свайп
 
     setHistory((h) => h.slice(0, -1)); // выкидываем последний ход
     setIndex((i) => Math.max(0, i - 1)); // возвращаемся на карточку назад

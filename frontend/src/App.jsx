@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import BottomNav from './components/BottomNav';
 import DeckScreen from './screens/DeckScreen';
 import LikesScreen from './screens/LikesScreen';
@@ -8,224 +8,223 @@ import EditProfileScreen from './screens/EditProfileScreen';
 import MatchScreen from './components/MatchScreen';
 import ChatTab from './screens/ChatTab';
 import { initTelegram } from './telegram';
-import { loadMyProfile, saveMyProfile } from './data/myProfile';
-import { randomReply } from './data/chatReplies';
-import { BOT_EMOJI, BOT_PHOTOS } from './data/emojiPalette';
+import { api, normalizeProfile, normalizeMessage } from './api';
 import './App.css';
 
-// Короткий случайный id для сообщения.
-function makeId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-}
+// Сид-боты имеют такие id и умеют авто-отвечать в чате.
+const BOT_ID_MIN = 900000;
 
-// Случайный элемент массива.
-function pick(list) {
-  return list[Math.floor(Math.random() * list.length)];
-}
+const ACTIVITY_KINDS = ['typing', 'typing', 'typing', 'emoji', 'photo'];
+const randomKind = () =>
+  ACTIVITY_KINDS[Math.floor(Math.random() * ACTIVITY_KINDS.length)];
 
-// Эмодзи, которыми "собеседник" иногда реагирует на наши сообщения.
-const BOT_REACTIONS = ['❤️', '😂', '🔥', '👍'];
-
-// Корневой компонент. Он хранит всё общее состояние приложения:
-//  - tab          : какая вкладка открыта
-//  - liked        : кого пользователь лайкнул
-//  - matches      : с кем симпатия взаимна (+ online, lastSeen)
-//  - matchPopup   : анкета для всплывающего экрана "Это взаимно!"
-//  - messages     : все переписки { [matchId]: [сообщения] }
-//  - activities   : кто что сейчас делает { [matchId]: 'typing' | 'emoji' | 'photo' }
-//  - activeChatId : id выбранного собеседника во вкладке "Чат"
-//  - myProfile    : анкета самого пользователя
-//  - editing      : открыт ли сейчас экран редактирования
+// Корневой компонент. Всё общее состояние теперь приходит с сервера:
+//  me        — своя анкета (GET /api/me)
+//  feed      — кого листать (GET /api/feed)
+//  likes     — кого я лайкнул (GET /api/likes)
+//  matches   — мэтчи с последним сообщением (GET /api/matches)
+//  messages  — { [matchId]: [сообщения] }, грузится по мере открытия чатов
+//  activities — локальная имитация "печатает…" для чатов с ботами
 
 export default function App() {
   const [tab, setTab] = useState('deck');
-  const [liked, setLiked] = useState([]);
+
+  const [me, setMe] = useState(null); // null = ещё грузится
+  const [feed, setFeed] = useState([]);
+  const [likes, setLikes] = useState([]);
   const [matches, setMatches] = useState([]);
-  const [matchPopup, setMatchPopup] = useState(null);
   const [messages, setMessages] = useState({});
   const [activities, setActivities] = useState({});
-  const [activeChatId, setActiveChatId] = useState(null);
 
-  const [myProfile, setMyProfile] = useState(loadMyProfile);
+  const [activeChatId, setActiveChatId] = useState(null);
+  const [matchPopup, setMatchPopup] = useState(null);
   const [editing, setEditing] = useState(false);
 
-  // "Живой" собеседник для открытого чата — всегда берём свежую версию из matches
-  // (там обновляется online/lastSeen), а не устаревший объект.
-  const activeChat = useMemo(
-    () => matches.find((m) => m.id === activeChatId) || null,
-    [matches, activeChatId]
-  );
+  // ---------- загрузка данных ----------
 
+  const loadMe = useCallback(async () => {
+    setMe(normalizeProfile(await api.get('/me')));
+  }, []);
+
+  const loadFeed = useCallback(async () => {
+    setFeed((await api.get('/feed')).map(normalizeProfile));
+  }, []);
+
+  const loadLikes = useCallback(async () => {
+    setLikes((await api.get('/likes')).map(normalizeProfile));
+  }, []);
+
+  const loadMatches = useCallback(async () => {
+    const list = await api.get('/matches');
+    setMatches(
+      list.map((m) => ({ ...m, profile: normalizeProfile(m.profile) }))
+    );
+  }, []);
+
+  const loadChat = useCallback(async (matchId) => {
+    const list = await api.get(`/matches/${matchId}/messages`);
+    setMessages((prev) => ({ ...prev, [matchId]: list.map(normalizeMessage) }));
+  }, []);
+
+  // Первая загрузка при запуске.
   useEffect(() => {
     initTelegram();
-  }, []);
+    loadMe();
+    loadFeed();
+    loadLikes();
+    loadMatches();
+  }, [loadMe, loadFeed, loadLikes, loadMatches]);
 
+  // Открыли чат — подгружаем его сообщения.
   useEffect(() => {
-    saveMyProfile(myProfile);
-  }, [myProfile]);
+    if (activeChatId != null) loadChat(activeChatId);
+  }, [activeChatId, loadChat]);
 
-  // Раз в 12 сек случайный мэтч меняет статус онлайн/оффлайн.
-  // Уходя оффлайн — фиксируем "был в сети сейчас".
+  // Пока нет WebSocket — раз в 20 сек обновляем мэтчи (presence, последние
+  // сообщения) и активный чат, чтобы видеть ответы собеседника.
   useEffect(() => {
     const iv = setInterval(() => {
-      setMatches((prev) => {
-        if (prev.length === 0) return prev;
-        const i = Math.floor(Math.random() * prev.length);
-        return prev.map((m, idx) => {
-          if (idx !== i) return m;
-          const goOnline = !m.online;
-          return {
-            ...m,
-            online: goOnline,
-            lastSeen: goOnline ? m.lastSeen : Date.now(),
-          };
-        });
-      });
-    }, 12000);
+      loadMatches();
+      if (activeChatId != null) loadChat(activeChatId);
+    }, 20000);
     return () => clearInterval(iv);
-  }, []);
+  }, [loadMatches, loadChat, activeChatId]);
 
-  function openChatWith(person) {
-    setActiveChatId(person.id);
+  // ---------- действия ----------
+
+  function openChat(matchId) {
+    setActiveChatId(matchId);
     setTab('chat');
   }
 
-  function handleLike(profile) {
-    setLiked((prev) =>
-      prev.some((p) => p.id === profile.id) ? prev : [...prev, profile]
-    );
-
-    if (profile.likesYou) {
-      // Дополняем анкету "присутствием": часть мэтчей сразу онлайн,
-      // остальные "были в сети" когда-то за последние 3 часа.
-      const enriched = {
-        ...profile,
-        online: Math.random() < 0.5,
-        lastSeen: Date.now() - Math.floor(Math.random() * 3 * 60 * 60 * 1000),
-      };
-      setMatches((prev) =>
-        prev.some((p) => p.id === profile.id) ? prev : [...prev, enriched]
-      );
-      setMatchPopup(enriched);
+  async function handleSwipe(profile, direction) {
+    try {
+      const res = await api.post('/swipes', {
+        targetId: profile.id,
+        direction,
+      });
+      if (direction === 'like') {
+        setLikes((prev) =>
+          prev.some((p) => p.id === profile.id) ? prev : [...prev, profile]
+        );
+      }
+      if (res.match) {
+        await loadMatches();
+        setMatchPopup({
+          ...normalizeProfile(res.withUser),
+          matchId: res.matchId,
+        });
+      }
+    } catch (err) {
+      console.error('swipe failed', err);
     }
   }
 
-  function handleUndoLike(profile) {
-    setLiked((prev) => prev.filter((p) => p.id !== profile.id));
-    setMatches((prev) => prev.filter((p) => p.id !== profile.id));
-    setMessages((prev) => {
-      const next = { ...prev };
-      delete next[profile.id];
-      return next;
-    });
-    if (activeChatId === profile.id) setActiveChatId(null);
+  async function handleUndoSwipe(profile) {
+    const affected = matches.find((m) => m.profile.id === profile.id);
+    try {
+      await api.post('/swipes/undo', { targetId: profile.id });
+      setLikes((prev) => prev.filter((p) => p.id !== profile.id));
+      if (affected && activeChatId === affected.matchId) setActiveChatId(null);
+      await loadMatches();
+    } catch (err) {
+      console.error('undo failed', err);
+    }
   }
 
-  // Отправка сообщения. payload = { type: 'text'|'emoji'|'photo', text?, photo? }
-  function handleSend(payload) {
-    const chatId = activeChatId;
-    const myMsg = { id: makeId(), from: 'me', ts: Date.now(), type: 'text', ...payload };
+  async function handleSaveProfile(data) {
+    const saved = await api.put('/me', data);
+    setMe(normalizeProfile(saved));
+    setEditing(false);
+    loadFeed(); // имя/видимость могли поменяться
+  }
 
+  async function handleSend(payload) {
+    const matchId = activeChatId;
+    const sent = await api.post(`/matches/${matchId}/messages`, payload);
     setMessages((prev) => ({
       ...prev,
-      [chatId]: [...(prev[chatId] || []), myMsg],
+      [matchId]: [...(prev[matchId] || []), normalizeMessage(sent)],
     }));
 
-    // Заглушка "живого" собеседника.
-    // 1. через 0.5 сек показываем статус активности
-    const kind = pick(['typing', 'typing', 'typing', 'emoji', 'photo']);
-    setTimeout(() => {
-      setActivities((prev) => ({ ...prev, [chatId]: kind }));
-    }, 500);
-
-    // 2. через ~2.1 сек убираем статус, иногда ставим реакцию и присылаем ответ
-    setTimeout(() => {
-      setActivities((prev) => {
-        const next = { ...prev };
-        delete next[chatId];
-        return next;
-      });
-
-      setMessages((prev) => {
-        let thread = prev[chatId] || [];
-
-        if (Math.random() < 0.35) {
-          thread = thread.map((m) =>
-            m.id === myMsg.id ? { ...m, reaction: pick(BOT_REACTIONS) } : m
-          );
-        }
-
-        // Тип ответа зависит от того, что "делал" собеседник.
-        let reply;
-        if (kind === 'emoji') reply = { type: 'emoji', text: pick(BOT_EMOJI) };
-        else if (kind === 'photo') reply = { type: 'photo', photo: pick(BOT_PHOTOS) };
-        else reply = { type: 'text', text: randomReply() };
-
-        return {
-          ...prev,
-          [chatId]: [
-            ...thread,
-            { id: makeId(), from: 'them', ts: Date.now(), ...reply },
-          ],
-        };
-      });
-    }, 2100);
+    // Собеседник-бот ответит через пару секунд. Показываем статус и потом
+    // перезагружаем чат, чтобы подхватить его сообщение.
+    const partner = matches.find((m) => m.matchId === matchId)?.profile;
+    if (partner && partner.id >= BOT_ID_MIN) {
+      const kind = randomKind();
+      setActivities((prev) => ({ ...prev, [matchId]: kind }));
+      setTimeout(() => {
+        setActivities((prev) => {
+          const next = { ...prev };
+          delete next[matchId];
+          return next;
+        });
+        loadChat(matchId);
+        loadMatches(); // обновить превью в списке
+      }, 2200);
+    }
   }
 
-  function handleReact(messageId, emoji) {
-    const chatId = activeChatId;
+  async function handleReact(messageId, emoji) {
+    const matchId = activeChatId;
+    const res = await api.post(`/messages/${messageId}/reaction`, { emoji });
     setMessages((prev) => ({
       ...prev,
-      [chatId]: (prev[chatId] || []).map((m) =>
-        m.id === messageId
-          ? { ...m, reaction: m.reaction === emoji ? undefined : emoji }
-          : m
+      [matchId]: (prev[matchId] || []).map((m) =>
+        m.id === messageId ? { ...m, reaction: res.reaction } : m
       ),
     }));
   }
 
-  function handleSaveProfile(nextProfile) {
-    setMyProfile(nextProfile);
-    setEditing(false);
-  }
+  // Свежая анкета собеседника открытого чата (из matches — там обновляется presence).
+  const activeChat = useMemo(
+    () => matches.find((m) => m.matchId === activeChatId)?.profile || null,
+    [matches, activeChatId]
+  );
 
   function renderProfileTab() {
+    if (!me) {
+      return (
+        <div className="screen">
+          <p className="muted">Загрузка…</p>
+        </div>
+      );
+    }
     if (editing) {
       return (
         <EditProfileScreen
-          profile={myProfile}
+          profile={me}
           onSave={handleSaveProfile}
           onCancel={() => setEditing(false)}
         />
       );
     }
-    return (
-      <MyProfileScreen profile={myProfile} onEdit={() => setEditing(true)} />
-    );
+    return <MyProfileScreen profile={me} onEdit={() => setEditing(true)} />;
   }
 
   return (
     <div className="app">
       <main className="app__body">
         {tab === 'deck' && (
-          <DeckScreen onLike={handleLike} onUndoLike={handleUndoLike} />
-        )}
-        {tab === 'likes' && <LikesScreen liked={liked} />}
-        {tab === 'matches' && (
-          <MatchesScreen
-            matches={matches}
-            messages={messages}
-            onOpenChat={openChatWith}
+          <DeckScreen
+            feed={feed}
+            onSwipe={handleSwipe}
+            onUndoSwipe={handleUndoSwipe}
           />
+        )}
+        {tab === 'likes' && <LikesScreen liked={likes} />}
+        {tab === 'matches' && (
+          <MatchesScreen matches={matches} onOpenChat={openChat} />
         )}
         {tab === 'chat' && (
           <ChatTab
             matches={matches}
             messages={messages}
             activities={activities}
-            myProfile={myProfile}
+            myProfile={me}
             activeChat={activeChat}
-            onSelectChat={(person) => setActiveChatId(person.id)}
+            activeChatId={activeChatId}
+            onSelectChat={setActiveChatId}
             onSend={handleSend}
             onReact={handleReact}
           />
@@ -236,13 +235,13 @@ export default function App() {
       <BottomNav active={tab} onChange={setTab} />
 
       <MatchScreen
-        me={myProfile}
+        me={me}
         them={matchPopup}
         onClose={() => setMatchPopup(null)}
         onMessage={() => {
-          const person = matchPopup;
+          const id = matchPopup?.matchId;
           setMatchPopup(null);
-          openChatWith(person);
+          if (id != null) openChat(id);
         }}
       />
     </div>
