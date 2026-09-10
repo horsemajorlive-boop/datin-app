@@ -269,6 +269,12 @@
   border-color: rgba(255, 255, 255, 0.14);
 }
 
+.card__info .ichip > svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0.85;
+}
+
 /* последний ряд чипов — отступ до кнопки "Подробнее" */
 .card__info .ichips:last-of-type {
   margin-bottom: 12px;
@@ -603,7 +609,7 @@
   margin-top: 12px;
 }
 
-/* Базовый чип: эмодзи + текст, нейтральный, плоский. */
+/* Базовый чип: линейная иконка + текст, нейтральный, плоский. */
 .ichip {
   display: inline-flex;
   align-items: center;
@@ -618,6 +624,14 @@
   border: 1px solid var(--line);
 }
 
+.ichip > svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+/* эмодзи в чипах образа жизни (жильё/авто/работа) — там оставляем эмодзи */
 .ichip__emoji {
   font-size: 14px;
   line-height: 1;
@@ -642,10 +656,32 @@
   gap: 8px;
 }
 
-/* Список подсказок ограничиваем по высоте и делаем прокручиваемым. */
-.picker__row--suggestions {
-  max-height: 172px;
+/* Разделы каталога интересов — прокручиваемый блок. */
+.picker__cats {
+  max-height: 300px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-right: 4px;
+}
+
+.picker__cat-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.picker__cat-head svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0.9;
 }
 
 .picker__input {
@@ -675,24 +711,33 @@
   font-family: inherit;
 }
 
+/* Выбранные интересы вверху — акцентные. */
+.ichip--picked {
+  background: var(--accent-soft);
+  border-color: rgba(255, 77, 109, 0.4);
+}
+
 .ichip__x {
   font-size: 10px;
-  opacity: 0.75;
+  opacity: 0.7;
   margin-left: 2px;
 }
 
-/* Подсказки — нейтральные, пока не выбраны. */
+/* Варианты в каталоге — нейтральные, пока не выбраны. */
 .ichip--add {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line-2);
   color: var(--text);
 }
 
-.ichip__plus {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--accent);
-  margin-left: 2px;
+.ichip--add.is-on {
+  background: var(--accent-soft);
+  border-color: rgba(255, 77, 109, 0.4);
+}
+
+.ichip--add:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
 /* ================= Сетка "Симпатий" ================= */

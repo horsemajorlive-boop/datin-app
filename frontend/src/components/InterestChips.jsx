@@ -1,10 +1,11 @@
-import { interestEmoji } from '../data/interests';
+import { interestIconKey } from '../data/interests';
+import { InterestIcon } from './interestIcons';
 
-// Отображение интересов в виде чипов с эмодзи (только показ, без взаимодействия).
+// Отображение интересов чипами: линейная иконка раздела + название.
 //
 // Props:
 //   interests — массив строк
-//   limit     — необяз.: показать не больше N штук, остальные свернуть в "+3"
+//   limit     — необяз.: показать не больше N, остальные свернуть в "+3"
 
 export default function InterestChips({ interests, limit }) {
   if (!interests || interests.length === 0) return null;
@@ -16,7 +17,7 @@ export default function InterestChips({ interests, limit }) {
     <div className="ichips">
       {shown.map((name) => (
         <span className="ichip" key={name}>
-          <span className="ichip__emoji">{interestEmoji(name)}</span>
+          <InterestIcon iconKey={interestIconKey(name)} />
           {name}
         </span>
       ))}

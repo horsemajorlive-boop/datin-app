@@ -1,50 +1,46 @@
 import { useState } from 'react';
-import { INTEREST_OPTIONS, interestEmoji } from '../data/interests';
+import { INTEREST_CATEGORIES, interestIconKey } from '../data/interests';
+import { InterestIcon } from './interestIcons';
 
-// Выбор интересов для редактора анкеты.
-//
-// Это "управляемый" компонент: свой список он не хранит — получает его в props
-// (value) и просит родителя обновить через onChange(следующийМассив).
+// Выбор интересов для редактора анкеты — по разделам.
 //
 // Props:
 //   value    — массив выбранных интересов (строки)
 //   onChange — вызвать с новым массивом
 
-const MAX_INTERESTS = 8;
+const MAX_INTERESTS = 10;
 
 export default function InterestPicker({ value, onChange }) {
-  const [text, setText] = useState(''); // что печатают в поле "свой вариант"
+  const [text, setText] = useState('');
 
-  // есть ли уже такой интерес (сравниваем без учёта регистра)
-  function alreadyPicked(name) {
-    return value.some((v) => v.toLowerCase() === name.toLowerCase());
-  }
+  const has = (name) => value.some((v) => v.toLowerCase() === name.toLowerCase());
 
-  function addInterest(raw) {
+  function add(raw) {
     const name = raw.trim();
-    if (!name || value.length >= MAX_INTERESTS || alreadyPicked(name)) return;
+    if (!name || value.length >= MAX_INTERESTS || has(name)) return;
     onChange([...value, name]);
     setText('');
   }
 
-  function removeInterest(name) {
+  function remove(name) {
     onChange(value.filter((v) => v !== name));
   }
 
+  function toggle(name) {
+    if (has(name)) remove(name);
+    else add(name);
+  }
+
   function handleKeyDown(e) {
-    // Enter или запятая — добавить напечатанное
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
-      addInterest(text);
+      add(text);
     }
-    // Backspace на пустом поле — убрать последний выбранный
     if (e.key === 'Backspace' && text === '' && value.length > 0) {
-      removeInterest(value[value.length - 1]);
+      remove(value[value.length - 1]);
     }
   }
 
-  // подсказки из каталога — только те, что ещё не выбраны
-  const suggestions = INTEREST_OPTIONS.filter((opt) => !alreadyPicked(opt.label));
   const isFull = value.length >= MAX_INTERESTS;
 
   return (
@@ -54,11 +50,11 @@ export default function InterestPicker({ value, onChange }) {
           {value.map((name) => (
             <button
               type="button"
-              className="ichip ichip--picked"
               key={name}
-              onClick={() => removeInterest(name)}
+              className="ichip ichip--picked"
+              onClick={() => remove(name)}
             >
-              <span className="ichip__emoji">{interestEmoji(name)}</span>
+              <InterestIcon iconKey={interestIconKey(name)} />
               {name}
               <span className="ichip__x">✕</span>
             </button>
@@ -71,27 +67,34 @@ export default function InterestPicker({ value, onChange }) {
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={handleKeyDown}
+        maxLength={24}
         placeholder={isFull ? 'Достаточно интересов' : 'Свой вариант, затем Enter'}
         disabled={isFull}
-        maxLength={20}
       />
 
-      {!isFull && suggestions.length > 0 && (
-        <div className="picker__row picker__row--suggestions">
-          {suggestions.map((opt) => (
-            <button
-              type="button"
-              className="ichip ichip--add"
-              key={opt.label}
-              onClick={() => addInterest(opt.label)}
-            >
-              <span className="ichip__emoji">{opt.emoji}</span>
-              {opt.label}
-              <span className="ichip__plus">+</span>
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="picker__cats">
+        {INTEREST_CATEGORIES.map((cat) => (
+          <div className="picker__cat" key={cat.id}>
+            <div className="picker__cat-head">
+              <InterestIcon iconKey={cat.icon} />
+              {cat.name}
+            </div>
+            <div className="picker__row">
+              {cat.items.map((item) => (
+                <button
+                  type="button"
+                  key={item}
+                  className={`ichip ichip--add ${has(item) ? 'is-on' : ''}`}
+                  onClick={() => toggle(item)}
+                  disabled={isFull && !has(item)}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
 
       <p className="field__hint">
         {value.length}/{MAX_INTERESTS}
