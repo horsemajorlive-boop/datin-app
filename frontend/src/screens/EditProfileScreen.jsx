@@ -144,7 +144,7 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
         <label className="field">
           <span>Имя</span>
           <input
-            value={form.name}
+            value={form.name ?? ''}
             onChange={(e) => updateField('name', e.target.value)}
             maxLength={30}
             placeholder="Как вас зовут"
@@ -155,7 +155,7 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
           <span>Возраст</span>
           <input
             type="number"
-            value={form.age}
+            value={form.age ?? ''}
             onChange={(e) => updateField('age', e.target.value)}
             min={18}
             max={100}
@@ -165,7 +165,7 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
         <label className="field">
           <span>Город</span>
           <input
-            value={form.city}
+            value={form.city ?? ''}
             onChange={(e) => updateField('city', e.target.value)}
             maxLength={40}
             placeholder="Москва"
@@ -176,12 +176,12 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
           <span>О себе</span>
           <textarea
             rows={4}
-            value={form.bio}
+            value={form.bio ?? ''}
             onChange={(e) => updateField('bio', e.target.value)}
             maxLength={300}
             placeholder="Пара слов о себе, чем занимаетесь, что ищете"
           />
-          <span className="field__hint">{form.bio.length}/300</span>
+          <span className="field__hint">{(form.bio ?? '').length}/300</span>
         </label>
 
         <div className="field">

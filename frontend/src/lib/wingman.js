@@ -68,7 +68,8 @@ export function getSuggestions({ myProfile, match, messages }) {
   }
 
   // 3. Отвечаем на сообщение собеседника — смотрим на его текст.
-  const text = last.text.toLowerCase();
+  // У фото-сообщений text = null, поэтому подстраховываемся.
+  const text = (last.text || '').toLowerCase();
   const out = [];
 
   if (text.includes('?')) {

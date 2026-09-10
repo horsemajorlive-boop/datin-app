@@ -13,6 +13,7 @@ import ChatPane from '../components/ChatPane';
 //   onSelectChat — выбрать чат: onSelectChat(matchId)
 //   onSend       — отправить сообщение: onSend({ type, text?, photo? })
 //   onReact      — реакция: onReact(messageId, emoji)
+//   onTyping     — сообщить, что я печатаю: onTyping(kind)
 
 export default function ChatTab({
   matches,
@@ -24,6 +25,7 @@ export default function ChatTab({
   onSelectChat,
   onSend,
   onReact,
+  onTyping,
 }) {
   if (matches.length === 0) {
     return (
@@ -53,6 +55,7 @@ export default function ChatTab({
           myProfile={myProfile}
           onSend={onSend}
           onReact={onReact}
+          onTyping={onTyping}
         />
       ) : (
         <div className="chattab__empty">

@@ -16,6 +16,7 @@ import { api } from '../api';
 //   activity  — что делает собеседник сейчас: 'typing' | 'emoji' | 'photo' | undefined
 //   onSend    — отправить сообщение: onSend({ type, text?, photo? })
 //   onReact   — поставить/снять реакцию: onReact(messageId, emoji)
+//   onTyping  — сообщить собеседнику "я печатаю": onTyping(kind)
 
 const REACTIONS = ['❤️', '😂', '😮', '😢', '👍', '🔥'];
 
@@ -44,6 +45,7 @@ export default function ChatPane({
   activity,
   onSend,
   onReact,
+  onTyping,
 }) {
   const [text, setText] = useState('');
   const [showWingman, setShowWingman] = useState(true);
@@ -223,7 +225,10 @@ export default function ChatPane({
         <input
           className="chat__input"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value);
+            if (e.target.value) onTyping?.('typing');
+          }}
           placeholder="Сообщение…"
           maxLength={500}
         />

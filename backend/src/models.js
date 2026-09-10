@@ -247,6 +247,25 @@ export function partnerOf(matchId, userId) {
   return null;
 }
 
+// Оба участника мэтча: [user_a, user_b] или null.
+export function matchUsers(matchId) {
+  const m = db
+    .prepare(`SELECT user_a, user_b FROM matches WHERE id = ?`)
+    .get(matchId);
+  return m ? [m.user_a, m.user_b] : null;
+}
+
+// Все, с кем у пользователя есть мэтч (для рассылки presence).
+export function matchPartners(userId) {
+  return db
+    .prepare(
+      `SELECT CASE WHEN user_a = :me THEN user_b ELSE user_a END AS other
+         FROM matches WHERE user_a = :me OR user_b = :me`
+    )
+    .all({ me: userId })
+    .map((r) => r.other);
+}
+
 export function getMatches(userId) {
   const rows = db
     .prepare(
@@ -344,5 +363,5 @@ export function setReaction(messageId, userId, emoji) {
     next,
     messageId
   );
-  return { messageId, reaction: next };
+  return { messageId, reaction: next, matchId: msg.match_id };
 }

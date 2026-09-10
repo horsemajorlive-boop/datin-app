@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { requireAuth } from './auth.js';
 import * as model from './models.js';
 import { scheduleBotReply } from './bot.js';
+import { attachRealtime, emitMessage, emitReaction, emitMatch } from './realtime.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const UPLOAD_DIR = path.join(here, '..', 'uploads');
@@ -58,7 +59,11 @@ app.post('/api/swipes', (req, res) => {
   if (!targetId || targetId === req.user.id) {
     return res.status(400).json({ error: 'bad targetId' });
   }
-  res.json(model.recordSwipe(req.user.id, targetId, direction));
+  const result = model.recordSwipe(req.user.id, targetId, direction);
+  res.json(result);
+
+  // Новый мэтч — сообщаем обоим по WebSocket (список мэтчей обновится сам).
+  if (result.match) emitMatch([req.user.id, targetId]);
 });
 
 // Отмена свайпа ("вернуть"): { targetId }
@@ -93,6 +98,9 @@ app.post('/api/matches/:id/messages', (req, res) => {
   if (msg === null) return res.status(403).json({ error: 'not your match' });
   res.status(201).json(msg);
 
+  // Доставляем сообщение собеседнику мгновенно.
+  emitMessage(matchId, msg, req.user.id);
+
   // Демо: если собеседник — сид-бот (id >= 900000), он ответит через пару секунд.
   const partner = model.partnerOf(matchId, req.user.id);
   if (partner && partner >= 900000) scheduleBotReply(matchId, partner);
@@ -107,6 +115,8 @@ app.post('/api/messages/:id/reaction', (req, res) => {
   );
   if (out === null) return res.status(403).json({ error: 'not allowed' });
   res.json(out);
+
+  emitReaction(out.matchId, out.messageId, out.reaction, req.user.id);
 });
 
 // Загрузка фото: { dataUrl: "data:image/jpeg;base64,..." } -> { url }
@@ -127,9 +137,12 @@ app.post('/api/upload', (req, res) => {
 });
 
 const PORT = Number(process.env.PORT) || 3001;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`[api] http://localhost:${PORT}`);
   if (process.env.ALLOW_DEV_AUTH === 'true') {
-    console.log('[api] DEV-авторизация включена (заголовок X-Dev-User)');
+    console.log('[api] DEV-авторизация включена (X-Dev-User / ?dev=)');
   }
 });
+
+// Подключаем WebSocket к тому же серверу.
+attachRealtime(server);

@@ -7,8 +7,10 @@
 
 import { getInitData } from './telegram';
 
-// Адрес API. В разработке — отдельный порт; на проде можно задать VITE_API_URL.
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// Адрес API.
+// Пусто = тот же origin, что и страница (в dev Vite проксирует /api и /uploads
+// на бэкенд, см. vite.config.js). На проде можно задать VITE_API_URL.
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 function authHeaders() {
   const initData = getInitData();
@@ -44,8 +46,9 @@ export const api = {
   put: (path, body) => request('PUT', path, body ?? {}),
 };
 
-// "/uploads/abc.jpg" -> "http://localhost:3001/uploads/abc.jpg".
-// Внешние ссылки (https://...) возвращаем как есть.
+// Абсолютные ссылки (https://..., data:...) — как есть.
+// "/uploads/abc.jpg" остаётся относительным: страница сама достроит его
+// до своего origin, а Vite/прод-сервер отдаст файл с бэкенда.
 export function assetUrl(url) {
   if (!url) return url;
   if (/^(https?:|data:)/.test(url)) return url;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import BottomNav from './components/BottomNav';
 import DeckScreen from './screens/DeckScreen';
 import LikesScreen from './screens/LikesScreen';
@@ -9,14 +9,8 @@ import MatchScreen from './components/MatchScreen';
 import ChatTab from './screens/ChatTab';
 import { initTelegram } from './telegram';
 import { api, normalizeProfile, normalizeMessage } from './api';
+import { connectSocket, onSocket, sendSocket } from './socket';
 import './App.css';
-
-// Сид-боты имеют такие id и умеют авто-отвечать в чате.
-const BOT_ID_MIN = 900000;
-
-const ACTIVITY_KINDS = ['typing', 'typing', 'typing', 'emoji', 'photo'];
-const randomKind = () =>
-  ACTIVITY_KINDS[Math.floor(Math.random() * ACTIVITY_KINDS.length)];
 
 // Корневой компонент. Всё общее состояние теперь приходит с сервера:
 //  me        — своя анкета (GET /api/me)
@@ -39,6 +33,9 @@ export default function App() {
   const [activeChatId, setActiveChatId] = useState(null);
   const [matchPopup, setMatchPopup] = useState(null);
   const [editing, setEditing] = useState(false);
+
+  // таймеры авто-сброса статуса "печатает" по каждому чату
+  const typingTimers = useRef({});
 
   // ---------- загрузка данных ----------
 
@@ -80,14 +77,78 @@ export default function App() {
     if (activeChatId != null) loadChat(activeChatId);
   }, [activeChatId, loadChat]);
 
-  // Пока нет WebSocket — раз в 20 сек обновляем мэтчи (presence, последние
-  // сообщения) и активный чат, чтобы видеть ответы собеседника.
+  // ---------- живое соединение (WebSocket) ----------
+
   useEffect(() => {
-    const iv = setInterval(() => {
-      loadMatches();
-      if (activeChatId != null) loadChat(activeChatId);
-    }, 20000);
-    return () => clearInterval(iv);
+    connectSocket();
+
+    const offs = [
+      // при (пере)подключении — догоняем состояние
+      onSocket('open', () => {
+        loadMatches();
+        if (activeChatId != null) loadChat(activeChatId);
+      }),
+
+      // новое сообщение от собеседника
+      onSocket('message', ({ matchId, message }) => {
+        const msg = normalizeMessage(message);
+        setMessages((prev) => {
+          const thread = prev[matchId];
+          if (!thread) return prev; // чат не открыт — подтянется при открытии
+          if (thread.some((m) => m.id === msg.id)) return prev; // уже есть
+          return { ...prev, [matchId]: [...thread, msg] };
+        });
+        setActivities((prev) => {
+          const next = { ...prev };
+          delete next[matchId]; // дописал — статус убираем
+          return next;
+        });
+        loadMatches(); // обновить превью и порядок в списке
+      }),
+
+      // реакция на сообщение
+      onSocket('reaction', ({ matchId, messageId, reaction }) => {
+        setMessages((prev) =>
+          prev[matchId]
+            ? {
+                ...prev,
+                [matchId]: prev[matchId].map((m) =>
+                  m.id === messageId ? { ...m, reaction } : m
+                ),
+              }
+            : prev
+        );
+      }),
+
+      // собеседник печатает / выбирает эмодзи / фото
+      onSocket('typing', ({ matchId, kind }) => {
+        setActivities((prev) => ({ ...prev, [matchId]: kind || 'typing' }));
+        clearTimeout(typingTimers.current[matchId]);
+        typingTimers.current[matchId] = setTimeout(() => {
+          setActivities((prev) => {
+            const next = { ...prev };
+            delete next[matchId];
+            return next;
+          });
+        }, 5000);
+      }),
+
+      // кто-то зашёл/вышел
+      onSocket('presence', ({ userId, online }) => {
+        setMatches((prev) =>
+          prev.map((m) =>
+            m.profile.id === userId
+              ? { ...m, profile: { ...m.profile, online } }
+              : m
+          )
+        );
+      }),
+
+      // появился новый мэтч
+      onSocket('match', () => loadMatches()),
+    ];
+
+    return () => offs.forEach((off) => off());
   }, [loadMatches, loadChat, activeChatId]);
 
   // ---------- действия ----------
@@ -142,27 +203,12 @@ export default function App() {
   async function handleSend(payload) {
     const matchId = activeChatId;
     const sent = await api.post(`/matches/${matchId}/messages`, payload);
+    // своё сообщение показываем сразу; ответ собеседника прилетит по WebSocket
     setMessages((prev) => ({
       ...prev,
       [matchId]: [...(prev[matchId] || []), normalizeMessage(sent)],
     }));
-
-    // Собеседник-бот ответит через пару секунд. Показываем статус и потом
-    // перезагружаем чат, чтобы подхватить его сообщение.
-    const partner = matches.find((m) => m.matchId === matchId)?.profile;
-    if (partner && partner.id >= BOT_ID_MIN) {
-      const kind = randomKind();
-      setActivities((prev) => ({ ...prev, [matchId]: kind }));
-      setTimeout(() => {
-        setActivities((prev) => {
-          const next = { ...prev };
-          delete next[matchId];
-          return next;
-        });
-        loadChat(matchId);
-        loadMatches(); // обновить превью в списке
-      }, 2200);
-    }
+    loadMatches(); // обновить превью в списке
   }
 
   async function handleReact(messageId, emoji) {
@@ -174,6 +220,17 @@ export default function App() {
         m.id === messageId ? { ...m, reaction: res.reaction } : m
       ),
     }));
+  }
+
+  // Пользователь печатает — сообщаем собеседнику (не чаще раза в 2 сек).
+  const lastTypingSent = useRef(0);
+  function handleTyping(kind = 'typing') {
+    const now = Date.now();
+    if (now - lastTypingSent.current < 2000) return;
+    lastTypingSent.current = now;
+    if (activeChatId != null) {
+      sendSocket({ type: 'typing', matchId: activeChatId, kind });
+    }
   }
 
   // Свежая анкета собеседника открытого чата (из matches — там обновляется presence).
@@ -227,6 +284,7 @@ export default function App() {
             onSelectChat={setActiveChatId}
             onSend={handleSend}
             onReact={handleReact}
+            onTyping={handleTyping}
           />
         )}
         {tab === 'me' && renderProfileTab()}
