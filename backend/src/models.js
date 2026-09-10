@@ -65,8 +65,12 @@ function emptyProfile(userId) {
   };
 }
 
+// Сколько интересов минимум нужно указать при входе.
+const ONBOARDING_MIN_INTERESTS = 5;
+
 // Прошёл ли пользователь обязательный вход: принял правила + подтвердил 18,
-// заполнил имя, возраст (18+), пол и добавил хотя бы одно фото.
+// заполнил имя/возраст (18+)/пол, добавил фото, указал жильё/авто/работу
+// и минимум 5 интересов. Рост и вес — необязательные, здесь не проверяются.
 // Тот же список проверяется на сервере при POST /api/onboarding — обойти нельзя.
 function computeOnboarded(profile) {
   return (
@@ -75,7 +79,11 @@ function computeOnboarded(profile) {
     Number.isFinite(profile.age) &&
     profile.age >= 18 &&
     (profile.gender === 'f' || profile.gender === 'm') &&
-    profile.photos.length > 0
+    profile.photos.length > 0 &&
+    HOUSING_CODES.includes(profile.housing) &&
+    CAR_CODES.includes(profile.car) &&
+    EMPLOYMENT_CODES.includes(profile.employment) &&
+    profile.interests.length >= ONBOARDING_MIN_INTERESTS
   );
 }
 
@@ -190,6 +198,20 @@ export function acceptOnboarding(userId, data = {}) {
   const photos = (Array.isArray(data.photos) ? data.photos : [])
     .filter((u) => typeof u === 'string' && u.trim())
     .slice(0, 6);
+  const housing = oneOf(data.housing, HOUSING_CODES);
+  const car = oneOf(data.car, CAR_CODES);
+  const employment = oneOf(data.employment, EMPLOYMENT_CODES);
+  // интересы: чистим строки, убираем дубли (без учёта регистра)
+  const interests = [];
+  for (const raw of Array.isArray(data.interests) ? data.interests : []) {
+    const s = String(raw ?? '').trim().slice(0, 24);
+    if (s && !interests.some((v) => v.toLowerCase() === s.toLowerCase())) {
+      interests.push(s);
+    }
+  }
+  // рост и вес — необязательные (null, если не указаны)
+  const height = intInRange(data.height, 120, 230);
+  const weight = intInRange(data.weight, 35, 250);
 
   if (data.acceptAge !== true || data.acceptRules !== true) {
     return { error: 'Нужно подтвердить возраст и принять правила' };
@@ -198,10 +220,27 @@ export function acceptOnboarding(userId, data = {}) {
   if (age === null) return { error: 'Возраст — только от 18 до 100 лет' };
   if (!gender) return { error: 'Выберите пол' };
   if (photos.length === 0) return { error: 'Добавьте хотя бы одно фото' };
+  if (!housing || !car || !employment) {
+    return { error: 'Заполните жильё, авто и работу' };
+  }
+  if (interests.length < ONBOARDING_MIN_INTERESTS) {
+    return { error: `Выберите минимум ${ONBOARDING_MIN_INTERESTS} интересов` };
+  }
 
   // Пишем анкету, не затирая остальные поля, если они вдруг уже есть.
   const current = getFullProfile(userId);
-  saveProfile(userId, { ...current, name, age, gender });
+  saveProfile(userId, {
+    ...current,
+    name,
+    age,
+    gender,
+    housing,
+    car,
+    employment,
+    height,
+    weight,
+    interests,
+  });
   setPhotos(userId, photos);
   db.prepare(`UPDATE users SET terms_accepted_at = ? WHERE id = ?`).run(
     now(),

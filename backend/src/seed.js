@@ -14,7 +14,7 @@ const BOTS = [
     profile: {
       name: 'Аня', age: 24, city: 'Москва', gender: 'f',
       bio: 'Люблю горы, кофе по утрам и настолки. Ищу того, с кем можно и помолчать, и посмеяться.',
-      interests: ['Горы', 'Кофе', 'Настолки'],
+      interests: ['Горы', 'Кофе', 'Настолки', 'Походы', 'Кемпинг'],
       housing: 'rent', car: 'no', employment: 'working',
       height: 168, weight: 54, smoking: 'no', drinking: 'sometimes',
     },
@@ -27,7 +27,7 @@ const BOTS = [
     profile: {
       name: 'Лера', age: 27, city: 'Санкт-Петербург', gender: 'f',
       bio: 'Архитектор. Рисую, бегаю по утрам вдоль Невы, коллекционирую виниловые пластинки.',
-      interests: ['Архитектура', 'Бег', 'Винил'],
+      interests: ['Архитектура', 'Бег', 'Винил', 'Музыка', 'Искусство'],
       housing: 'own', car: 'yes', employment: 'working',
       height: 175, weight: 62, smoking: 'no', drinking: 'no',
     },
@@ -39,7 +39,7 @@ const BOTS = [
     profile: {
       name: 'Марина', age: 22, city: 'Казань', gender: 'f',
       bio: 'Студентка-биолог. Обожаю котов, документалки про природу и долгие прогулки.',
-      interests: ['Биология', 'Кошки', 'Документалки'],
+      interests: ['Биология', 'Кошки', 'Документалки', 'Природа', 'Волонтёрство в приютах'],
       housing: 'parents', car: 'no', employment: 'not_working',
       height: 162, weight: 50, smoking: 'sometimes', drinking: 'sometimes',
     },
@@ -52,7 +52,7 @@ const BOTS = [
     profile: {
       name: 'Соня', age: 29, city: 'Екатеринбург', gender: 'f',
       bio: 'Фотограф. Была в 30 странах, следующая — Япония. Ищу компаньона по путешествиям.',
-      interests: ['Фотография', 'Путешествия', 'Языки'],
+      interests: ['Фотография', 'Путешествия', 'Языки', 'Кино', 'Вино'],
       housing: 'own', car: 'yes', employment: 'working',
       height: 171, weight: 58, smoking: 'no', drinking: 'sometimes',
     },
@@ -64,7 +64,7 @@ const BOTS = [
     profile: {
       name: 'Катя', age: 25, city: 'Новосибирск', gender: 'f',
       bio: 'Программистка. Готовлю пасту лучше, чем пишу код (а код пишу неплохо). Люблю иронию.',
-      interests: ['Технологии', 'Готовка', 'Мемы'],
+      interests: ['Технологии', 'Готовка', 'Мемы', 'Видеоигры', 'Книги'],
       housing: 'rent', car: 'no', employment: 'working',
       height: 165, weight: 55, smoking: 'no', drinking: 'no',
     },
@@ -76,7 +76,7 @@ const BOTS = [
     profile: {
       name: 'Даша', age: 26, city: 'Сочи', gender: 'f',
       bio: 'Инструктор по сёрфингу. Море — это вся моя жизнь. Научу тебя ловить волну.',
-      interests: ['Сёрфинг', 'Море', 'Йога'],
+      interests: ['Сёрфинг', 'Море', 'Йога', 'Плавание', 'Путешествия'],
       housing: 'rent', car: 'yes', employment: 'working',
       height: 173, weight: 60, smoking: 'yes', drinking: 'yes',
     },

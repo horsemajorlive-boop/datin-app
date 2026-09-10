@@ -1,14 +1,20 @@
 import { useState } from 'react';
 import PhotoGrid from '../components/PhotoGrid';
+import RangeRow from '../components/RangeRow';
+import ChoiceRow from '../components/ChoiceRow';
+import InterestPicker from '../components/InterestPicker';
 import { api, normalizeProfile } from '../api';
 import { clampAge } from '../lib/filters';
 import { RULES } from '../data/rules';
+import { HOUSING, CAR, EMPLOYMENT } from '../data/lifestyle';
+import { HEIGHT_RANGE, WEIGHT_RANGE } from '../data/health';
 import { IconChevronLeft, IconCheck, IconHeart } from '../components/icons';
 
 // Обязательный вход в приложение. Пока пользователь не пройдёт все шаги,
 // App не показывает основной интерфейс — обойти экран нельзя.
 //
-// Шаги: 0 приветствие · 1 правила · 2 фото · 3 имя/возраст/пол
+// Шаги: 0 приветствие · 1 правила · 2 фото · 3 о себе (+ рост/вес по желанию)
+//       · 4 имущество (жильё/авто/работа) · 5 интересы (минимум 5)
 //
 // Props:
 //   onDone(profile) — вызвать с готовой анкетой, когда сервер подтвердил вход
@@ -18,7 +24,8 @@ const GENDERS = [
   { code: 'm', label: 'Мужчина' },
 ];
 
-const STEPS_TOTAL = 4;
+const MIN_INTERESTS = 5;
+const STEPS_TOTAL = 6;
 
 export default function Onboarding({ onDone }) {
   const [step, setStep] = useState(0);
@@ -29,6 +36,12 @@ export default function Onboarding({ onDone }) {
     name: '',
     age: '',
     gender: '',
+    height: null,
+    weight: null,
+    housing: '',
+    car: '',
+    employment: '',
+    interests: [],
   });
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -48,6 +61,12 @@ export default function Onboarding({ onDone }) {
         age: Number(data.age),
         gender: data.gender,
         photos: data.photos,
+        height: data.height ?? null,
+        weight: data.weight ?? null,
+        housing: data.housing,
+        car: data.car,
+        employment: data.employment,
+        interests: data.interests,
       });
       onDone(normalizeProfile(profile));
     } catch (err) {
@@ -58,13 +77,14 @@ export default function Onboarding({ onDone }) {
 
   // можно ли уйти с текущего шага дальше
   const canContinue =
-    (step === 0) ||
+    step === 0 ||
     (step === 1 && data.acceptAge && data.acceptRules) ||
     (step === 2 && data.photos.length > 0) ||
-    (step === 3 &&
-      data.name.trim() &&
-      Number(data.age) >= 18 &&
-      data.gender);
+    (step === 3 && data.name.trim() && Number(data.age) >= 18 && data.gender) ||
+    (step === 4 && data.housing && data.car && data.employment) ||
+    (step === 5 && data.interests.length >= MIN_INTERESTS);
+
+  const interestsLeft = MIN_INTERESTS - data.interests.length;
 
   return (
     <div className="onb">
@@ -196,6 +216,66 @@ export default function Onboarding({ onDone }) {
                 ))}
               </div>
             </div>
+
+            <RangeRow
+              label="Рост"
+              unit="см"
+              min={HEIGHT_RANGE.min}
+              max={HEIGHT_RANGE.max}
+              defaultValue={HEIGHT_RANGE.default}
+              value={data.height}
+              onChange={(v) => set({ height: v })}
+            />
+            <RangeRow
+              label="Вес"
+              unit="кг"
+              min={WEIGHT_RANGE.min}
+              max={WEIGHT_RANGE.max}
+              defaultValue={WEIGHT_RANGE.default}
+              value={data.weight}
+              onChange={(v) => set({ weight: v })}
+            />
+            <p className="field__hint">Рост и вес — по желанию</p>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="form">
+            <h2 className="onb__title">Имущество</h2>
+            <p className="muted onb__hint">Коротко о быте — это важно для поиска.</p>
+            <ChoiceRow
+              label="Жильё"
+              options={HOUSING}
+              value={data.housing}
+              onChange={(v) => set({ housing: v })}
+            />
+            <ChoiceRow
+              label="Автомобиль"
+              options={CAR}
+              value={data.car}
+              onChange={(v) => set({ car: v })}
+            />
+            <ChoiceRow
+              label="Работа"
+              options={EMPLOYMENT}
+              value={data.employment}
+              onChange={(v) => set({ employment: v })}
+            />
+          </div>
+        )}
+
+        {step === 5 && (
+          <div>
+            <h2 className="onb__title">Интересы</h2>
+            <p className="muted onb__hint">
+              {interestsLeft > 0
+                ? `Выберите минимум ${MIN_INTERESTS}. Осталось ещё ${interestsLeft}.`
+                : `Выбрано ${data.interests.length}. Можно добавить ещё или продолжить.`}
+            </p>
+            <InterestPicker
+              value={data.interests}
+              onChange={(interests) => set({ interests })}
+            />
           </div>
         )}
 
@@ -204,11 +284,7 @@ export default function Onboarding({ onDone }) {
 
       <footer className="onb__foot">
         {step < STEPS_TOTAL - 1 ? (
-          <button
-            className="btn-wide"
-            disabled={!canContinue}
-            onClick={next}
-          >
+          <button className="btn-wide" disabled={!canContinue} onClick={next}>
             {step === 0 ? 'Начать' : 'Продолжить'}
           </button>
         ) : (
