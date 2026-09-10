@@ -72,6 +72,28 @@ app.put('/api/me', (req, res) => {
   res.json({ ...model.getFullProfile(req.user.id), isAdmin: isAdmin(req.user.id) });
 });
 
+// Настройки: { isVisible?, showOnline? }
+app.patch('/api/me/settings', (req, res) => {
+  const profile = model.updateSettings(req.user.id, req.body || {});
+  res.json({ ...profile, isAdmin: isAdmin(req.user.id) });
+});
+
+// Удалить аккаунт целиком. Строки БД уходят каскадом, файлы чистим здесь.
+app.delete('/api/me', (req, res) => {
+  const { uploadFiles, verificationFile } = model.deleteAccount(req.user.id);
+  for (const f of uploadFiles) {
+    fs.rm(path.join(UPLOAD_DIR, path.basename(f)), { force: true }, () => {});
+  }
+  if (verificationFile) {
+    fs.rm(
+      path.join(VERIFY_DIR, path.basename(verificationFile)),
+      { force: true },
+      () => {}
+    );
+  }
+  res.json({ ok: true });
+});
+
 // Обязательный вход: принять правила + подтвердить 18 + имя/возраст/пол + фото.
 // { acceptAge, acceptRules, name, age, gender, photos: [url] }
 app.post('/api/onboarding', (req, res) => {

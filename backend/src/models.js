@@ -60,6 +60,7 @@ function emptyProfile(userId) {
     drinking: '',
     photos: [],
     isVisible: true,
+    showOnline: true,
     termsAcceptedAt: null,
     onboarded: false,
     verified: false,
@@ -102,7 +103,9 @@ function presence(userId) {
   };
 }
 
-export function getFullProfile(userId) {
+// forOther=true — анкету смотрит другой пользователь: если владелец скрыл
+// статус "в сети", не отдаём ему online/lastSeen.
+export function getFullProfile(userId, { forOther = false } = {}) {
   const row = db
     .prepare(`SELECT * FROM profiles WHERE user_id = ?`)
     .get(userId);
@@ -112,13 +115,20 @@ export function getFullProfile(userId) {
     .all(userId)
     .map((p) => p.url);
 
-  const { online, lastSeen } = presence(userId);
-
   const userRow = db
-    .prepare(`SELECT terms_accepted_at, verified_at FROM users WHERE id = ?`)
+    .prepare(
+      `SELECT terms_accepted_at, verified_at, show_online FROM users WHERE id = ?`
+    )
     .get(userId);
   const termsAcceptedAt = userRow?.terms_accepted_at ?? null;
   const verifiedAt = userRow?.verified_at ?? null;
+  const showOnline = (userRow?.show_online ?? 1) === 1;
+
+  let { online, lastSeen } = presence(userId);
+  if (forOther && !showOnline) {
+    online = false;
+    lastSeen = null;
+  }
 
   const vRow = db
     .prepare(`SELECT status FROM verifications WHERE user_id = ?`)
@@ -131,6 +141,7 @@ export function getFullProfile(userId) {
     verified: verifiedAt != null,
     verifiedAt,
     verificationStatus,
+    showOnline,
   };
 
   if (!row) {
@@ -478,7 +489,11 @@ export function recordSwipe(actorId, targetId, direction) {
     .prepare(`SELECT id FROM matches WHERE user_a = ? AND user_b = ?`)
     .get(a, b);
 
-  return { match: true, matchId: m.id, withUser: getFullProfile(targetId) };
+  return {
+    match: true,
+    matchId: m.id,
+    withUser: getFullProfile(targetId, { forOther: true }),
+  };
 }
 
 // Отмена последнего свайпа (кнопка "вернуть"). Удаляет свайп; если из-за него
@@ -546,7 +561,7 @@ export function getMatches(userId) {
     return {
       matchId: r.id,
       createdAt: r.created_at,
-      profile: getFullProfile(otherId),
+      profile: getFullProfile(otherId, { forOther: true }),
       lastMessage: last
         ? {
             type: last.type,
@@ -706,4 +721,45 @@ export function reviewVerification(userId, adminId, decision) {
 export function revokeVerification(userId) {
   db.prepare(`UPDATE users SET verified_at = NULL WHERE id = ?`).run(userId);
   db.prepare(`DELETE FROM verifications WHERE user_id = ?`).run(userId);
+}
+
+// ---------- Настройки и аккаунт ----------
+
+// Точечное обновление настроек. Пишем только то, что реально пришло.
+export function updateSettings(userId, patch = {}) {
+  if (typeof patch.isVisible === 'boolean') {
+    db.prepare(`UPDATE profiles SET is_visible = :v WHERE user_id = :u`).run({
+      v: patch.isVisible ? 1 : 0,
+      u: userId,
+    });
+  }
+  if (typeof patch.showOnline === 'boolean') {
+    db.prepare(`UPDATE users SET show_online = :v WHERE id = :u`).run({
+      v: patch.showOnline ? 1 : 0,
+      u: userId,
+    });
+  }
+  return getFullProfile(userId);
+}
+
+// Полное удаление аккаунта. Возвращает имена файлов, которые роут должен
+// удалить с диска (фото анкеты + селфи верификации). Строки БД уходят
+// каскадом по внешним ключам ON DELETE CASCADE.
+export function deleteAccount(userId) {
+  const photoFiles = db
+    .prepare(`SELECT url FROM photos WHERE user_id = ?`)
+    .all(userId)
+    .map((r) => r.url);
+  const vRow = db
+    .prepare(`SELECT photo_file FROM verifications WHERE user_id = ?`)
+    .get(userId);
+
+  db.prepare(`DELETE FROM users WHERE id = ?`).run(userId);
+
+  return {
+    uploadFiles: photoFiles
+      .filter((u) => typeof u === 'string' && u.startsWith('/uploads/'))
+      .map((u) => u.slice('/uploads/'.length)),
+    verificationFile: vRow?.photo_file || null,
+  };
 }

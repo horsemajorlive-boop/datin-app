@@ -40,6 +40,39 @@
   margin-bottom: 18px;
 }
 
+/* Заголовок экрана с кнопкой-иконкой справа (напр. шестерёнка настроек). */
+.screen__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.screen__head .screen__title {
+  margin-bottom: 0;
+}
+
+.screen__icon-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.screen__icon-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.screen__icon-btn:active {
+  color: var(--text);
+}
+
 .muted {
   color: var(--muted);
 }
@@ -230,12 +263,14 @@
   bottom: 0;
   padding: 20px;
   z-index: 2;
+  color: #fff; /* всегда поверх тёмного фото — в любой теме */
 }
 
 .card__info h2 {
   font-size: 24px;
   font-weight: 600;
   letter-spacing: -0.02em;
+  color: #fff;
 }
 
 .card__city {
@@ -265,6 +300,7 @@
 .card__info .ichip {
   padding: 4px 9px;
   font-size: 11.5px;
+  color: #fff;
   background: rgba(255, 255, 255, 0.14);
   border-color: rgba(255, 255, 255, 0.14);
 }
@@ -625,7 +661,7 @@
   font-weight: 500;
   color: var(--text);
   white-space: nowrap;
-  background: rgba(255, 255, 255, 0.055);
+  background: var(--fill);
   border: 1px solid var(--line);
 }
 
@@ -735,7 +771,7 @@
 
 /* Варианты в каталоге — нейтральные, пока не выбраны. */
 .ichip--add {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--fill);
   border: 1px solid var(--line-2);
   color: var(--text);
 }
@@ -795,7 +831,7 @@
 }
 
 .matchlist__item:active {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--fill);
 }
 
 .matchlist__photo {
@@ -1296,7 +1332,7 @@
 }
 
 .emojipick__btn:active {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--fill-2);
 }
 
 .chat__input {
@@ -1371,7 +1407,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  background: rgba(255, 255, 255, 0.055);
+  background: var(--fill);
   border: 1px solid var(--line-2);
   color: var(--text);
   padding: 7px 13px;
@@ -1483,7 +1519,7 @@
   height: 22px;
   border: none;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--fill-2);
   color: var(--muted);
   font-size: 11px;
   cursor: pointer;
@@ -1519,7 +1555,7 @@
 }
 
 .cityinput__list li button:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--fill);
 }
 
 .cityinput__empty {
@@ -1700,7 +1736,7 @@
 .photos__add {
   width: 100px;
   height: 132px;
-  border: 1px dashed rgba(255, 255, 255, 0.3);
+  border: 1px dashed var(--line-2);
   border-radius: 12px;
   background: var(--surface);
   color: var(--muted);
@@ -1751,6 +1787,7 @@
   max-width: 360px;
   padding: 24px;
   text-align: center;
+  color: #fff; /* экран мэтча всегда тёмно-драматичный, текст светлый */
 }
 
 .match__title {
@@ -1758,11 +1795,11 @@
   font-weight: 700;
   letter-spacing: -0.03em;
   margin-bottom: 6px;
-  color: var(--text);
+  color: #fff;
 }
 
 .match__subtitle {
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.7);
   margin-bottom: 28px;
 }
 
@@ -2247,4 +2284,165 @@
 
 .modcard__actions .btn-wide {
   margin-top: 0;
+}
+
+/* ================= Настройки ================= */
+
+.set-group {
+  margin-bottom: 22px;
+}
+
+.set-group__head {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+
+.set-group__head--danger {
+  color: var(--accent);
+}
+
+.set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 13px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--text);
+  text-align: left;
+}
+
+.set-row + .set-row {
+  margin-top: 8px;
+}
+
+.set-row--col {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.set-row--col > span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.set-row--btn {
+  cursor: pointer;
+  font: inherit;
+}
+
+.set-row__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.set-row__text small {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.set-row__chev {
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.set-rules {
+  margin: 8px 2px 0;
+}
+
+/* Тумблер */
+.switch {
+  flex-shrink: 0;
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  border: none;
+  background: var(--fill-2);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.switch.is-on {
+  background: var(--accent);
+}
+
+.switch:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.switch__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s ease;
+}
+
+.switch.is-on .switch__knob {
+  transform: translateX(18px);
+}
+
+/* Образцы акцентного цвета */
+.swatches {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.swatch {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: var(--sw);
+  cursor: pointer;
+  outline-offset: 2px;
+  transition: transform 0.1s ease;
+}
+
+.swatch:active {
+  transform: scale(0.92);
+}
+
+.swatch.is-on {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px var(--bg) inset;
+}
+
+.set-confirm p {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.set-confirm .form__actions {
+  gap: 12px;
+}
+
+/* Кнопки опасных действий */
+.btn-wide--danger {
+  color: var(--accent);
+  border-color: var(--accent-soft);
+}
+
+.btn-wide--danger-solid {
+  background: var(--accent);
+  color: #fff;
 }

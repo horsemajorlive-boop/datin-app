@@ -7,6 +7,7 @@ import MyProfileScreen from './screens/MyProfileScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
 import VerificationScreen from './screens/VerificationScreen';
 import AdminVerifications from './screens/AdminVerifications';
+import SettingsScreen from './screens/SettingsScreen';
 import Onboarding from './screens/Onboarding';
 import MatchScreen from './components/MatchScreen';
 import ChatTab from './screens/ChatTab';
@@ -304,12 +305,26 @@ export default function App() {
         />
       );
     }
+    if (profileView === 'settings') {
+      return (
+        <SettingsScreen
+          profile={me}
+          onBack={() => setProfileView('view')}
+          onChangedProfile={(updated) => {
+            setMe(updated);
+            loadFeed(); // видимость в поиске могла поменяться
+          }}
+          onDeleted={() => window.location.reload()}
+        />
+      );
+    }
     return (
       <MyProfileScreen
         profile={me}
         onEdit={() => setProfileView('edit')}
         onVerify={() => setProfileView('verify')}
         onModerate={() => setProfileView('admin')}
+        onOpenSettings={() => setProfileView('settings')}
       />
     );
   }

@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS users (
   created_at         INTEGER NOT NULL,
   last_seen_at       INTEGER NOT NULL,
   terms_accepted_at  INTEGER,         -- когда принял правила и подтвердил 18+ (NULL = ещё нет)
-  verified_at        INTEGER          -- когда админ подтвердил фото (NULL = не подтверждён)
+  verified_at        INTEGER,         -- когда админ подтвердил фото (NULL = не подтверждён)
+  show_online        INTEGER NOT NULL DEFAULT 1  -- 1 = показывать статус "в сети" другим
 );
 
 -- Заявки на верификацию фото. Одна активная на пользователя: новая заявка

@@ -67,4 +67,11 @@ try {
   /* колонка уже существует — ок */
 }
 
+try {
+  db.exec('ALTER TABLE users ADD COLUMN show_online INTEGER NOT NULL DEFAULT 1');
+  console.log('[db] миграция: добавлена колонка users.show_online');
+} catch {
+  /* колонка уже существует — ок */
+}
+
 console.log('[db] готова:', DB_PATH);

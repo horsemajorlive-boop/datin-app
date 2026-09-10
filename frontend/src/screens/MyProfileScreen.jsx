@@ -3,16 +3,17 @@ import InterestChips from '../components/InterestChips';
 import LifestyleChips from '../components/LifestyleChips';
 import HealthChips from '../components/HealthChips';
 import VerifiedBadge from '../components/VerifiedBadge';
-import { IconVerified } from '../components/icons';
+import { IconVerified, IconSettings } from '../components/icons';
 import { useCarousel } from '../lib/useCarousel';
 
 // Экран "Профиль" — как выглядит анкета самого пользователя.
 //
 // Props:
-//   profile    — анкета пользователя (из App)
-//   onEdit     — переключиться в режим редактирования
-//   onVerify   — открыть экран верификации
-//   onModerate — открыть очередь модерации (только у админа)
+//   profile        — анкета пользователя (из App)
+//   onEdit         — переключиться в режим редактирования
+//   onVerify       — открыть экран верификации
+//   onModerate     — открыть очередь модерации (только у админа)
+//   onOpenSettings — открыть настройки
 
 function VerificationRow({ profile, onVerify }) {
   if (profile.verified) {
@@ -46,15 +47,34 @@ function VerificationRow({ profile, onVerify }) {
   );
 }
 
-export default function MyProfileScreen({ profile, onEdit, onVerify, onModerate }) {
+export default function MyProfileScreen({
+  profile,
+  onEdit,
+  onVerify,
+  onModerate,
+  onOpenSettings,
+}) {
   // Хук — до любого return.
   const photo = useCarousel(profile.photos.length);
+
+  const header = (
+    <div className="screen__head">
+      <h1 className="screen__title">Мой профиль</h1>
+      <button
+        className="screen__icon-btn"
+        onClick={onOpenSettings}
+        aria-label="Настройки"
+      >
+        <IconSettings />
+      </button>
+    </div>
+  );
 
   // Считаем анкету "пустой", если не заполнено имя.
   if (!profile.name) {
     return (
       <div className="screen">
-        <h1 className="screen__title">Мой профиль</h1>
+        {header}
         <p className="muted">
           Анкета ещё не заполнена. Расскажите о себе — так вас будет видно другим.
         </p>
@@ -67,7 +87,7 @@ export default function MyProfileScreen({ profile, onEdit, onVerify, onModerate 
 
   return (
     <div className="screen">
-      <h1 className="screen__title">Мой профиль</h1>
+      {header}
 
       <div className="card card--static">
         <PhotoCarousel
