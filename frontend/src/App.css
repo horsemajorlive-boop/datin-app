@@ -54,6 +54,58 @@
   position: relative; /* чтобы "салют" из сердечек позиционировался от колоды */
 }
 
+/* Кнопка фильтров — плавает в правом верхнем углу над колодой. */
+.deck__filter {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  z-index: 20;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.deck__filter svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* точка-индикатор, когда фильтры активны */
+.deck__filter.is-active::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+}
+
+/* Поля "возраст от — до" в фильтрах. */
+.filter__age {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter__age input {
+  width: 100%;
+}
+
+.filter__dash {
+  color: var(--muted);
+}
+
 /* ================= "Салют" при лайке ================= */
 
 .likefx {

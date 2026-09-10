@@ -46,10 +46,21 @@ app.put('/api/me', (req, res) => {
   res.json(model.getFullProfile(req.user.id));
 });
 
-// Лента для свайпов
+// Лента для свайпов (+ необязательные фильтры в query-параметрах)
 app.get('/api/feed', (req, res) => {
-  const limit = Math.min(Number(req.query.limit) || 20, 50);
-  res.json(model.getFeed(req.user.id, limit));
+  const q = req.query;
+  res.json(
+    model.getFeed(req.user.id, {
+      limit: q.limit,
+      ageMin: q.ageMin ? Number(q.ageMin) : undefined,
+      ageMax: q.ageMax ? Number(q.ageMax) : undefined,
+      city: q.city ? String(q.city).trim().slice(0, 60) : undefined,
+      gender: q.gender,
+      housing: q.housing ? String(q.housing).split(',') : undefined,
+      car: q.car,
+      employment: q.employment,
+    })
+  );
 });
 
 // Свайп: { targetId, direction: 'like' | 'pass' }

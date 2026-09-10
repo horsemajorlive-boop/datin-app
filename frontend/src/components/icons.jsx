@@ -70,3 +70,13 @@ export function IconUser() {
     </svg>
   );
 }
+
+export function IconSliders() {
+  return (
+    <svg {...base}>
+      <path d="M4 8h10M18 8h2M4 16h4M12 16h8" />
+      <circle cx="16" cy="8" r="2.2" />
+      <circle cx="9" cy="16" r="2.2" />
+    </svg>
+  );
+}

@@ -10,6 +10,7 @@ import ChatTab from './screens/ChatTab';
 import { initTelegram } from './telegram';
 import { api, normalizeProfile, normalizeMessage } from './api';
 import { connectSocket, onSocket, sendSocket } from './socket';
+import { loadFilters, saveFilters, buildFeedQuery } from './lib/filters';
 import './App.css';
 
 // Корневой компонент. Всё общее состояние теперь приходит с сервера:
@@ -33,6 +34,7 @@ export default function App() {
   const [activeChatId, setActiveChatId] = useState(null);
   const [matchPopup, setMatchPopup] = useState(null);
   const [editing, setEditing] = useState(false);
+  const [filters, setFilters] = useState(loadFilters); // фильтры ленты (из localStorage)
 
   // таймеры авто-сброса статуса "печатает" по каждому чату
   const typingTimers = useRef({});
@@ -44,8 +46,9 @@ export default function App() {
   }, []);
 
   const loadFeed = useCallback(async () => {
-    setFeed((await api.get('/feed')).map(normalizeProfile));
-  }, []);
+    const list = await api.get('/feed' + buildFeedQuery(filters));
+    setFeed(list.map(normalizeProfile));
+  }, [filters]);
 
   const loadLikes = useCallback(async () => {
     setLikes((await api.get('/likes')).map(normalizeProfile));
@@ -76,10 +79,19 @@ export default function App() {
   useEffect(() => {
     initTelegram();
     loadMe();
-    loadFeed();
     loadLikes();
     loadMatches();
-  }, [loadMe, loadFeed, loadLikes, loadMatches]);
+  }, [loadMe, loadLikes, loadMatches]);
+
+  // Лента — при запуске и при каждом изменении фильтров.
+  useEffect(() => {
+    loadFeed();
+  }, [loadFeed]);
+
+  // Изменились фильтры — сохраняем в localStorage.
+  useEffect(() => {
+    saveFilters(filters);
+  }, [filters]);
 
   // Открыли чат — подгружаем его сообщения.
   useEffect(() => {
@@ -274,6 +286,8 @@ export default function App() {
         {tab === 'deck' && (
           <DeckScreen
             feed={feed}
+            filters={filters}
+            onChangeFilters={setFilters}
             onSwipe={handleSwipe}
             onUndoSwipe={handleUndoSwipe}
           />

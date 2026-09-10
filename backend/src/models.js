@@ -176,23 +176,66 @@ function hydrateProfiles(rows) {
   }));
 }
 
-// Кого показывать в поиске: видимые, не я, с заполненным именем, ещё не свайпнутые.
-export function getFeed(userId, limit = 20) {
+// Кого показывать в поиске.
+// Базовые условия: видимые, не я, с именем, ещё не свайпнутые.
+// opts — необязательные фильтры: ageMin, ageMax, city, gender, housing[], car, employment.
+export function getFeed(userId, opts = {}) {
+  const { ageMin, ageMax, city, gender, housing, car, employment } = opts;
+
+  // Собираем WHERE по кусочкам — только те условия, что реально заданы.
+  const where = [
+    'p.is_visible = 1',
+    'p.user_id <> :me',
+    "p.name <> ''",
+    'p.user_id NOT IN (SELECT target_id FROM swipes WHERE actor_id = :me)',
+  ];
+  const params = { me: userId, limit: Math.min(Number(opts.limit) || 20, 50) };
+
+  if (Number.isFinite(ageMin)) {
+    where.push('p.age >= :ageMin');
+    params.ageMin = ageMin;
+  }
+  if (Number.isFinite(ageMax)) {
+    where.push('p.age <= :ageMax');
+    params.ageMax = ageMax;
+  }
+  if (city) {
+    where.push('p.city LIKE :city');
+    params.city = `%${city}%`;
+  }
+  if (gender === 'f' || gender === 'm') {
+    where.push('p.gender = :gender');
+    params.gender = gender;
+  }
+  if (Array.isArray(housing)) {
+    const codes = housing.filter((h) => HOUSING_CODES.includes(h));
+    if (codes.length) {
+      // набор кодов ограничен, поэтому безопасно раскрыть в IN (:h0, :h1, ...)
+      const placeholders = codes.map((_, i) => `:h${i}`);
+      where.push(`p.housing IN (${placeholders.join(', ')})`);
+      codes.forEach((c, i) => (params[`h${i}`] = c));
+    }
+  }
+  if (CAR_CODES.includes(car)) {
+    where.push('p.car = :car');
+    params.car = car;
+  }
+  if (EMPLOYMENT_CODES.includes(employment)) {
+    where.push('p.employment = :employment');
+    params.employment = employment;
+  }
+
   const rows = db
     .prepare(
       `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
               p.housing, p.car, p.employment
          FROM profiles p
-        WHERE p.is_visible = 1
-          AND p.user_id <> :me
-          AND p.name <> ''
-          AND p.user_id NOT IN (
-            SELECT target_id FROM swipes WHERE actor_id = :me
-          )
+        WHERE ${where.join(' AND ')}
         ORDER BY p.updated_at DESC
         LIMIT :limit`
     )
-    .all({ me: userId, limit });
+    .all(params);
+
   return hydrateProfiles(rows);
 }
 
