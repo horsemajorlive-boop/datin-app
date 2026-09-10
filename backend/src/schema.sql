@@ -19,6 +19,9 @@ CREATE TABLE IF NOT EXISTS profiles (
   bio         TEXT    NOT NULL DEFAULT '',
   gender      TEXT    NOT NULL DEFAULT '',   -- 'f' | 'm' | ''
   interests   TEXT    NOT NULL DEFAULT '[]', -- JSON-массив строк
+  housing     TEXT    NOT NULL DEFAULT '',   -- 'own' | 'rent' | 'parents' | ''
+  car         TEXT    NOT NULL DEFAULT '',   -- 'yes' | 'no' | ''
+  employment  TEXT    NOT NULL DEFAULT '',   -- 'working' | 'not_working' | ''
   is_visible  INTEGER NOT NULL DEFAULT 1,    -- 1 = показывать в поиске
   updated_at  INTEGER NOT NULL
 );

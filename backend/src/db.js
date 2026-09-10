@@ -23,4 +23,16 @@ db.exec('PRAGMA foreign_keys = ON;');
 const schema = fs.readFileSync(path.join(here, 'schema.sql'), 'utf8');
 db.exec(schema);
 
+// Мини-миграции: добавляем новые колонки в уже существующую таблицу.
+// ALTER TABLE ... ADD COLUMN бросит ошибку, если колонка уже есть — глотаем её.
+const NEW_PROFILE_COLUMNS = ['housing', 'car', 'employment'];
+for (const col of NEW_PROFILE_COLUMNS) {
+  try {
+    db.exec(`ALTER TABLE profiles ADD COLUMN ${col} TEXT NOT NULL DEFAULT ''`);
+    console.log(`[db] миграция: добавлена колонка profiles.${col}`);
+  } catch {
+    /* колонка уже существует — ок */
+  }
+}
+
 console.log('[db] готова:', DB_PATH);

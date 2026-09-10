@@ -204,14 +204,22 @@
   overflow: hidden;
 }
 
-/* Ряд интересов на карточке в колоде — компактнее, чем в анкете. */
+/* Ряды чипов на карточке в колоде — компактнее, чем в анкете. */
 .card__info .ichips {
-  margin-bottom: 12px;
+  margin: 0 0 7px;
+  gap: 6px;
 }
 
 .card__info .ichip {
-  padding: 5px 10px;
-  font-size: 12px;
+  padding: 4px 9px;
+  font-size: 11.5px;
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+/* последний ряд чипов — отступ до кнопки "Подробнее" */
+.card__info .ichips:last-of-type {
+  margin-bottom: 12px;
 }
 
 .card__more {
@@ -1198,6 +1206,13 @@
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 8px;
+}
+
+/* Ряд вариантов "выбери один" (жильё / авто / работа в редакторе). */
+.choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .chipbtn {

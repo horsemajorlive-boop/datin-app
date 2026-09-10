@@ -2,6 +2,8 @@ import { useRef, useState } from 'react';
 import { fileToCompressedDataUrl } from '../lib/image';
 import { api } from '../api';
 import InterestPicker from '../components/InterestPicker';
+import ChoiceRow from '../components/ChoiceRow';
+import { HOUSING, CAR, EMPLOYMENT } from '../data/lifestyle';
 
 // Экран редактирования анкеты — форма с загрузкой фото.
 //
@@ -87,6 +89,9 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
       city: form.city.trim(),
       bio: form.bio.trim(),
       interests: form.interests,
+      housing: form.housing || '',
+      car: form.car || '',
+      employment: form.employment || '',
       photos: form.photos,
     });
   }
@@ -183,6 +188,25 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
           />
           <span className="field__hint">{(form.bio ?? '').length}/300</span>
         </label>
+
+        <ChoiceRow
+          label="Жильё"
+          options={HOUSING}
+          value={form.housing || ''}
+          onChange={(v) => updateField('housing', v)}
+        />
+        <ChoiceRow
+          label="Автомобиль"
+          options={CAR}
+          value={form.car || ''}
+          onChange={(v) => updateField('car', v)}
+        />
+        <ChoiceRow
+          label="Работа"
+          options={EMPLOYMENT}
+          value={form.employment || ''}
+          onChange={(v) => updateField('employment', v)}
+        />
 
         <div className="field">
           <span>Интересы</span>

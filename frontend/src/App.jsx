@@ -59,8 +59,17 @@ export default function App() {
   }, []);
 
   const loadChat = useCallback(async (matchId) => {
-    const list = await api.get(`/matches/${matchId}/messages`);
-    setMessages((prev) => ({ ...prev, [matchId]: list.map(normalizeMessage) }));
+    try {
+      const list = await api.get(`/matches/${matchId}/messages`);
+      setMessages((prev) => ({
+        ...prev,
+        [matchId]: list.map(normalizeMessage),
+      }));
+    } catch (err) {
+      // мэтч мог исчезнуть (отмена свайпа) — просто закрываем этот чат
+      console.warn('чат недоступен', matchId, err.message);
+      setActiveChatId((cur) => (cur === matchId ? null : cur));
+    }
   }, []);
 
   // Первая загрузка при запуске.

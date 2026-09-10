@@ -1,6 +1,7 @@
 import { getCurrentUser } from '../telegram';
 import PhotoCarousel from '../components/PhotoCarousel';
 import InterestChips from '../components/InterestChips';
+import LifestyleChips from '../components/LifestyleChips';
 import { useCarousel } from '../lib/useCarousel';
 
 // Экран "Профиль" — как выглядит анкета самого пользователя.
@@ -51,6 +52,7 @@ export default function MyProfileScreen({ profile, onEdit }) {
         </div>
       </div>
 
+      <LifestyleChips profile={profile} />
       <InterestChips interests={profile.interests} />
 
       <button className="btn-wide" onClick={onEdit}>

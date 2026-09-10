@@ -26,6 +26,12 @@ export function upsertUser(tgUser) {
 
 // ---------- Анкета ----------
 
+// Допустимые коды полей "образа жизни".
+const HOUSING_CODES = ['own', 'rent', 'parents'];
+const CAR_CODES = ['yes', 'no'];
+const EMPLOYMENT_CODES = ['working', 'not_working'];
+const oneOf = (value, codes) => (codes.includes(value) ? value : '');
+
 // Пустая анкета (когда пользователь ещё ничего не заполнил).
 function emptyProfile(userId) {
   return {
@@ -37,6 +43,9 @@ function emptyProfile(userId) {
     bio: '',
     gender: '',
     interests: [],
+    housing: '',
+    car: '',
+    employment: '',
     photos: [],
     isVisible: true,
   };
@@ -77,6 +86,9 @@ export function getFullProfile(userId) {
     bio: row.bio,
     gender: row.gender,
     interests: JSON.parse(row.interests || '[]'),
+    housing: row.housing || '',
+    car: row.car || '',
+    employment: row.employment || '',
     isVisible: !!row.is_visible,
     photos,
     online,
@@ -94,11 +106,17 @@ export function touchUser(userId) {
 
 export function saveProfile(userId, data) {
   db.prepare(
-    `INSERT INTO profiles (user_id, name, age, city, bio, gender, interests, updated_at)
-     VALUES (:user_id, :name, :age, :city, :bio, :gender, :interests, :ts)
+    `INSERT INTO profiles
+       (user_id, name, age, city, bio, gender, interests,
+        housing, car, employment, updated_at)
+     VALUES
+       (:user_id, :name, :age, :city, :bio, :gender, :interests,
+        :housing, :car, :employment, :ts)
      ON CONFLICT(user_id) DO UPDATE SET
        name = :name, age = :age, city = :city, bio = :bio,
-       gender = :gender, interests = :interests, updated_at = :ts`
+       gender = :gender, interests = :interests,
+       housing = :housing, car = :car, employment = :employment,
+       updated_at = :ts`
   ).run({
     user_id: userId,
     name: String(data.name ?? '').slice(0, 40),
@@ -109,6 +127,9 @@ export function saveProfile(userId, data) {
     interests: JSON.stringify(
       Array.isArray(data.interests) ? data.interests.slice(0, 12) : []
     ),
+    housing: oneOf(data.housing, HOUSING_CODES),
+    car: oneOf(data.car, CAR_CODES),
+    employment: oneOf(data.employment, EMPLOYMENT_CODES),
     ts: now(),
   });
 }
@@ -148,6 +169,9 @@ function hydrateProfiles(rows) {
     bio: r.bio,
     gender: r.gender,
     interests: JSON.parse(r.interests || '[]'),
+    housing: r.housing || '',
+    car: r.car || '',
+    employment: r.employment || '',
     photos: photosStmt.all(r.user_id).map((p) => p.url),
   }));
 }
@@ -156,7 +180,8 @@ function hydrateProfiles(rows) {
 export function getFeed(userId, limit = 20) {
   const rows = db
     .prepare(
-      `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests
+      `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
+              p.housing, p.car, p.employment
          FROM profiles p
         WHERE p.is_visible = 1
           AND p.user_id <> :me
@@ -175,7 +200,8 @@ export function getFeed(userId, limit = 20) {
 export function getMyLikes(userId) {
   const rows = db
     .prepare(
-      `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests
+      `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
+              p.housing, p.car, p.employment
          FROM swipes s
          JOIN profiles p ON p.user_id = s.target_id
         WHERE s.actor_id = :me AND s.direction = 'like'

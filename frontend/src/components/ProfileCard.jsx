@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import PhotoCarousel from './PhotoCarousel';
 import InterestChips from './InterestChips';
+import LifestyleChips from './LifestyleChips';
 import { useCarousel } from '../lib/useCarousel';
 
 // Одна карточка анкеты в колоде.
@@ -93,6 +94,7 @@ export default function ProfileCard({ profile, active, onSwipe, onOpen }) {
         </h2>
         <p className="card__city">{profile.city}</p>
         <p className="card__bio">{profile.bio}</p>
+        <LifestyleChips profile={profile} short />
         <InterestChips interests={profile.interests} limit={3} />
         <button
           className="card__more"
