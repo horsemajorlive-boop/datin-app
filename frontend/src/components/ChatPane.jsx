@@ -3,6 +3,7 @@ import WingmanBar from './WingmanBar';
 import DatePlanner from './DatePlanner';
 import EmojiPicker from './EmojiPicker';
 import VerifiedBadge from './VerifiedBadge';
+import ReportSheet from './ReportSheet';
 import { getSuggestions } from '../lib/wingman';
 import { fileToCompressedDataUrl } from '../lib/image';
 import { formatLastSeen } from '../lib/relativeTime';
@@ -13,6 +14,7 @@ import {
   IconSmile,
   IconImage,
   IconSend,
+  IconMore,
 } from './icons';
 
 // Правая часть вкладки "Чат" — сама переписка.
@@ -54,11 +56,14 @@ export default function ChatPane({
   onSend,
   onReact,
   onTyping,
+  onLeftChat,
 }) {
   const [text, setText] = useState('');
   const [showWingman, setShowWingman] = useState(true);
   const [showPlanner, setShowPlanner] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const [pickerFor, setPickerFor] = useState(null); // id сообщения с открытым выбором реакции
   const [, forceTick] = useState(0); // чтобы "был в сети N назад" обновлялся сам
   const bodyRef = useRef(null);
@@ -153,8 +158,48 @@ export default function ChatPane({
           >
             <IconSparkles />
           </button>
+          <div className="chat__menu-wrap">
+            <button
+              type="button"
+              className={`chat__tool ${showMenu ? 'is-on' : ''}`}
+              onClick={() => setShowMenu((v) => !v)}
+              aria-label="Ещё"
+            >
+              <IconMore />
+            </button>
+            {showMenu && (
+              <>
+                <div
+                  className="chat__menu-bg"
+                  onClick={() => setShowMenu(false)}
+                />
+                <div className="chat__menu">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMenu(false);
+                      setShowReport(true);
+                    }}
+                  >
+                    Пожаловаться
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
+
+      {showReport && (
+        <ReportSheet
+          user={{ id: match.id, name: match.name }}
+          onClose={() => setShowReport(false)}
+          onDone={() => {
+            setShowReport(false);
+            onLeftChat?.();
+          }}
+        />
+      )}
 
       <div className="chat__body" ref={bodyRef}>
         {messages.length === 0 && !activity ? (

@@ -26,6 +26,7 @@ export default function ChatTab({
   onSend,
   onReact,
   onTyping,
+  onLeftChat,
 }) {
   if (matches.length === 0) {
     return (
@@ -56,6 +57,7 @@ export default function ChatTab({
           onSend={onSend}
           onReact={onReact}
           onTyping={onTyping}
+          onLeftChat={onLeftChat}
         />
       ) : (
         <div className="chattab__empty">

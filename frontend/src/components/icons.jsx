@@ -151,6 +151,24 @@ export function IconTrash() {
   );
 }
 
+export function IconMore() {
+  return (
+    <svg {...base}>
+      <circle cx="12" cy="5" r="1" />
+      <circle cx="12" cy="12" r="1" />
+      <circle cx="12" cy="19" r="1" />
+    </svg>
+  );
+}
+
+export function IconFlag() {
+  return (
+    <svg {...base}>
+      <path d="M4 22V4M4 4h13l-2 5 2 5H4" />
+    </svg>
+  );
+}
+
 // "Золотая галочка" — заливка цветом currentColor, галочка белая.
 // Форма-звёздочка (по мотивам значков верификации).
 export function IconVerified() {

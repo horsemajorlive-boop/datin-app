@@ -359,6 +359,12 @@ export function getFeed(userId, opts = {}) {
     'p.user_id <> :me',
     "p.name <> ''",
     'p.user_id NOT IN (SELECT target_id FROM swipes WHERE actor_id = :me)',
+    // никого, с кем есть блокировка в любую сторону
+    `p.user_id NOT IN (
+       SELECT blocked_id FROM blocks WHERE blocker_id = :me
+       UNION
+       SELECT blocker_id FROM blocks WHERE blocked_id = :me
+     )`,
   ];
   const params = { me: userId, limit: Math.min(Number(opts.limit) || 20, 50) };
 
@@ -449,6 +455,11 @@ export function getMyLikes(userId) {
          JOIN profiles p ON p.user_id = s.target_id
          JOIN users u ON u.id = p.user_id
         WHERE s.actor_id = :me AND s.direction = 'like'
+          AND p.user_id NOT IN (
+            SELECT blocked_id FROM blocks WHERE blocker_id = :me
+            UNION
+            SELECT blocker_id FROM blocks WHERE blocked_id = :me
+          )
         ORDER BY s.created_at DESC`
     )
     .all({ me: userId });
@@ -459,6 +470,8 @@ export function getMyLikes(userId) {
 
 // Возвращает { match: boolean, matchId?: number, withUser?: profile }
 export function recordSwipe(actorId, targetId, direction) {
+  if (isBlockedEitherWay(actorId, targetId)) return { match: false };
+
   db.prepare(
     `INSERT INTO swipes (actor_id, target_id, direction, created_at)
      VALUES (:a, :t, :d, :ts)
@@ -762,4 +775,141 @@ export function deleteAccount(userId) {
       .map((u) => u.slice('/uploads/'.length)),
     verificationFile: vRow?.photo_file || null,
   };
+}
+
+// ---------- Блокировки и жалобы ----------
+
+const REPORT_REASONS = ['spam', 'scam', 'offensive', 'photos', 'underage', 'other'];
+
+// Есть ли блокировка между a и b в любую сторону.
+export function isBlockedEitherWay(a, b) {
+  const row = db
+    .prepare(
+      `SELECT 1 FROM blocks
+        WHERE (blocker_id = :a AND blocked_id = :b)
+           OR (blocker_id = :b AND blocked_id = :a)
+        LIMIT 1`
+    )
+    .get({ a, b });
+  return !!row;
+}
+
+// Заблокировать пользователя: запись в blocks + разрыв связи
+// (свайпы обеих сторон и мэтч со всей перепиской).
+export function blockUser(blockerId, blockedId) {
+  if (blockerId === blockedId) return { error: 'нельзя заблокировать себя' };
+
+  db.prepare(
+    `INSERT INTO blocks (blocker_id, blocked_id, created_at)
+     VALUES (:b, :t, :ts)
+     ON CONFLICT(blocker_id, blocked_id) DO NOTHING`
+  ).run({ b: blockerId, t: blockedId, ts: now() });
+
+  db.prepare(
+    `DELETE FROM swipes
+      WHERE (actor_id = :a AND target_id = :b)
+         OR (actor_id = :b AND target_id = :a)`
+  ).run({ a: blockerId, b: blockedId });
+
+  const lo = Math.min(blockerId, blockedId);
+  const hi = Math.max(blockerId, blockedId);
+  db.prepare(`DELETE FROM matches WHERE user_a = ? AND user_b = ?`).run(lo, hi);
+
+  return { ok: true };
+}
+
+export function unblockUser(blockerId, blockedId) {
+  db.prepare(
+    `DELETE FROM blocks WHERE blocker_id = ? AND blocked_id = ?`
+  ).run(blockerId, blockedId);
+  return { ok: true };
+}
+
+// Кого я заблокировал — для экрана настроек.
+export function getBlockedList(userId) {
+  const rows = db
+    .prepare(
+      `SELECT b.blocked_id AS id, p.name
+         FROM blocks b
+         LEFT JOIN profiles p ON p.user_id = b.blocked_id
+        WHERE b.blocker_id = :me
+        ORDER BY b.created_at DESC`
+    )
+    .all({ me: userId });
+
+  const photoStmt = db.prepare(
+    `SELECT url FROM photos WHERE user_id = ? ORDER BY position LIMIT 1`
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name || 'Пользователь',
+    photo: photoStmt.get(r.id)?.url || null,
+  }));
+}
+
+// Пожаловаться. Жалоба всегда сопровождается блокировкой.
+export function createReport(reporterId, reportedId, reason, note) {
+  if (reporterId === reportedId) return { error: 'нельзя пожаловаться на себя' };
+  if (!REPORT_REASONS.includes(reason)) return { error: 'неизвестная причина' };
+
+  db.prepare(
+    `INSERT INTO reports (reporter_id, reported_id, reason, note, created_at)
+     VALUES (:r, :t, :reason, :note, :ts)`
+  ).run({
+    r: reporterId,
+    t: reportedId,
+    reason,
+    note: String(note ?? '').slice(0, 500),
+    ts: now(),
+  });
+
+  blockUser(reporterId, reportedId);
+  return { ok: true };
+}
+
+// Очередь жалоб для админа: открытые, с анкетой того, на кого пожаловались.
+export function getOpenReports() {
+  const rows = db
+    .prepare(
+      `SELECT r.id, r.reason, r.note, r.created_at,
+              r.reporter_id, r.reported_id,
+              rep.name AS reporter_name, tgt.name AS reported_name
+         FROM reports r
+         LEFT JOIN profiles rep ON rep.user_id = r.reporter_id
+         LEFT JOIN profiles tgt ON tgt.user_id = r.reported_id
+        WHERE r.status = 'open'
+        ORDER BY r.created_at ASC`
+    )
+    .all();
+
+  const photosStmt = db.prepare(
+    `SELECT url FROM photos WHERE user_id = ? ORDER BY position`
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    reason: r.reason,
+    note: r.note,
+    createdAt: r.created_at,
+    reporterId: r.reporter_id,
+    reporterName: r.reporter_name || 'Пользователь',
+    reportedId: r.reported_id,
+    reportedName: r.reported_name || 'Пользователь',
+    reportedPhotos: photosStmt.all(r.reported_id).map((p) => p.url),
+  }));
+}
+
+export function reviewReport(reportId, adminId) {
+  const info = db
+    .prepare(
+      `UPDATE reports SET status = 'reviewed', reviewed_at = :ts, reviewed_by = :admin
+        WHERE id = :id AND status = 'open'`
+    )
+    .run({ ts: now(), admin: adminId, id: reportId });
+  return info.changes > 0 ? { ok: true } : { error: 'жалоба не найдена' };
+}
+
+// Быстрое действие админа: скрыть анкету из поиска.
+export function hideProfile(userId) {
+  db.prepare(`UPDATE profiles SET is_visible = 0 WHERE user_id = ?`).run(userId);
+  return { ok: true };
 }

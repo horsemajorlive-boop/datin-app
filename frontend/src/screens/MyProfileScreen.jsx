@@ -52,6 +52,7 @@ export default function MyProfileScreen({
   onEdit,
   onVerify,
   onModerate,
+  onOpenReports,
   onOpenSettings,
 }) {
   // Хук — до любого return.
@@ -119,9 +120,14 @@ export default function MyProfileScreen({
       </button>
 
       {profile.isAdmin && (
-        <button className="btn-wide btn-wide--ghost" onClick={onModerate}>
-          Модерация верификаций
-        </button>
+        <>
+          <button className="btn-wide btn-wide--ghost" onClick={onModerate}>
+            Модерация верификаций
+          </button>
+          <button className="btn-wide btn-wide--ghost" onClick={onOpenReports}>
+            Жалобы
+          </button>
+        </>
       )}
     </div>
   );

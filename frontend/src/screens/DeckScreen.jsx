@@ -20,6 +20,7 @@ export default function DeckScreen({
   onChangeFilters,
   onSwipe,
   onUndoSwipe,
+  onBlockOrReport,
 }) {
   const [opened, setOpened] = useState(null);
   const [locked, setLocked] = useState(false);
@@ -53,7 +54,14 @@ export default function DeckScreen({
         <div className="paywall-hint">Возврат анкеты — функция премиума</div>
       )}
 
-      <ProfileSheet profile={opened} onClose={() => setOpened(null)} />
+      <ProfileSheet
+        profile={opened}
+        onClose={() => setOpened(null)}
+        onResolved={() => {
+          setOpened(null);
+          onBlockOrReport?.();
+        }}
+      />
 
       {showFilters && (
         <FilterSheet

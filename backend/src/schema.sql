@@ -85,6 +85,31 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at INTEGER NOT NULL
 );
 
+-- Блокировки: blocker заблокировал blocked. Действует в обе стороны
+-- (они не видят друг друга нигде). Пара уникальна.
+CREATE TABLE IF NOT EXISTS blocks (
+  blocker_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  blocked_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (blocker_id, blocked_id)
+);
+
+-- Жалобы на пользователей — для модерации.
+CREATE TABLE IF NOT EXISTS reports (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  reporter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reported_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  reason      TEXT    NOT NULL,                 -- код причины
+  note        TEXT    NOT NULL DEFAULT '',      -- необязательный комментарий
+  status      TEXT    NOT NULL DEFAULT 'open',  -- 'open' | 'reviewed'
+  created_at  INTEGER NOT NULL,
+  reviewed_at INTEGER,
+  reviewed_by INTEGER
+);
+
 CREATE INDEX IF NOT EXISTS idx_messages_match ON messages(match_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_swipes_actor  ON swipes(actor_id);
 CREATE INDEX IF NOT EXISTS idx_swipes_target ON swipes(target_id);
+CREATE INDEX IF NOT EXISTS idx_blocks_blocker ON blocks(blocker_id);
+CREATE INDEX IF NOT EXISTS idx_blocks_blocked ON blocks(blocked_id);
+CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status, created_at);

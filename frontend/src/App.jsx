@@ -7,6 +7,7 @@ import MyProfileScreen from './screens/MyProfileScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
 import VerificationScreen from './screens/VerificationScreen';
 import AdminVerifications from './screens/AdminVerifications';
+import AdminReports from './screens/AdminReports';
 import SettingsScreen from './screens/SettingsScreen';
 import Onboarding from './screens/Onboarding';
 import MatchScreen from './components/MatchScreen';
@@ -219,6 +220,20 @@ export default function App() {
     }
   }
 
+  // После жалобы/блокировки (сам запрос уже сделал компонент) — обновляем всё,
+  // где мог остаться заблокированный человек.
+  function refreshAfterBlock() {
+    loadFeed();
+    loadLikes();
+    loadMatches();
+  }
+
+  function handleLeftChat() {
+    setActiveChatId(null);
+    setTab('chat');
+    refreshAfterBlock();
+  }
+
   async function handleSaveProfile(data) {
     const saved = await api.put('/me', data);
     setMe(normalizeProfile(saved));
@@ -305,6 +320,9 @@ export default function App() {
         />
       );
     }
+    if (profileView === 'reports') {
+      return <AdminReports onBack={() => setProfileView('view')} />;
+    }
     if (profileView === 'settings') {
       return (
         <SettingsScreen
@@ -314,6 +332,7 @@ export default function App() {
             setMe(updated);
             loadFeed(); // видимость в поиске могла поменяться
           }}
+          onBlockedChanged={() => loadFeed()}
           onDeleted={() => window.location.reload()}
         />
       );
@@ -324,6 +343,7 @@ export default function App() {
         onEdit={() => setProfileView('edit')}
         onVerify={() => setProfileView('verify')}
         onModerate={() => setProfileView('admin')}
+        onOpenReports={() => setProfileView('reports')}
         onOpenSettings={() => setProfileView('settings')}
       />
     );
@@ -345,6 +365,7 @@ export default function App() {
             onChangeFilters={setFilters}
             onSwipe={handleSwipe}
             onUndoSwipe={handleUndoSwipe}
+            onBlockOrReport={refreshAfterBlock}
           />
         )}
         {tab === 'likes' && <LikesScreen liked={likes} />}
@@ -363,6 +384,7 @@ export default function App() {
             onSend={handleSend}
             onReact={handleReact}
             onTyping={handleTyping}
+            onLeftChat={handleLeftChat}
           />
         )}
         {tab === 'me' && renderProfileTab()}

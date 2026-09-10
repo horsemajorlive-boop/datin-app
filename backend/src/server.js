@@ -138,6 +138,26 @@ app.post('/api/admin/verifications/:userId/review', requireAdmin, (req, res) => 
   res.json(out);
 });
 
+// --- Жалобы (только админ) ---
+
+app.get('/api/admin/reports', requireAdmin, (req, res) => {
+  res.json(model.getOpenReports());
+});
+
+// Пометить жалобу разобранной
+app.post('/api/admin/reports/:id/review', requireAdmin, (req, res) => {
+  const out = model.reviewReport(Number(req.params.id), req.user.id);
+  if (out.error) return res.status(404).json({ error: out.error });
+  res.json(out);
+});
+
+// Быстро скрыть анкету пользователя из поиска: { userId }
+app.post('/api/admin/hide-profile', requireAdmin, (req, res) => {
+  const userId = Number(req.body?.userId);
+  if (!userId) return res.status(400).json({ error: 'bad userId' });
+  res.json(model.hideProfile(userId));
+});
+
 // Лента для свайпов (+ необязательные фильтры в query-параметрах)
 app.get('/api/feed', (req, res) => {
   const q = req.query;
@@ -181,6 +201,43 @@ app.post('/api/swipes/undo', (req, res) => {
   if (!targetId) return res.status(400).json({ error: 'bad targetId' });
   model.undoSwipe(req.user.id, targetId);
   res.json({ ok: true });
+});
+
+// --- Блокировки и жалобы ---
+
+// Заблокировать: { userId }
+app.post('/api/block', (req, res) => {
+  const targetId = Number(req.body?.userId);
+  if (!targetId) return res.status(400).json({ error: 'bad userId' });
+  const out = model.blockUser(req.user.id, targetId);
+  if (out.error) return res.status(400).json({ error: out.error });
+  res.json(out);
+});
+
+// Разблокировать: { userId }
+app.post('/api/unblock', (req, res) => {
+  const targetId = Number(req.body?.userId);
+  if (!targetId) return res.status(400).json({ error: 'bad userId' });
+  res.json(model.unblockUser(req.user.id, targetId));
+});
+
+// Кого я заблокировал
+app.get('/api/blocked', (req, res) => {
+  res.json(model.getBlockedList(req.user.id));
+});
+
+// Пожаловаться: { userId, reason, note? } — заодно блокирует
+app.post('/api/report', (req, res) => {
+  const targetId = Number(req.body?.userId);
+  if (!targetId) return res.status(400).json({ error: 'bad userId' });
+  const out = model.createReport(
+    req.user.id,
+    targetId,
+    String(req.body?.reason || ''),
+    req.body?.note
+  );
+  if (out.error) return res.status(400).json({ error: out.error });
+  res.json(out);
 });
 
 // Кого я лайкнул (вкладка "Симпатии")

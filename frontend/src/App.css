@@ -2467,3 +2467,108 @@
   background: var(--accent);
   color: #fff;
 }
+
+/* ================= Жалобы и блокировки ================= */
+
+.report__hint {
+  font-size: 13px;
+}
+
+.report__reasons {
+  margin: 14px 0 12px;
+}
+
+.report__note {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 66px;
+  outline: none;
+}
+
+.report__note:focus {
+  border-color: var(--accent);
+}
+
+/* Меню "ещё" в шапке чата */
+.chat__menu-wrap {
+  position: relative;
+}
+
+.chat__menu-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+}
+
+.chat__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 31;
+  min-width: 160px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.chat__menu button {
+  display: block;
+  width: 100%;
+  padding: 11px 14px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 14px;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.chat__menu button:active {
+  background: var(--fill);
+}
+
+/* Список заблокированных в настройках */
+.blocklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.blocklist__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.blocklist__item img,
+.blocklist__ph {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--surface-2);
+  flex-shrink: 0;
+}
+
+.blocklist__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

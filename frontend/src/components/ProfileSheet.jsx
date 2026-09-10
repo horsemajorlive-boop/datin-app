@@ -1,20 +1,24 @@
+import { useState } from 'react';
 import PhotoCarousel from './PhotoCarousel';
 import InterestChips from './InterestChips';
 import LifestyleChips from './LifestyleChips';
 import HealthChips from './HealthChips';
 import VerifiedBadge from './VerifiedBadge';
+import ReportSheet from './ReportSheet';
 import { useCarousel } from '../lib/useCarousel';
 
 // Всплывающее окно ("шторка") с полной анкетой.
 //
 // Props:
-//   profile — какую анкету показать (или null — тогда ничего не рисуем)
-//   onClose — закрыть окно
+//   profile    — какую анкету показать (или null — тогда ничего не рисуем)
+//   onClose    — закрыть окно
+//   onResolved — вызвать после жалобы/блокировки (родитель обновит ленту)
 
-export default function ProfileSheet({ profile, onClose }) {
+export default function ProfileSheet({ profile, onClose, onResolved }) {
   // Хук вызываем ВСЕГДА и до любого return — таково правило хуков в React.
   // Если анкеты нет, длину считаем нулём.
   const photo = useCarousel(profile?.photos.length ?? 0);
+  const [showReport, setShowReport] = useState(false);
 
   if (!profile) return null;
 
@@ -47,8 +51,25 @@ export default function ProfileSheet({ profile, onClose }) {
           <button className="btn-wide" onClick={onClose}>
             Закрыть
           </button>
+          <button
+            className="btn-wide btn-wide--ghost btn-wide--danger"
+            onClick={() => setShowReport(true)}
+          >
+            Пожаловаться
+          </button>
         </div>
       </div>
+
+      {showReport && (
+        <ReportSheet
+          user={{ id: profile.id, name: profile.name }}
+          onClose={() => setShowReport(false)}
+          onDone={() => {
+            setShowReport(false);
+            onResolved?.(profile.id);
+          }}
+        />
+      )}
     </div>
   );
 }

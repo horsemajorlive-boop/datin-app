@@ -9,6 +9,7 @@ import {
 } from '../lib/theme';
 import { RULES } from '../data/rules';
 import { IconChevronLeft } from '../components/icons';
+import { assetUrl } from '../api';
 import pkg from '../../package.json';
 
 // Экран настроек в профиле.
@@ -17,6 +18,7 @@ import pkg from '../../package.json';
 //   profile         — своя анкета (нужны isVisible, showOnline)
 //   onBack          — вернуться в профиль
 //   onChangedProfile(me) — после смены настроек анкеты
+//   onBlockedChanged — после разблокировки (родитель обновит ленту)
 //   onDeleted       — после удаления аккаунта
 
 function Switch({ checked, onChange, disabled }) {
@@ -38,14 +40,39 @@ export default function SettingsScreen({
   profile,
   onBack,
   onChangedProfile,
+  onBlockedChanged,
   onDeleted,
 }) {
   const [prefs, setPrefs] = useState(loadThemePrefs);
   const [savingSetting, setSavingSetting] = useState(false);
   const [showRules, setShowRules] = useState(false);
+  const [showBlocked, setShowBlocked] = useState(false);
+  const [blocked, setBlocked] = useState(null); // null = ещё не грузили
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
+
+  async function toggleBlocked() {
+    const next = !showBlocked;
+    setShowBlocked(next);
+    if (next && blocked == null) {
+      try {
+        setBlocked(await api.get('/blocked'));
+      } catch {
+        setBlocked([]);
+      }
+    }
+  }
+
+  async function unblock(id) {
+    try {
+      await api.post('/unblock', { userId: id });
+      setBlocked((cur) => cur.filter((u) => u.id !== id));
+      onBlockedChanged?.();
+    } catch (err) {
+      setError(err.message || 'Не удалось разблокировать');
+    }
+  }
 
   function setTheme(next) {
     const updated = { ...prefs, ...next };
@@ -150,6 +177,48 @@ export default function SettingsScreen({
             onChange={(on) => patchSetting({ showOnline: on })}
           />
         </div>
+      </div>
+
+      {/* ПРИВАТНОСТЬ */}
+      <div className="set-group">
+        <div className="set-group__head">Приватность</div>
+
+        <button
+          type="button"
+          className="set-row set-row--btn"
+          onClick={toggleBlocked}
+        >
+          <span>
+            Заблокированные
+            {blocked != null && blocked.length > 0 ? ` (${blocked.length})` : ''}
+          </span>
+          <span className="set-row__chev">{showBlocked ? '–' : '+'}</span>
+        </button>
+        {showBlocked && (
+          <div className="blocklist">
+            {blocked == null && <p className="muted">Загрузка…</p>}
+            {blocked != null && blocked.length === 0 && (
+              <p className="muted">Список пуст.</p>
+            )}
+            {blocked?.map((u) => (
+              <div className="blocklist__item" key={u.id}>
+                {u.photo ? (
+                  <img src={assetUrl(u.photo)} alt={u.name} />
+                ) : (
+                  <span className="blocklist__ph" />
+                )}
+                <span className="blocklist__name">{u.name}</span>
+                <button
+                  type="button"
+                  className="chipbtn"
+                  onClick={() => unblock(u.id)}
+                >
+                  Разблокировать
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* О ПРИЛОЖЕНИИ */}
