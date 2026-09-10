@@ -8,7 +8,7 @@ import { clampAge } from '../lib/filters';
 import { RULES } from '../data/rules';
 import { HOUSING, CAR, EMPLOYMENT } from '../data/lifestyle';
 import { HEIGHT_RANGE, WEIGHT_RANGE } from '../data/health';
-import { GOAL, INTENT, KIDS } from '../data/goals';
+import { GOAL, KIDS } from '../data/goals';
 import { IconChevronLeft, IconCheck, IconHeart } from '../components/icons';
 
 // Обязательный вход в приложение. Пока пользователь не пройдёт все шаги,
@@ -40,7 +40,6 @@ export default function Onboarding({ onDone }) {
     height: null,
     weight: null,
     goal: '',
-    intent: '',
     kids: '',
     housing: '',
     car: '',
@@ -68,7 +67,6 @@ export default function Onboarding({ onDone }) {
         height: data.height ?? null,
         weight: data.weight ?? null,
         goal: data.goal,
-        intent: data.intent,
         kids: data.kids,
         housing: data.housing,
         car: data.car,
@@ -88,7 +86,7 @@ export default function Onboarding({ onDone }) {
     (step === 1 && data.acceptAge && data.acceptRules) ||
     (step === 2 && data.photos.length > 0) ||
     (step === 3 && data.name.trim() && Number(data.age) >= 18 && data.gender) ||
-    (step === 4 && data.goal && data.intent) ||
+    (step === 4 && data.goal) ||
     (step === 5 && data.housing && data.car && data.employment) ||
     (step === 6 && data.interests.length >= MIN_INTERESTS);
 
@@ -254,16 +252,10 @@ export default function Onboarding({ onDone }) {
               Так проще найти тех, кто ищет то же самое.
             </p>
             <ChoiceRow
-              label="Что ищете"
+              label="Что хотите от сайта"
               options={GOAL}
               value={data.goal}
               onChange={(v) => set({ goal: v })}
-            />
-            <ChoiceRow
-              label="Насколько серьёзно"
-              options={INTENT}
-              value={data.intent}
-              onChange={(v) => set({ intent: v })}
             />
             <ChoiceRow
               label="Дети · по желанию"

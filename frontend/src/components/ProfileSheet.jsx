@@ -29,7 +29,7 @@ export default function ProfileSheet({
 
   if (!profile) return null;
 
-  const hasGoals = profile.goal || profile.intent || profile.kids;
+  const hasGoals = profile.goal || profile.kids;
   const hasLifestyle =
     profile.housing || profile.car || profile.employment ||
     profile.height || profile.weight || profile.smoking || profile.drinking;

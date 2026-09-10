@@ -6,7 +6,7 @@ import RangeRow from '../components/RangeRow';
 import PhotoGrid from '../components/PhotoGrid';
 import { HOUSING, CAR, EMPLOYMENT } from '../data/lifestyle';
 import { SMOKING, DRINKING, HEIGHT_RANGE, WEIGHT_RANGE } from '../data/health';
-import { GOAL, INTENT, KIDS } from '../data/goals';
+import { GOAL, KIDS } from '../data/goals';
 
 // Экран редактирования анкеты — форма из сгруппированных секций.
 //
@@ -60,8 +60,8 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
       setError('Выберите пол');
       return;
     }
-    if (!form.goal || !form.intent) {
-      setError('Укажите, что вы ищете и насколько серьёзно');
+    if (!form.goal) {
+      setError('Укажите, что вы хотите от сайта');
       return;
     }
 
@@ -73,7 +73,6 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
       bio: form.bio.trim(),
       interests: form.interests,
       goal: form.goal || '',
-      intent: form.intent || '',
       kids: form.kids || '',
       housing: form.housing || '',
       car: form.car || '',
@@ -168,16 +167,10 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
 
         <Section title="Цели знакомства">
           <ChoiceRow
-            label="Что ищете"
+            label="Что хотите от сайта"
             options={GOAL}
             value={form.goal || ''}
             onChange={(v) => updateField('goal', v)}
-          />
-          <ChoiceRow
-            label="Насколько серьёзно"
-            options={INTENT}
-            value={form.intent || ''}
-            onChange={(v) => updateField('intent', v)}
           />
           <ChoiceRow
             label="Дети"

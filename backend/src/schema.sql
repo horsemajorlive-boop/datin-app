@@ -41,8 +41,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   housing     TEXT    NOT NULL DEFAULT '',   -- 'own' | 'rent' | 'parents' | ''
   car         TEXT    NOT NULL DEFAULT '',   -- 'yes' | 'no' | ''
   employment  TEXT    NOT NULL DEFAULT '',   -- 'working' | 'not_working' | ''
-  goal        TEXT    NOT NULL DEFAULT '',   -- что ищет: 'friendship' | 'dating' | 'relationship'
-  intent      TEXT    NOT NULL DEFAULT '',   -- 'serious' | 'casual'
+  goal        TEXT    NOT NULL DEFAULT '',   -- 'friendship' | 'date' | 'flirt' | 'relationship'
   kids        TEXT    NOT NULL DEFAULT '',   -- 'want' | 'have' | 'dont' | 'maybe'
   height      INTEGER,                       -- рост в см (NULL = не указан)
   weight      INTEGER,                       -- вес в кг (NULL = не указан)

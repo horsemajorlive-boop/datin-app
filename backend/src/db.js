@@ -27,7 +27,7 @@ db.exec(schema);
 // ALTER TABLE ... ADD COLUMN бросит ошибку, если колонка уже есть — глотаем её.
 const NEW_TEXT_COLUMNS = [
   'housing', 'car', 'employment', 'smoking', 'drinking',
-  'goal', 'intent', 'kids',
+  'goal', 'kids',
 ];
 for (const col of NEW_TEXT_COLUMNS) {
   try {

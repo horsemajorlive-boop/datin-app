@@ -111,7 +111,7 @@ export default function MyProfileScreen({
 
       {profile.bio && <p className="myprofile__bio">{profile.bio}</p>}
 
-      {(profile.goal || profile.intent || profile.kids) && (
+      {(profile.goal || profile.kids) && (
         <section className="sheet__section">
           <h3>Ищет</h3>
           <GoalChips profile={profile} />

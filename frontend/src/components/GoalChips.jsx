@@ -1,19 +1,17 @@
-import { goalShort, intentShort, kidsShort } from '../data/goals';
+import { goalShort, kidsShort } from '../data/goals';
 import { IconHeart } from './icons';
 
-// Цели знакомства чипами: что ищет, серьёзность, дети.
+// Цель на сайте и отношение к детям чипами.
 //
 // Props:
-//   profile — анкета (goal, intent, kids)
+//   profile — анкета (goal, kids)
 
 export default function GoalChips({ profile }) {
   if (!profile) return null;
 
-  const chips = [
-    goalShort(profile.goal),
-    intentShort(profile.intent),
-    kidsShort(profile.kids),
-  ].filter(Boolean);
+  const chips = [goalShort(profile.goal), kidsShort(profile.kids)].filter(
+    Boolean
+  );
 
   if (chips.length === 0) return null;
 

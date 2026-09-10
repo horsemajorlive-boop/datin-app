@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { DEFAULT_FILTERS, clampAge } from '../lib/filters';
 import { HOUSING, CAR, EMPLOYMENT } from '../data/lifestyle';
 import { SMOKING, DRINKING, HEIGHT_RANGE } from '../data/health';
-import { GOAL, INTENT, KIDS } from '../data/goals';
+import { GOAL, KIDS } from '../data/goals';
 import CityInput from './CityInput';
 import { isPremium } from '../premium';
 
@@ -188,14 +188,6 @@ export default function FilterSheet({ value, onApply, onClose }) {
               options={GOAL}
               value={f.goal}
               onPick={(v) => set({ goal: v })}
-            />
-
-            <OneRow
-              label="Настрой"
-              options={INTENT}
-              value={f.intent}
-              onPick={(v) => set({ intent: v })}
-              useLabel
             />
 
             <OneRow

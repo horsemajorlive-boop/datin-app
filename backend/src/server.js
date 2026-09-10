@@ -177,7 +177,6 @@ app.get('/api/feed', (req, res) => {
       car: q.car,
       employment: q.employment,
       goal: q.goal,
-      intent: q.intent,
       kids: q.kids,
       heightMin: q.heightMin ? Number(q.heightMin) : undefined,
       heightMax: q.heightMax ? Number(q.heightMax) : undefined,

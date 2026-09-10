@@ -32,9 +32,8 @@ const CAR_CODES = ['yes', 'no'];
 const EMPLOYMENT_CODES = ['working', 'not_working'];
 const SMOKING_CODES = ['no', 'sometimes', 'yes'];
 const DRINKING_CODES = ['no', 'sometimes', 'yes'];
-// Цели знакомства.
-const GOAL_CODES = ['friendship', 'dating', 'relationship'];
-const INTENT_CODES = ['serious', 'casual'];
+// Цель на сайте + отношение к детям.
+const GOAL_CODES = ['friendship', 'date', 'flirt', 'relationship'];
 const KIDS_CODES = ['want', 'have', 'dont', 'maybe'];
 const oneOf = (value, codes) => (codes.includes(value) ? value : '');
 
@@ -59,7 +58,6 @@ function emptyProfile(userId) {
     car: '',
     employment: '',
     goal: '',
-    intent: '',
     kids: '',
     height: null,
     weight: null,
@@ -83,9 +81,9 @@ function emptyProfile(userId) {
 const ONBOARDING_MIN_INTERESTS = 5;
 
 // Прошёл ли пользователь обязательный вход: принял правила + подтвердил 18,
-// заполнил имя/возраст (18+)/пол, добавил фото, указал цель знакомства и
-// серьёзность, жильё/авто/работу и минимум 5 интересов. Рост, вес и «дети» —
-// необязательные. Тот же список проверяется при POST /api/onboarding.
+// заполнил имя/возраст (18+)/пол, добавил фото, указал цель на сайте,
+// жильё/авто/работу и минимум 5 интересов. Рост, вес и «дети» — необязательные.
+// Тот же список проверяется при POST /api/onboarding.
 function computeOnboarded(profile) {
   return (
     profile.termsAcceptedAt != null &&
@@ -95,7 +93,6 @@ function computeOnboarded(profile) {
     (profile.gender === 'f' || profile.gender === 'm') &&
     profile.photos.length > 0 &&
     GOAL_CODES.includes(profile.goal) &&
-    INTENT_CODES.includes(profile.intent) &&
     HOUSING_CODES.includes(profile.housing) &&
     CAR_CODES.includes(profile.car) &&
     EMPLOYMENT_CODES.includes(profile.employment) &&
@@ -189,7 +186,6 @@ export function getFullProfile(userId, { forOther = false } = {}) {
     car: row.car || '',
     employment: row.employment || '',
     goal: row.goal || '',
-    intent: row.intent || '',
     kids: row.kids || '',
     height: row.height ?? null,
     weight: row.weight ?? null,
@@ -217,17 +213,17 @@ export function saveProfile(userId, data) {
   db.prepare(
     `INSERT INTO profiles
        (user_id, name, age, city, bio, gender, interests,
-        housing, car, employment, goal, intent, kids,
+        housing, car, employment, goal, kids,
         height, weight, smoking, drinking, updated_at)
      VALUES
        (:user_id, :name, :age, :city, :bio, :gender, :interests,
-        :housing, :car, :employment, :goal, :intent, :kids,
+        :housing, :car, :employment, :goal, :kids,
         :height, :weight, :smoking, :drinking, :ts)
      ON CONFLICT(user_id) DO UPDATE SET
        name = :name, age = :age, city = :city, bio = :bio,
        gender = :gender, interests = :interests,
        housing = :housing, car = :car, employment = :employment,
-       goal = :goal, intent = :intent, kids = :kids,
+       goal = :goal, kids = :kids,
        height = :height, weight = :weight, smoking = :smoking, drinking = :drinking,
        updated_at = :ts`
   ).run({
@@ -248,7 +244,6 @@ export function saveProfile(userId, data) {
     car: oneOf(data.car, CAR_CODES),
     employment: oneOf(data.employment, EMPLOYMENT_CODES),
     goal: oneOf(data.goal, GOAL_CODES),
-    intent: oneOf(data.intent, INTENT_CODES),
     kids: oneOf(data.kids, KIDS_CODES),
     ts: now(),
   });
@@ -267,7 +262,6 @@ export function acceptOnboarding(userId, data = {}) {
   const car = oneOf(data.car, CAR_CODES);
   const employment = oneOf(data.employment, EMPLOYMENT_CODES);
   const goal = oneOf(data.goal, GOAL_CODES);
-  const intent = oneOf(data.intent, INTENT_CODES);
   const kids = oneOf(data.kids, KIDS_CODES); // необязательно
   // интересы: чистим строки, убираем дубли (без учёта регистра)
   const interests = [];
@@ -288,8 +282,8 @@ export function acceptOnboarding(userId, data = {}) {
   if (age === null) return { error: 'Возраст — только от 18 до 100 лет' };
   if (!gender) return { error: 'Выберите пол' };
   if (photos.length === 0) return { error: 'Добавьте хотя бы одно фото' };
-  if (!goal || !intent) {
-    return { error: 'Укажите, что вы ищете и насколько серьёзно' };
+  if (!goal) {
+    return { error: 'Укажите, что вы хотите от сайта' };
   }
   if (!housing || !car || !employment) {
     return { error: 'Заполните жильё, авто и работу' };
@@ -309,7 +303,6 @@ export function acceptOnboarding(userId, data = {}) {
     car,
     employment,
     goal,
-    intent,
     kids,
     height,
     weight,
@@ -363,7 +356,6 @@ function hydrateProfiles(rows) {
     car: r.car || '',
     employment: r.employment || '',
     goal: r.goal || '',
-    intent: r.intent || '',
     kids: r.kids || '',
     height: r.height ?? null,
     weight: r.weight ?? null,
@@ -387,7 +379,6 @@ export function getFeed(userId, opts = {}) {
     car,
     employment,
     goal,
-    intent,
     kids,
     heightMin,
     heightMax,
@@ -467,10 +458,6 @@ export function getFeed(userId, opts = {}) {
     where.push('p.goal = :goal');
     params.goal = goal;
   }
-  if (INTENT_CODES.includes(intent)) {
-    where.push('p.intent = :intent');
-    params.intent = intent;
-  }
   if (KIDS_CODES.includes(kids)) {
     where.push('p.kids = :kids');
     params.kids = kids;
@@ -487,7 +474,7 @@ export function getFeed(userId, opts = {}) {
   const rows = db
     .prepare(
       `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
-              p.housing, p.car, p.employment, p.goal, p.intent, p.kids,
+              p.housing, p.car, p.employment, p.goal, p.kids,
               p.height, p.weight, p.smoking, p.drinking, u.verified_at
          FROM profiles p
          JOIN users u ON u.id = p.user_id
@@ -505,7 +492,7 @@ export function getMyLikes(userId) {
   const rows = db
     .prepare(
       `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
-              p.housing, p.car, p.employment, p.goal, p.intent, p.kids,
+              p.housing, p.car, p.employment, p.goal, p.kids,
               p.height, p.weight, p.smoking, p.drinking, u.verified_at
          FROM swipes s
          JOIN profiles p ON p.user_id = s.target_id
