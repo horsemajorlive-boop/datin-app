@@ -74,4 +74,11 @@ try {
   /* колонка уже существует — ок */
 }
 
+try {
+  db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0');
+  console.log('[db] миграция: добавлена колонка users.is_admin');
+} catch {
+  /* колонка уже существует — ок */
+}
+
 console.log('[db] готова:', DB_PATH);

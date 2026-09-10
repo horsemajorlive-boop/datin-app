@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "seed": "node src/seed.js"
+    "seed": "node src/seed.js",
+    "grant-admin": "node src/grant-admin.js",
+    "revoke-admin": "node src/grant-admin.js --revoke"
   },
   "dependencies": {
     "cors": "^2.8.5",

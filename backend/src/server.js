@@ -12,7 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { requireAuth } from './auth.js';
-import { requireAdmin, isAdmin } from './admin.js';
+import { requireAdmin, isAdmin, bootstrapEnvAdmins } from './admin.js';
 import * as model from './models.js';
 import { scheduleBotReply } from './bot.js';
 import { attachRealtime, emitMessage, emitReaction, emitMatch } from './realtime.js';
@@ -99,7 +99,7 @@ app.delete('/api/me', (req, res) => {
 app.post('/api/onboarding', (req, res) => {
   const out = model.acceptOnboarding(req.user.id, req.body || {});
   if (out.error) return res.status(400).json({ error: out.error });
-  res.json(out.profile);
+  res.json({ ...out.profile, isAdmin: isAdmin(req.user.id) });
 });
 
 // --- Верификация фото (ручная модерация) ---
@@ -244,6 +244,8 @@ app.post('/api/upload', (req, res) => {
   fs.writeFileSync(path.join(UPLOAD_DIR, name), buf);
   res.status(201).json({ url: `/uploads/${name}` });
 });
+
+bootstrapEnvAdmins(); // проставить is_admin тем, кто в ADMIN_IDS
 
 const PORT = Number(process.env.PORT) || 3001;
 const server = app.listen(PORT, () => {
