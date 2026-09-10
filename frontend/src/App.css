@@ -892,34 +892,40 @@
   line-height: 1.6;
 }
 
-/* Узкая колонка мэтчей слева. */
+/* Колонка мэтчей слева: аватар + имя. */
 .rail {
-  width: 68px;
+  width: 84px;
   flex-shrink: 0;
   overflow-y: auto;
   padding: 12px 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 10px;
+  align-items: stretch;
+  gap: 14px;
   border-right: 1px solid var(--line);
   background: var(--surface);
 }
 
 .rail__item {
-  position: relative;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
   border: none;
-  padding: 0;
+  padding: 0 4px;
   background: none;
   cursor: pointer;
-  opacity: 0.45;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  opacity: 0.5;
   transition: opacity 0.15s ease;
 }
 
-.rail__item img {
+.rail__avatar {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+
+.rail__avatar img {
   width: 100%;
   height: 100%;
   border-radius: 50%;
@@ -928,12 +934,27 @@
   transition: box-shadow 0.15s ease;
 }
 
+.rail__name {
+  max-width: 100%;
+  font-size: 10.5px;
+  line-height: 1.2;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .rail__item.is-active {
   opacity: 1;
 }
 
-.rail__item.is-active img {
+.rail__item.is-active .rail__avatar img {
   box-shadow: 0 0 0 2px var(--accent);
+}
+
+.rail__item.is-active .rail__name {
+  color: var(--text);
+  font-weight: 600;
 }
 
 /* Точка "ещё не переписывались" — вверху справа. */

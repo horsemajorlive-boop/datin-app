@@ -19,9 +19,12 @@ export default function ChatRail({ matches, messages, activeId, onSelect }) {
             onClick={() => onSelect(matchId)}
             title={profile.name}
           >
-            <img src={profile.photos[0]} alt={profile.name} />
-            {profile.online && <span className="rail__online" />}
-            {isNew && <span className="rail__dot" />}
+            <span className="rail__avatar">
+              <img src={profile.photos[0]} alt={profile.name} />
+              {profile.online && <span className="rail__online" />}
+              {isNew && <span className="rail__dot" />}
+            </span>
+            <span className="rail__name">{profile.name}</span>
           </button>
         );
       })}
