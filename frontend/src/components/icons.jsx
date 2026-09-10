@@ -80,3 +80,48 @@ export function IconSliders() {
     </svg>
   );
 }
+
+export function IconSend() {
+  return (
+    <svg {...base}>
+      <path d="M22 3L11 14M22 3l-7 19-4-8-8-4 19-7z" />
+    </svg>
+  );
+}
+
+export function IconSmile() {
+  return (
+    <svg {...base}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8.5 14.5a4.5 4.5 0 0 0 7 0" />
+      <path d="M9 9.5h.01M15 9.5h.01" />
+    </svg>
+  );
+}
+
+export function IconImage() {
+  return (
+    <svg {...base}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="8.5" cy="9.5" r="1.6" />
+      <path d="M21 15l-5-5-9 9" />
+    </svg>
+  );
+}
+
+export function IconCalendar() {
+  return (
+    <svg {...base}>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18M8 3v4M16 3v4" />
+    </svg>
+  );
+}
+
+export function IconChevronLeft() {
+  return (
+    <svg {...base}>
+      <path d="M15 5l-7 7 7 7" />
+    </svg>
+  );
+}

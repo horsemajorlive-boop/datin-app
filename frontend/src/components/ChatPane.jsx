@@ -6,6 +6,13 @@ import { getSuggestions } from '../lib/wingman';
 import { fileToCompressedDataUrl } from '../lib/image';
 import { formatLastSeen } from '../lib/relativeTime';
 import { api } from '../api';
+import {
+  IconCalendar,
+  IconSparkles,
+  IconSmile,
+  IconImage,
+  IconSend,
+} from './icons';
 
 // Правая часть вкладки "Чат" — сама переписка.
 //
@@ -104,21 +111,24 @@ export default function ChatPane({
       ? 'в сети'
       : formatLastSeen(match.lastSeen, match.gender);
 
+  const statusClass =
+    'chat__status' +
+    (activity ? ' is-activity' : match.online ? ' is-online' : '');
+
   return (
     <div className="chatpane">
       <header className="chat__header">
-        <img className="chat__avatar" src={match.photos[0]} alt={match.name} />
         <div className="chat__peer">
-          <span className="chat__name">{match.name}</span>
-          <span
-            className={
-              'chat__status' +
-              (activity ? ' is-activity' : match.online ? ' is-online' : '')
-            }
-          >
-            {statusText}
+          <span className="chat__avatar-wrap">
+            <img src={match.photos[0]} alt={match.name} />
+            {match.online && <span className="chat__online-dot" />}
+          </span>
+          <span className="chat__peer-text">
+            <span className="chat__name">{match.name}</span>
+            <span className={statusClass}>{statusText}</span>
           </span>
         </div>
+
         <div className="chat__tools">
           <button
             type="button"
@@ -129,7 +139,7 @@ export default function ChatPane({
             }}
             aria-label="Спланировать встречу"
           >
-            📅
+            <IconCalendar />
           </button>
           <button
             type="button"
@@ -137,16 +147,19 @@ export default function ChatPane({
             onClick={() => setShowWingman((v) => !v)}
             aria-label="Подсказки"
           >
-            ✨
+            <IconSparkles />
           </button>
         </div>
       </header>
 
       <div className="chat__body" ref={bodyRef}>
         {messages.length === 0 && !activity ? (
-          <p className="chat__empty">
-            У вас мэтч! Напишите первым — не стесняйтесь 🙂
-          </p>
+          <div className="chat__empty">
+            <p className="chat__empty-title">Вы понравились друг другу</p>
+            <p className="chat__empty-sub">
+              Начните разговор первым — так интереснее
+            </p>
+          </div>
         ) : (
           messages.map((m) => (
             <div
@@ -203,42 +216,44 @@ export default function ChatPane({
       )}
 
       <form className="chat__inputbar" onSubmit={handleSubmit}>
-        <button
-          type="button"
-          className="chat__inbtn"
-          onClick={() => {
-            setShowEmoji((v) => !v);
-            setShowPlanner(false);
-          }}
-          aria-label="Эмодзи"
-        >
-          😊
-        </button>
-        <button
-          type="button"
-          className="chat__inbtn"
-          onClick={() => fileRef.current?.click()}
-          aria-label="Отправить фото"
-        >
-          🖼️
-        </button>
-        <input
-          className="chat__input"
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            if (e.target.value) onTyping?.('typing');
-          }}
-          placeholder="Сообщение…"
-          maxLength={500}
-        />
+        <div className="chat__field">
+          <button
+            type="button"
+            className="chat__inbtn"
+            onClick={() => {
+              setShowEmoji((v) => !v);
+              setShowPlanner(false);
+            }}
+            aria-label="Эмодзи"
+          >
+            <IconSmile />
+          </button>
+          <input
+            className="chat__input"
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              if (e.target.value) onTyping?.('typing');
+            }}
+            placeholder="Сообщение"
+            maxLength={500}
+          />
+          <button
+            type="button"
+            className="chat__inbtn"
+            onClick={() => fileRef.current?.click()}
+            aria-label="Отправить фото"
+          >
+            <IconImage />
+          </button>
+        </div>
         <button
           className="chat__send"
           type="submit"
           disabled={!text.trim()}
           aria-label="Отправить"
         >
-          ➤
+          <IconSend />
         </button>
         <input
           ref={fileRef}

@@ -841,35 +841,36 @@
   justify-content: center;
   padding: 24px;
   text-align: center;
-  color: var(--muted);
-  font-size: 14px;
+  color: var(--faint);
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 /* Узкая колонка мэтчей слева. */
 .rail {
-  width: 72px;
+  width: 68px;
   flex-shrink: 0;
   overflow-y: auto;
   padding: 12px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   border-right: 1px solid var(--line);
   background: var(--surface);
 }
 
 .rail__item {
   position: relative;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  border: 2px solid transparent;
+  border: none;
   padding: 0;
   background: none;
   cursor: pointer;
-  opacity: 0.55;
-  transition: opacity 0.15s ease, border-color 0.15s ease;
+  opacity: 0.45;
+  transition: opacity 0.15s ease;
 }
 
 .rail__item img {
@@ -877,20 +878,25 @@
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
+  box-shadow: 0 0 0 0 var(--accent);
+  transition: box-shadow 0.15s ease;
 }
 
 .rail__item.is-active {
   opacity: 1;
-  border-color: var(--accent);
+}
+
+.rail__item.is-active img {
+  box-shadow: 0 0 0 2px var(--accent);
 }
 
 /* Точка "ещё не переписывались" — вверху справа. */
 .rail__dot {
   position: absolute;
-  top: 0;
-  right: 0;
-  width: 12px;
-  height: 12px;
+  top: -1px;
+  right: -1px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   background: var(--accent);
   border: 2px solid var(--surface);
@@ -899,10 +905,10 @@
 /* Точка "в сети" — внизу справа. */
 .rail__online {
   position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 12px;
-  height: 12px;
+  bottom: -1px;
+  right: -1px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   background: var(--like);
   border: 2px solid var(--surface);
@@ -921,52 +927,56 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
 }
 
-.chat__tools {
-  margin-left: auto;
+.chat__peer {
   display: flex;
-  gap: 2px;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
-.chat__tool {
-  background: none;
-  border: none;
-  font-size: 18px;
-  cursor: pointer;
-  padding: 4px 6px;
-  border-radius: 8px;
-  opacity: 0.55;
+.chat__avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
 }
 
-.chat__tool.is-on {
-  opacity: 1;
-  background: var(--accent-soft);
-}
-
-.chat__avatar {
-  width: 38px;
-  height: 38px;
+.chat__avatar-wrap img {
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   object-fit: cover;
 }
 
-.chat__peer {
+.chat__online-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--like);
+  border: 2px solid var(--surface);
+}
+
+.chat__peer-text {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .chat__name {
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .chat__status {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--faint);
 }
 
 .chat__status.is-online {
@@ -977,22 +987,62 @@
   color: var(--accent);
 }
 
+.chat__tools {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+.chat__tool {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  border-radius: 9px;
+  color: var(--faint);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.chat__tool svg {
+  width: 18px;
+  height: 18px;
+}
+
+.chat__tool.is-on {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
 .chat__body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 16px;
+  padding: 16px 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
 }
 
 .chat__empty {
   margin: auto;
-  max-width: 260px;
+  max-width: 250px;
   text-align: center;
+}
+
+.chat__empty-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.chat__empty-sub {
+  margin-top: 6px;
+  font-size: 13px;
   color: var(--muted);
-  font-size: 14px;
   line-height: 1.5;
 }
 
@@ -1000,10 +1050,10 @@
   position: relative;
   max-width: 78%;
   padding: 8px 12px 6px;
-  border-radius: 14px;
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   cursor: pointer;
 }
 
@@ -1020,12 +1070,12 @@
 /* Реакция-эмодзи — всегда у нижне-ЛЕВОГО края (время всегда справа, не пересекаются). */
 .chat__reaction {
   position: absolute;
-  bottom: -11px;
+  bottom: -10px;
   left: 10px;
-  background: var(--surface-2);
-  border: 2px solid var(--bg);
+  background: var(--surface);
+  border: 1px solid var(--line-2);
   border-radius: var(--radius-pill);
-  padding: 1px 5px;
+  padding: 1px 6px;
   font-size: 11px;
   line-height: 16px;
 }
@@ -1085,26 +1135,27 @@
   align-self: flex-end;
   background: var(--accent);
   color: #fff;
-  border-bottom-right-radius: 4px;
+  border-bottom-right-radius: 5px;
 }
 
 .chat__msg--them {
   align-self: flex-start;
   background: var(--surface-2);
-  border-bottom-left-radius: 4px;
+  border-bottom-left-radius: 5px;
 }
 
 .chat__text {
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.42;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .chat__time {
-  font-size: 10px;
-  opacity: 0.5;
+  font-size: 9.5px;
+  opacity: 0.45;
   align-self: flex-end;
+  margin-top: 1px;
 }
 
 /* Сообщение-эмодзи и сообщение-фото — без "плашки". */
@@ -1162,22 +1213,54 @@
 .chat__inputbar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   padding: 10px 12px;
   padding-bottom: calc(10px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--line);
   background: var(--surface);
 }
 
-/* Кнопки "эмодзи" и "фото" в строке ввода. */
+/* Пилюля-поле: [эмодзи] [ввод] [фото]. */
+.chat__field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-pill);
+  padding: 3px 6px;
+  transition: border-color 0.15s ease;
+}
+
+.chat__field:focus-within {
+  border-color: var(--accent);
+}
+
+/* Иконки-кнопки внутри поля (эмодзи / фото). */
 .chat__inbtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
   background: none;
   border: none;
-  font-size: 20px;
-  padding: 4px;
+  border-radius: 50%;
+  color: var(--faint);
   cursor: pointer;
-  flex-shrink: 0;
-  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.chat__inbtn:active {
+  color: var(--text);
+}
+
+.chat__inbtn svg {
+  width: 19px;
+  height: 19px;
 }
 
 /* Панель выбора эмодзи для набора сообщения. */
@@ -1188,8 +1271,8 @@
   padding: 8px 10px;
   max-height: 168px;
   overflow-y: auto;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  background: var(--bg);
+  border-top: 1px solid var(--line);
+  background: var(--surface);
 }
 
 .emojipick__btn {
@@ -1208,39 +1291,47 @@
 
 .chat__input {
   flex: 1;
-  background: var(--surface-2);
-  border: 1px solid var(--line-2);
-  border-radius: var(--radius-pill);
-  padding: 10px 15px;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 8px 4px;
   color: var(--text);
   font-size: 14px;
   outline: none;
-  transition: border-color 0.15s ease;
 }
 
 .chat__input::placeholder {
   color: var(--faint);
 }
 
-.chat__input:focus {
-  border-color: var(--accent);
-}
-
 .chat__send {
-  width: 40px;
-  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   border: none;
   background: var(--accent);
   color: #fff;
-  font-size: 15px;
   cursor: pointer;
   flex-shrink: 0;
-  transition: opacity 0.15s ease;
+  transition: transform 0.12s ease, opacity 0.15s ease;
+}
+
+.chat__send svg {
+  width: 17px;
+  height: 17px;
+  margin-left: -1px;
+}
+
+.chat__send:active {
+  transform: scale(0.92);
 }
 
 .chat__send:disabled {
-  opacity: 0.4;
+  background: var(--surface-2);
+  color: var(--faint);
   cursor: default;
 }
 
@@ -1248,8 +1339,8 @@
 
 .wingman {
   padding: 8px 12px 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  background: var(--bg);
+  border-top: 1px solid var(--line);
+  background: var(--surface);
 }
 
 .wingman__label {
@@ -1287,9 +1378,9 @@
 /* ================= Планировщик встречи ================= */
 
 .planner {
-  padding: 12px;
+  padding: 12px 14px;
   border-top: 1px solid var(--line);
-  background: var(--bg);
+  background: var(--surface);
 }
 
 .planner__title {
