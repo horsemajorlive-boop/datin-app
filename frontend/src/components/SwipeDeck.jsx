@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import ProfileCard from './ProfileCard';
 import LikeFx from './LikeFx';
+import { IconX, IconHeart, IconRotateCcw } from './icons';
 import { isPremium } from '../premium';
 
 // "Колода" карточек. Помнит:
@@ -97,7 +98,7 @@ export default function SwipeDeck({
           disabled={!canUndo}
           aria-label="Вернуть анкету"
         >
-          ⟲
+          <IconRotateCcw />
         </button>
         <button
           className="btn btn--nope"
@@ -105,7 +106,7 @@ export default function SwipeDeck({
           disabled={!hasCard}
           aria-label="Пропустить"
         >
-          ✕
+          <IconX />
         </button>
         <button
           className="btn btn--like"
@@ -113,7 +114,7 @@ export default function SwipeDeck({
           disabled={!hasCard}
           aria-label="Лайк"
         >
-          ♥
+          <IconHeart filled />
         </button>
       </div>
     </div>

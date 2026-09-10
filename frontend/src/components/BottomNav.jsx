@@ -1,3 +1,11 @@
+import {
+  IconSearch,
+  IconHeart,
+  IconSparkles,
+  IconMessage,
+  IconUser,
+} from './icons';
+
 // Нижняя панель навигации.
 //
 // Props:
@@ -5,24 +13,26 @@
 //   onChange — сменить вкладку
 
 const TABS = [
-  { id: 'deck', label: 'Поиск', icon: '🔥' },
-  { id: 'likes', label: 'Симпатии', icon: '♥' },
-  { id: 'matches', label: 'Мэтчи', icon: '💛' },
-  { id: 'chat', label: 'Чат', icon: '💬' },
-  { id: 'me', label: 'Профиль', icon: '👤' },
+  { id: 'deck', label: 'Поиск', Icon: IconSearch },
+  { id: 'likes', label: 'Симпатии', Icon: IconHeart },
+  { id: 'matches', label: 'Мэтчи', Icon: IconSparkles },
+  { id: 'chat', label: 'Чат', Icon: IconMessage },
+  { id: 'me', label: 'Профиль', Icon: IconUser },
 ];
 
 export default function BottomNav({ active, onChange }) {
   return (
     <nav className="nav">
-      {TABS.map((tab) => (
+      {TABS.map(({ id, label, Icon }) => (
         <button
-          key={tab.id}
-          className={`nav__item ${active === tab.id ? 'is-active' : ''}`}
-          onClick={() => onChange(tab.id)}
+          key={id}
+          className={`nav__item ${active === id ? 'is-active' : ''}`}
+          onClick={() => onChange(id)}
         >
-          <span className="nav__icon">{tab.icon}</span>
-          <span className="nav__label">{tab.label}</span>
+          <span className="nav__icon">
+            <Icon />
+          </span>
+          <span className="nav__label">{label}</span>
         </button>
       ))}
     </nav>
