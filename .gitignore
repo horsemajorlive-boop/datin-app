@@ -11,6 +11,7 @@ frontend/dist/
 
 # Загруженные пользователями файлы
 backend/uploads/
+backend/verification-uploads/
 
 # Секреты и локальные настройки окружения
 .env

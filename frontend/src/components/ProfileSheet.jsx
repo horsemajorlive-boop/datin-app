@@ -2,6 +2,7 @@ import PhotoCarousel from './PhotoCarousel';
 import InterestChips from './InterestChips';
 import LifestyleChips from './LifestyleChips';
 import HealthChips from './HealthChips';
+import VerifiedBadge from './VerifiedBadge';
 import { useCarousel } from '../lib/useCarousel';
 
 // Всплывающее окно ("шторка") с полной анкетой.
@@ -34,6 +35,7 @@ export default function ProfileSheet({ profile, onClose }) {
         <div className="sheet__body">
           <h2>
             {profile.name}, {profile.age}
+            {profile.verified && <VerifiedBadge />}
           </h2>
           <p className="muted">{profile.city}</p>
           <p>{profile.bio}</p>

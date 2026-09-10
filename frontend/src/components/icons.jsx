@@ -133,3 +133,24 @@ export function IconCheck() {
     </svg>
   );
 }
+
+// "Золотая галочка" — заливка цветом currentColor, галочка белая.
+// Форма-звёздочка (по мотивам значков верификации).
+export function IconVerified() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none">
+      <path
+        fill="currentColor"
+        d="M12 1.5l2.6 2.1 3.3-.5 1 3.2 3 1.6-1.3 3.1 1.3 3.1-3 1.6-1 3.2-3.3-.5L12 22.5l-2.6-2.1-3.3.5-1-3.2-3-1.6 1.3-3.1L2.1 9.9l3-1.6 1-3.2 3.3.5L12 1.5z"
+      />
+      <path
+        d="M8 12.2l2.6 2.6L16 9.4"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

@@ -62,6 +62,9 @@ function emptyProfile(userId) {
     isVisible: true,
     termsAcceptedAt: null,
     onboarded: false,
+    verified: false,
+    verifiedAt: null,
+    verificationStatus: 'none', // 'none' | 'pending' | 'approved' | 'rejected'
   };
 }
 
@@ -112,12 +115,33 @@ export function getFullProfile(userId) {
   const { online, lastSeen } = presence(userId);
 
   const userRow = db
-    .prepare(`SELECT terms_accepted_at FROM users WHERE id = ?`)
+    .prepare(`SELECT terms_accepted_at, verified_at FROM users WHERE id = ?`)
     .get(userId);
   const termsAcceptedAt = userRow?.terms_accepted_at ?? null;
+  const verifiedAt = userRow?.verified_at ?? null;
+
+  const vRow = db
+    .prepare(`SELECT status FROM verifications WHERE user_id = ?`)
+    .get(userId);
+  const verificationStatus = verifiedAt != null
+    ? 'approved'
+    : vRow?.status || 'none';
+
+  const verifyFields = {
+    verified: verifiedAt != null,
+    verifiedAt,
+    verificationStatus,
+  };
 
   if (!row) {
-    const base = { ...emptyProfile(userId), photos, termsAcceptedAt, online, lastSeen };
+    const base = {
+      ...emptyProfile(userId),
+      photos,
+      termsAcceptedAt,
+      ...verifyFields,
+      online,
+      lastSeen,
+    };
     return { ...base, onboarded: computeOnboarded(base) };
   }
 
@@ -140,6 +164,7 @@ export function getFullProfile(userId) {
     isVisible: !!row.is_visible,
     photos,
     termsAcceptedAt,
+    ...verifyFields,
     online,
     lastSeen,
   };
@@ -292,6 +317,7 @@ function hydrateProfiles(rows) {
     weight: r.weight ?? null,
     smoking: r.smoking || '',
     drinking: r.drinking || '',
+    verified: r.verified_at != null,
     photos: photosStmt.all(r.user_id).map((p) => p.url),
   }));
 }
@@ -312,6 +338,7 @@ export function getFeed(userId, opts = {}) {
     heightMax,
     smoking,
     drinking,
+    verified,
     sort,
   } = opts;
 
@@ -375,6 +402,9 @@ export function getFeed(userId, opts = {}) {
     where.push('p.employment = :employment');
     params.employment = employment;
   }
+  if (verified) {
+    where.push('u.verified_at IS NOT NULL');
+  }
 
   // Сортировка: по умолчанию — недавно активные; 'new' — недавно
   // зарегистрированные (премиум-опция, но сам порядок безобиден).
@@ -385,7 +415,7 @@ export function getFeed(userId, opts = {}) {
     .prepare(
       `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
               p.housing, p.car, p.employment,
-              p.height, p.weight, p.smoking, p.drinking
+              p.height, p.weight, p.smoking, p.drinking, u.verified_at
          FROM profiles p
          JOIN users u ON u.id = p.user_id
         WHERE ${where.join(' AND ')}
@@ -403,9 +433,10 @@ export function getMyLikes(userId) {
     .prepare(
       `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
               p.housing, p.car, p.employment,
-              p.height, p.weight, p.smoking, p.drinking
+              p.height, p.weight, p.smoking, p.drinking, u.verified_at
          FROM swipes s
          JOIN profiles p ON p.user_id = s.target_id
+         JOIN users u ON u.id = p.user_id
         WHERE s.actor_id = :me AND s.direction = 'like'
         ORDER BY s.created_at DESC`
     )
@@ -592,4 +623,87 @@ export function setReaction(messageId, userId, emoji) {
     messageId
   );
   return { messageId, reaction: next, matchId: msg.match_id };
+}
+
+// ---------- Верификация фото (ручная модерация) ----------
+
+// Пользователь прислал селфи на проверку. Новая заявка заменяет прошлую.
+// Саму галочку не трогаем — её снимает/ставит только админ.
+export function submitVerification(userId, photoFile, pose) {
+  db.prepare(
+    `INSERT INTO verifications (user_id, photo_file, pose, status, created_at)
+     VALUES (:u, :f, :p, 'pending', :ts)
+     ON CONFLICT(user_id) DO UPDATE SET
+       photo_file = :f, pose = :p, status = 'pending',
+       created_at = :ts, reviewed_at = NULL, reviewed_by = NULL`
+  ).run({ u: userId, f: photoFile, p: String(pose || '').slice(0, 120), ts: now() });
+  return { status: 'pending' };
+}
+
+// Имя файла селфи для конкретной заявки (нужно админу, чтобы показать фото).
+export function getVerificationFile(userId) {
+  const row = db
+    .prepare(`SELECT photo_file FROM verifications WHERE user_id = ?`)
+    .get(userId);
+  return row?.photo_file || null;
+}
+
+// Очередь на модерацию: все заявки в статусе pending + анкета и публичные фото,
+// чтобы админу было с чем сравнивать селфи.
+export function getPendingVerifications() {
+  const rows = db
+    .prepare(
+      `SELECT v.user_id, v.pose, v.created_at, p.name, p.age, p.city
+         FROM verifications v
+         JOIN profiles p ON p.user_id = v.user_id
+        WHERE v.status = 'pending'
+        ORDER BY v.created_at ASC`
+    )
+    .all();
+
+  const photosStmt = db.prepare(
+    `SELECT url FROM photos WHERE user_id = ? ORDER BY position`
+  );
+
+  return rows.map((r) => ({
+    userId: r.user_id,
+    name: r.name,
+    age: r.age,
+    city: r.city,
+    pose: r.pose,
+    createdAt: r.created_at,
+    photos: photosStmt.all(r.user_id).map((p) => p.url),
+  }));
+}
+
+// Решение админа: 'approve' ставит золотую галочку, 'reject' — снимает.
+export function reviewVerification(userId, adminId, decision) {
+  const row = db
+    .prepare(`SELECT status FROM verifications WHERE user_id = ?`)
+    .get(userId);
+  if (!row) return { error: 'заявка не найдена' };
+
+  const approve = decision === 'approve';
+  db.prepare(
+    `UPDATE verifications
+        SET status = :s, reviewed_at = :ts, reviewed_by = :admin
+      WHERE user_id = :u`
+  ).run({
+    s: approve ? 'approved' : 'rejected',
+    ts: now(),
+    admin: adminId,
+    u: userId,
+  });
+  db.prepare(`UPDATE users SET verified_at = :v WHERE id = :u`).run({
+    v: approve ? now() : null,
+    u: userId,
+  });
+  return { status: approve ? 'approved' : 'rejected' };
+}
+
+// Пользователь поменял фото анкеты — снимаем галочку и заявку,
+// чтобы верификацию нельзя было "унаследовать" на другие снимки.
+export function revokeVerification(userId) {
+  db.prepare(`UPDATE users SET verified_at = NULL WHERE id = ?`).run(userId);
+  db.prepare(`DELETE FROM verifications WHERE user_id = ?`).run(userId);
 }

@@ -5,6 +5,8 @@ import LikesScreen from './screens/LikesScreen';
 import MatchesScreen from './screens/MatchesScreen';
 import MyProfileScreen from './screens/MyProfileScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
+import VerificationScreen from './screens/VerificationScreen';
+import AdminVerifications from './screens/AdminVerifications';
 import Onboarding from './screens/Onboarding';
 import MatchScreen from './components/MatchScreen';
 import ChatTab from './screens/ChatTab';
@@ -34,7 +36,8 @@ export default function App() {
 
   const [activeChatId, setActiveChatId] = useState(null);
   const [matchPopup, setMatchPopup] = useState(null);
-  const [editing, setEditing] = useState(false);
+  // какой экран показываем во вкладке "Профиль": view | edit | verify | admin
+  const [profileView, setProfileView] = useState('view');
   const [filters, setFilters] = useState(loadFilters); // фильтры ленты (из localStorage)
 
   // таймеры авто-сброса статуса "печатает" по каждому чату
@@ -218,7 +221,7 @@ export default function App() {
   async function handleSaveProfile(data) {
     const saved = await api.put('/me', data);
     setMe(normalizeProfile(saved));
-    setEditing(false);
+    setProfileView('view');
     loadFeed(); // имя/видимость могли поменяться
   }
 
@@ -269,16 +272,46 @@ export default function App() {
         </div>
       );
     }
-    if (editing) {
+    if (profileView === 'edit') {
       return (
         <EditProfileScreen
           profile={me}
           onSave={handleSaveProfile}
-          onCancel={() => setEditing(false)}
+          onCancel={() => setProfileView('view')}
         />
       );
     }
-    return <MyProfileScreen profile={me} onEdit={() => setEditing(true)} />;
+    if (profileView === 'verify') {
+      return (
+        <VerificationScreen
+          status={me.verificationStatus}
+          onBack={() => setProfileView('view')}
+          onSubmitted={(profile) => {
+            setMe(profile);
+            setProfileView('view');
+          }}
+        />
+      );
+    }
+    if (profileView === 'admin') {
+      return (
+        <AdminVerifications
+          onBack={() => {
+            setProfileView('view');
+            loadMe(); // вдруг подтвердили в т.ч. себя
+            loadFeed(); // галочки в ленте могли поменяться
+          }}
+        />
+      );
+    }
+    return (
+      <MyProfileScreen
+        profile={me}
+        onEdit={() => setProfileView('edit')}
+        onVerify={() => setProfileView('verify')}
+        onModerate={() => setProfileView('admin')}
+      />
+    );
   }
 
   // Обязательный вход: пока анкета не готова (правила + фото + имя/возраст/пол),
@@ -320,7 +353,13 @@ export default function App() {
         {tab === 'me' && renderProfileTab()}
       </main>
 
-      <BottomNav active={tab} onChange={setTab} />
+      <BottomNav
+        active={tab}
+        onChange={(t) => {
+          setTab(t);
+          if (t !== 'me') setProfileView('view'); // ушли из профиля — сбрасываем подэкран
+        }}
+      />
 
       <MatchScreen
         me={me}

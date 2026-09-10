@@ -111,6 +111,19 @@ export default function FilterSheet({ value, onApply, onClose }) {
             </div>
 
             <div className="field">
+              <span>Верификация</span>
+              <div className="choice">
+                <button
+                  type="button"
+                  className={`chipbtn ${f.verified ? 'is-on' : ''}`}
+                  onClick={() => set({ verified: !f.verified })}
+                >
+                  Только подтверждённые
+                </button>
+              </div>
+            </div>
+
+            <div className="field">
               <span>Сортировка</span>
               <div className="choice">
                 {SORTS.map((o) => {

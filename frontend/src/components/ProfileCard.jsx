@@ -3,6 +3,7 @@ import PhotoCarousel from './PhotoCarousel';
 import InterestChips from './InterestChips';
 import LifestyleChips from './LifestyleChips';
 import HealthChips from './HealthChips';
+import VerifiedBadge from './VerifiedBadge';
 import { useCarousel } from '../lib/useCarousel';
 
 // Одна карточка анкеты в колоде.
@@ -92,6 +93,7 @@ export default function ProfileCard({ profile, active, onSwipe, onOpen }) {
       <div className="card__info">
         <h2>
           {profile.name}, {profile.age}
+          {profile.verified && <VerifiedBadge />}
         </h2>
         <p className="card__city">{profile.city}</p>
         <p className="card__bio">{profile.bio}</p>

@@ -20,6 +20,7 @@ const BOTS = [
     },
     photos: ['anya', 'anya-b', 'anya-c'],
     likesYou: true,
+    verified: true,
   },
   {
     id: 900002,
@@ -57,6 +58,7 @@ const BOTS = [
       height: 171, weight: 58, smoking: 'no', drinking: 'sometimes',
     },
     photos: ['sonya'],
+    verified: true,
   },
   {
     id: 900005,
@@ -69,6 +71,7 @@ const BOTS = [
       height: 165, weight: 55, smoking: 'no', drinking: 'no',
     },
     photos: ['katya'],
+    verified: true,
   },
   {
     id: 900006,
@@ -112,6 +115,11 @@ BOTS.forEach((bot, i) => {
 
   // Боты уже "прошли вход" — иначе не попадут в ленту.
   db.prepare(`UPDATE users SET terms_accepted_at = ? WHERE id = ?`).run(createdAt, bot.id);
+
+  // Часть ботов — с "золотой галочкой", чтобы фильтр "только подтверждённые" работал.
+  if (bot.verified) {
+    db.prepare(`UPDATE users SET verified_at = ? WHERE id = ?`).run(createdAt, bot.id);
+  }
 
   if (bot.likesYou) {
     // бот лайкает dev-пользователя; сам dev-пользователь ещё не свайпал,

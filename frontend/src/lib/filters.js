@@ -13,6 +13,7 @@ export const DEFAULT_FILTERS = {
   heightMax: '',
   smoking: '', // '' | 'no' | 'sometimes' | 'yes'
   drinking: '', // '' | 'no' | 'sometimes' | 'yes'
+  verified: false, // true — только с подтверждённым фото
   sort: '', // '' — сейчас активны (по умолчанию) | 'new' — новенькие (Premium)
 };
 
@@ -65,6 +66,7 @@ export function buildFeedQuery(f) {
   if (f.heightMax) p.set('heightMax', f.heightMax);
   if (f.smoking) p.set('smoking', f.smoking);
   if (f.drinking) p.set('drinking', f.drinking);
+  if (f.verified) p.set('verified', '1');
   if (f.sort) p.set('sort', f.sort);
   const s = p.toString();
   return s ? `?${s}` : '';

@@ -8,7 +8,20 @@ CREATE TABLE IF NOT EXISTS users (
   first_name         TEXT,
   created_at         INTEGER NOT NULL,
   last_seen_at       INTEGER NOT NULL,
-  terms_accepted_at  INTEGER          -- когда принял правила и подтвердил 18+ (NULL = ещё нет)
+  terms_accepted_at  INTEGER,         -- когда принял правила и подтвердил 18+ (NULL = ещё нет)
+  verified_at        INTEGER          -- когда админ подтвердил фото (NULL = не подтверждён)
+);
+
+-- Заявки на верификацию фото. Одна активная на пользователя: новая заявка
+-- заменяет прошлую. Селфи лежит в приватной папке, наружу не отдаётся.
+CREATE TABLE IF NOT EXISTS verifications (
+  user_id     INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  photo_file  TEXT    NOT NULL,               -- имя файла в verification-uploads/
+  pose        TEXT    NOT NULL DEFAULT '',    -- какая поза была задана
+  status      TEXT    NOT NULL DEFAULT 'pending', -- 'pending' | 'approved' | 'rejected'
+  created_at  INTEGER NOT NULL,
+  reviewed_at INTEGER,
+  reviewed_by INTEGER
 );
 
 -- Анкета: одна на пользователя (user_id — первичный ключ).

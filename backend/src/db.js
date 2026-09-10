@@ -60,4 +60,11 @@ try {
   /* колонка уже существует — ок */
 }
 
+try {
+  db.exec('ALTER TABLE users ADD COLUMN verified_at INTEGER');
+  console.log('[db] миграция: добавлена колонка users.verified_at');
+} catch {
+  /* колонка уже существует — ок */
+}
+
 console.log('[db] готова:', DB_PATH);

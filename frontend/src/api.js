@@ -51,10 +51,23 @@ async function request(method, path, body) {
   return res.json();
 }
 
+// Загружает бинарный ответ (например, приватное фото) с авторизацией и
+// отдаёт Blob. Из него на клиенте делают ссылку через URL.createObjectURL.
+async function requestBlob(path) {
+  const res = await fetch(`${API_BASE}/api${path}`, { headers: authHeaders() });
+  if (!res.ok) {
+    const err = new Error(`GET ${path} → ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.blob();
+}
+
 export const api = {
   get: (path) => request('GET', path),
   post: (path, body) => request('POST', path, body ?? {}),
   put: (path, body) => request('PUT', path, body ?? {}),
+  getBlob: (path) => requestBlob(path),
 };
 
 // Абсолютные ссылки (https://..., data:...) — как есть.

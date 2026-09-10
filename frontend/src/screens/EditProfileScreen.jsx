@@ -16,6 +16,11 @@ import { SMOKING, DRINKING, HEIGHT_RANGE, WEIGHT_RANGE } from '../data/health';
 
 const MAX_PHOTOS = 4;
 
+const GENDERS = [
+  { code: 'f', label: 'Женщина' },
+  { code: 'm', label: 'Мужчина' },
+];
+
 export default function EditProfileScreen({ profile, onSave, onCancel }) {
   // form.interests теперь массив — им управляет компонент InterestPicker.
   const [form, setForm] = useState({ ...profile });
@@ -42,10 +47,15 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
       setError('Возраст — только от 18 до 100 лет');
       return;
     }
+    if (form.gender !== 'f' && form.gender !== 'm') {
+      setError('Выберите пол');
+      return;
+    }
 
     onSave({
       name: form.name.trim(),
       age,
+      gender: form.gender,
       city: form.city.trim(),
       bio: form.bio.trim(),
       interests: form.interests,
@@ -100,6 +110,22 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
             placeholder="Только с 18 лет"
           />
         </label>
+
+        <div className="field">
+          <span>Пол</span>
+          <div className="choice">
+            {GENDERS.map((g) => (
+              <button
+                key={g.code}
+                type="button"
+                className={`chipbtn ${form.gender === g.code ? 'is-on' : ''}`}
+                onClick={() => updateField('gender', g.code)}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="field">
           <span>Город</span>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import WingmanBar from './WingmanBar';
 import DatePlanner from './DatePlanner';
 import EmojiPicker from './EmojiPicker';
+import VerifiedBadge from './VerifiedBadge';
 import { getSuggestions } from '../lib/wingman';
 import { fileToCompressedDataUrl } from '../lib/image';
 import { formatLastSeen } from '../lib/relativeTime';
@@ -124,7 +125,10 @@ export default function ChatPane({
             {match.online && <span className="chat__online-dot" />}
           </span>
           <span className="chat__peer-text">
-            <span className="chat__name">{match.name}</span>
+            <span className="chat__name">
+              {match.name}
+              {match.verified && <VerifiedBadge />}
+            </span>
             <span className={statusClass}>{statusText}</span>
           </span>
         </div>
