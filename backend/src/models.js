@@ -487,18 +487,24 @@ export function getFeed(userId, opts = {}) {
   return hydrateProfiles(rows);
 }
 
-// Кого я лайкнул (вкладка "Симпатии").
-export function getMyLikes(userId) {
+// Кто лайкнул ВАС и ждёт ответа (вкладка "Симпатии").
+// Только те, кому вы ещё не ответили своим свайпом, и без заблокированных.
+// Ответный лайк сразу превращается в мэтч.
+export function getIncomingLikes(userId) {
   const rows = db
     .prepare(
       `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
               p.housing, p.car, p.employment, p.goal, p.kids,
               p.height, p.weight, p.smoking, p.drinking, u.verified_at
          FROM swipes s
-         JOIN profiles p ON p.user_id = s.target_id
+         JOIN profiles p ON p.user_id = s.actor_id
          JOIN users u ON u.id = p.user_id
-        WHERE s.actor_id = :me AND s.direction = 'like'
-          AND p.user_id NOT IN (
+        WHERE s.target_id = :me AND s.direction = 'like'
+          AND p.is_visible = 1 AND p.name <> ''
+          AND s.actor_id NOT IN (
+            SELECT target_id FROM swipes WHERE actor_id = :me
+          )
+          AND s.actor_id NOT IN (
             SELECT blocked_id FROM blocks WHERE blocker_id = :me
             UNION
             SELECT blocker_id FROM blocks WHERE blocked_id = :me

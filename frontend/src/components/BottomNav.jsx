@@ -1,21 +1,14 @@
-import {
-  IconSearch,
-  IconHeart,
-  IconSparkles,
-  IconMessage,
-  IconUser,
-} from './icons';
+import { IconSearch, IconHeart, IconMessage, IconUser } from './icons';
 
 // Нижняя панель навигации.
 //
 // Props:
-//   active   — id активной вкладки ('deck' | 'likes' | 'matches' | 'chat' | 'me')
+//   active   — id активной вкладки ('deck' | 'likes' | 'chat' | 'me')
 //   onChange — сменить вкладку
 
 const TABS = [
   { id: 'deck', label: 'Поиск', Icon: IconSearch },
   { id: 'likes', label: 'Симпатии', Icon: IconHeart },
-  { id: 'matches', label: 'Мэтчи', Icon: IconSparkles },
   { id: 'chat', label: 'Чат', Icon: IconMessage },
   { id: 'me', label: 'Профиль', Icon: IconUser },
 ];

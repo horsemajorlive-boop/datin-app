@@ -252,9 +252,9 @@ app.post('/api/report', (req, res) => {
   res.json(out);
 });
 
-// Кого я лайкнул (вкладка "Симпатии")
-app.get('/api/likes', (req, res) => {
-  res.json(model.getMyLikes(req.user.id));
+// Кто лайкнул вас и ждёт ответа (вкладка "Симпатии")
+app.get('/api/likes/incoming', (req, res) => {
+  res.json(model.getIncomingLikes(req.user.id));
 });
 
 // Список мэтчей

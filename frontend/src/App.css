@@ -995,23 +995,105 @@
 
 /* ================= Сетка "Симпатий" ================= */
 
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+/* ================= Экран "Симпатии" (кто лайкнул вас) ================= */
+
+.likes__lead {
+  margin: -8px 0 16px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.likes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.likecard {
+  display: flex;
+  align-items: center;
   gap: 12px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
 }
 
-.grid__cell img {
+.likecard__photo {
+  width: 58px;
+  height: 72px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.likecard__photo img {
   width: 100%;
-  aspect-ratio: 3 / 4;
+  height: 100%;
   object-fit: cover;
-  border-radius: 14px;
 }
 
-.grid__cell span {
-  display: block;
-  margin-top: 6px;
-  font-size: 14px;
+.likecard__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.likecard__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.likecard__city {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.likecard__actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.likecard__btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--line-2);
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+
+.likecard__btn:active {
+  transform: scale(0.92);
+}
+
+.likecard__btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.likecard__btn--pass {
+  color: var(--muted);
+}
+
+.likecard__btn--like {
+  color: #fff;
+  background: var(--like);
+  border-color: transparent;
 }
 
 /* ================= Список "Мэтчей" ================= */

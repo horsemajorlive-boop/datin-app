@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import BottomNav from './components/BottomNav';
 import DeckScreen from './screens/DeckScreen';
 import LikesScreen from './screens/LikesScreen';
-import MatchesScreen from './screens/MatchesScreen';
 import MyProfileScreen from './screens/MyProfileScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
 import VerificationScreen from './screens/VerificationScreen';
@@ -21,7 +20,7 @@ import './App.css';
 // Корневой компонент. Всё общее состояние теперь приходит с сервера:
 //  me        — своя анкета (GET /api/me)
 //  feed      — кого листать (GET /api/feed)
-//  likes     — кого я лайкнул (GET /api/likes)
+//  incoming  — кто лайкнул меня и ждёт ответа (GET /api/likes/incoming)
 //  matches   — мэтчи с последним сообщением (GET /api/matches)
 //  messages  — { [matchId]: [сообщения] }, грузится по мере открытия чатов
 //  activities — локальная имитация "печатает…" для чатов с ботами
@@ -31,7 +30,7 @@ export default function App() {
 
   const [me, setMe] = useState(null); // null = ещё грузится
   const [feed, setFeed] = useState([]);
-  const [likes, setLikes] = useState([]);
+  const [incoming, setIncoming] = useState([]); // кто лайкнул меня
   const [matches, setMatches] = useState([]);
   const [messages, setMessages] = useState({});
   const [activities, setActivities] = useState({});
@@ -56,8 +55,8 @@ export default function App() {
     setFeed(list.map(normalizeProfile));
   }, [filters]);
 
-  const loadLikes = useCallback(async () => {
-    setLikes((await api.get('/likes')).map(normalizeProfile));
+  const loadIncoming = useCallback(async () => {
+    setIncoming((await api.get('/likes/incoming')).map(normalizeProfile));
   }, []);
 
   const loadMatches = useCallback(async () => {
@@ -85,9 +84,9 @@ export default function App() {
   useEffect(() => {
     initTelegram();
     loadMe();
-    loadLikes();
+    loadIncoming();
     loadMatches();
-  }, [loadMe, loadLikes, loadMatches]);
+  }, [loadMe, loadIncoming, loadMatches]);
 
   // Лента — при запуске и при каждом изменении фильтров.
   useEffect(() => {
@@ -172,11 +171,14 @@ export default function App() {
       }),
 
       // появился новый мэтч
-      onSocket('match', () => loadMatches()),
+      onSocket('match', () => {
+        loadMatches();
+        loadIncoming(); // этот человек больше не «ждёт ответа»
+      }),
     ];
 
     return () => offs.forEach((off) => off());
-  }, [loadMatches, loadChat, activeChatId]);
+  }, [loadMatches, loadIncoming, loadChat, activeChatId]);
 
   // ---------- действия ----------
 
@@ -191,11 +193,6 @@ export default function App() {
         targetId: profile.id,
         direction,
       });
-      if (direction === 'like') {
-        setLikes((prev) =>
-          prev.some((p) => p.id === profile.id) ? prev : [...prev, profile]
-        );
-      }
       if (res.match) {
         await loadMatches();
         setMatchPopup({
@@ -203,18 +200,26 @@ export default function App() {
           matchId: res.matchId,
         });
       }
+      // мог свайпнуть того, кто уже лайкал меня — обновим «Симпатии»
+      loadIncoming();
     } catch (err) {
       console.error('swipe failed', err);
     }
+  }
+
+  // Решение на вкладке «Симпатии»: ответить взаимностью или пропустить.
+  async function handleIncomingDecision(profile, direction) {
+    setIncoming((prev) => prev.filter((p) => p.id !== profile.id)); // сразу убираем
+    await handleSwipe(profile, direction);
   }
 
   async function handleUndoSwipe(profile) {
     const affected = matches.find((m) => m.profile.id === profile.id);
     try {
       await api.post('/swipes/undo', { targetId: profile.id });
-      setLikes((prev) => prev.filter((p) => p.id !== profile.id));
       if (affected && activeChatId === affected.matchId) setActiveChatId(null);
       await loadMatches();
+      loadIncoming(); // отменённый свайп мог вернуть человека в «Симпатии»
     } catch (err) {
       console.error('undo failed', err);
     }
@@ -224,7 +229,7 @@ export default function App() {
   // где мог остаться заблокированный человек.
   function refreshAfterBlock() {
     loadFeed();
-    loadLikes();
+    loadIncoming();
     loadMatches();
   }
 
@@ -369,9 +374,12 @@ export default function App() {
             myInterests={me?.interests || []}
           />
         )}
-        {tab === 'likes' && <LikesScreen liked={likes} />}
-        {tab === 'matches' && (
-          <MatchesScreen matches={matches} onOpenChat={openChat} />
+        {tab === 'likes' && (
+          <LikesScreen
+            people={incoming}
+            onLike={(p) => handleIncomingDecision(p, 'like')}
+            onPass={(p) => handleIncomingDecision(p, 'pass')}
+          />
         )}
         {tab === 'chat' && (
           <ChatTab

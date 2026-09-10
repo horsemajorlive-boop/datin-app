@@ -1,31 +1,68 @@
-// Экран "Симпатии": сетка анкет, которые пользователь лайкнул.
-// Пока это просто список на нашей стороне. Позже здесь будут ВЗАИМНЫЕ симпатии
-// (мэтчи) — когда backend подтвердит, что вы понравились друг другу.
+import VerifiedBadge from '../components/VerifiedBadge';
+import { IconX, IconHeart } from '../components/icons';
+
+// Экран "Симпатии" — кто лайкнул ВАС и ждёт ответа.
+// Лайк в ответ = мгновенный мэтч; «пропустить» убирает человека из списка.
 //
 // Props:
-//   liked — массив лайкнутых анкет
+//   people — массив анкет (GET /api/likes/incoming)
+//   onLike — ответить взаимностью: onLike(profile)
+//   onPass — отклонить: onPass(profile)
 
-export default function LikesScreen({ liked }) {
-  if (liked.length === 0) {
+export default function LikesScreen({ people, onLike, onPass }) {
+  if (people.length === 0) {
     return (
       <div className="screen">
         <h1 className="screen__title">Симпатии</h1>
-        <p className="muted">Вы ещё никого не лайкнули. Полистайте анкеты во вкладке «Поиск».</p>
+        <p className="muted">
+          Здесь появятся люди, которые лайкнули вас. Ответите взаимностью — сразу
+          будет мэтч.
+        </p>
       </div>
     );
   }
 
   return (
     <div className="screen">
-      <h1 className="screen__title">Симпатии ({liked.length})</h1>
-      <div className="grid">
-        {liked.map((profile) => (
-          <div className="grid__cell" key={profile.id}>
-            <img src={profile.photos[0]} alt={profile.name} />
-            <span>
-              {profile.name}, {profile.age}
-            </span>
-          </div>
+      <h1 className="screen__title">
+        Симпатии <span className="screen__count">{people.length}</span>
+      </h1>
+      <p className="likes__lead">
+        Эти люди уже лайкнули вас. Ответьте взаимностью — сразу будет мэтч.
+      </p>
+
+      <div className="likes">
+        {people.map((p) => (
+          <article className="likecard" key={p.id}>
+            <div className="likecard__photo">
+              <img src={p.photos[0]} alt={p.name} />
+            </div>
+            <div className="likecard__info">
+              <span className="likecard__name">
+                {p.name}, {p.age}
+                {p.verified && <VerifiedBadge />}
+              </span>
+              {p.city && <span className="likecard__city">{p.city}</span>}
+            </div>
+            <div className="likecard__actions">
+              <button
+                type="button"
+                className="likecard__btn likecard__btn--pass"
+                onClick={() => onPass(p)}
+                aria-label="Пропустить"
+              >
+                <IconX />
+              </button>
+              <button
+                type="button"
+                className="likecard__btn likecard__btn--like"
+                onClick={() => onLike(p)}
+                aria-label="Лайк в ответ"
+              >
+                <IconHeart filled />
+              </button>
+            </div>
+          </article>
         ))}
       </div>
     </div>
