@@ -3,11 +3,12 @@
 
 -- Пользователи. id совпадает с id пользователя в Telegram.
 CREATE TABLE IF NOT EXISTS users (
-  id            INTEGER PRIMARY KEY,
-  username      TEXT,
-  first_name    TEXT,
-  created_at    INTEGER NOT NULL,
-  last_seen_at  INTEGER NOT NULL
+  id                 INTEGER PRIMARY KEY,
+  username           TEXT,
+  first_name         TEXT,
+  created_at         INTEGER NOT NULL,
+  last_seen_at       INTEGER NOT NULL,
+  terms_accepted_at  INTEGER          -- когда принял правила и подтвердил 18+ (NULL = ещё нет)
 );
 
 -- Анкета: одна на пользователя (user_id — первичный ключ).

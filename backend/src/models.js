@@ -60,7 +60,23 @@ function emptyProfile(userId) {
     drinking: '',
     photos: [],
     isVisible: true,
+    termsAcceptedAt: null,
+    onboarded: false,
   };
+}
+
+// Прошёл ли пользователь обязательный вход: принял правила + подтвердил 18,
+// заполнил имя, возраст (18+), пол и добавил хотя бы одно фото.
+// Тот же список проверяется на сервере при POST /api/onboarding — обойти нельзя.
+function computeOnboarded(profile) {
+  return (
+    profile.termsAcceptedAt != null &&
+    !!profile.name &&
+    Number.isFinite(profile.age) &&
+    profile.age >= 18 &&
+    (profile.gender === 'f' || profile.gender === 'm') &&
+    profile.photos.length > 0
+  );
 }
 
 const ONLINE_WINDOW_MS = 90 * 1000; // "в сети", если активность была не позже 90 сек назад
@@ -87,9 +103,17 @@ export function getFullProfile(userId) {
 
   const { online, lastSeen } = presence(userId);
 
-  if (!row) return { ...emptyProfile(userId), photos, online, lastSeen };
+  const userRow = db
+    .prepare(`SELECT terms_accepted_at FROM users WHERE id = ?`)
+    .get(userId);
+  const termsAcceptedAt = userRow?.terms_accepted_at ?? null;
 
-  return {
+  if (!row) {
+    const base = { ...emptyProfile(userId), photos, termsAcceptedAt, online, lastSeen };
+    return { ...base, onboarded: computeOnboarded(base) };
+  }
+
+  const profile = {
     id: userId,
     userId,
     name: row.name,
@@ -107,9 +131,11 @@ export function getFullProfile(userId) {
     drinking: row.drinking || '',
     isVisible: !!row.is_visible,
     photos,
+    termsAcceptedAt,
     online,
     lastSeen,
   };
+  return { ...profile, onboarded: computeOnboarded(profile) };
 }
 
 // Отметить пользователя "был онлайн сейчас".
@@ -153,6 +179,36 @@ export function saveProfile(userId, data) {
     employment: oneOf(data.employment, EMPLOYMENT_CODES),
     ts: now(),
   });
+}
+
+// Обязательный вход ("онбординг"). Проверяем всё на сервере, чтобы нельзя было
+// проскочить мимо экранов на клиенте. Возвращает { error } либо { profile }.
+export function acceptOnboarding(userId, data = {}) {
+  const name = String(data.name ?? '').trim();
+  const age = intInRange(data.age, 18, 100);
+  const gender = ['f', 'm'].includes(data.gender) ? data.gender : '';
+  const photos = (Array.isArray(data.photos) ? data.photos : [])
+    .filter((u) => typeof u === 'string' && u.trim())
+    .slice(0, 6);
+
+  if (data.acceptAge !== true || data.acceptRules !== true) {
+    return { error: 'Нужно подтвердить возраст и принять правила' };
+  }
+  if (!name) return { error: 'Впишите имя' };
+  if (age === null) return { error: 'Возраст — только от 18 до 100 лет' };
+  if (!gender) return { error: 'Выберите пол' };
+  if (photos.length === 0) return { error: 'Добавьте хотя бы одно фото' };
+
+  // Пишем анкету, не затирая остальные поля, если они вдруг уже есть.
+  const current = getFullProfile(userId);
+  saveProfile(userId, { ...current, name, age, gender });
+  setPhotos(userId, photos);
+  db.prepare(`UPDATE users SET terms_accepted_at = ? WHERE id = ?`).run(
+    now(),
+    userId
+  );
+
+  return { profile: getFullProfile(userId) };
 }
 
 // Заменить все фото пользователя новым списком url-ов.

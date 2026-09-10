@@ -5,6 +5,7 @@ import LikesScreen from './screens/LikesScreen';
 import MatchesScreen from './screens/MatchesScreen';
 import MyProfileScreen from './screens/MyProfileScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
+import Onboarding from './screens/Onboarding';
 import MatchScreen from './components/MatchScreen';
 import ChatTab from './screens/ChatTab';
 import { initTelegram } from './telegram';
@@ -278,6 +279,12 @@ export default function App() {
       );
     }
     return <MyProfileScreen profile={me} onEdit={() => setEditing(true)} />;
+  }
+
+  // Обязательный вход: пока анкета не готова (правила + фото + имя/возраст/пол),
+  // показываем ТОЛЬКО экран онбординга — ни ленты, ни навигации.
+  if (me && !me.onboarded) {
+    return <Onboarding onDone={(profile) => setMe(profile)} />;
   }
 
   return (

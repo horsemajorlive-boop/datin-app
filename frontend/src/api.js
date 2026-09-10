@@ -34,7 +34,18 @@ async function request(method, path, body) {
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(`${method} ${path} → ${res.status} ${text}`);
+    // сервер обычно отвечает { error: "человеческое сообщение" } — покажем именно его
+    let message = `${method} ${path} → ${res.status}`;
+    try {
+      const body = JSON.parse(text);
+      if (body?.error) message = body.error;
+      else if (text) message += ` ${text}`;
+    } catch {
+      if (text) message += ` ${text}`;
+    }
+    const err = new Error(message);
+    err.status = res.status;
+    throw err;
   }
   if (res.status === 204) return null;
   return res.json();

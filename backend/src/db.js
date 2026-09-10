@@ -45,4 +45,19 @@ for (const col of NEW_INT_COLUMNS) {
   }
 }
 
+// Колонка users.terms_accepted_at + разовый бэкфилл: у кого уже есть
+// заполненная анкета — считаем, что правила они приняли при регистрации,
+// чтобы обновление не выкидывало их обратно на онбординг.
+try {
+  db.exec('ALTER TABLE users ADD COLUMN terms_accepted_at INTEGER');
+  console.log('[db] миграция: добавлена колонка users.terms_accepted_at');
+  db.exec(`
+    UPDATE users SET terms_accepted_at = created_at
+     WHERE terms_accepted_at IS NULL
+       AND id IN (SELECT user_id FROM profiles WHERE name <> '')
+  `);
+} catch {
+  /* колонка уже существует — ок */
+}
+
 console.log('[db] готова:', DB_PATH);

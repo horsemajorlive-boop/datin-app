@@ -110,6 +110,9 @@ BOTS.forEach((bot, i) => {
   const createdAt = Date.now() - i * 3 * DAY;
   db.prepare(`UPDATE users SET created_at = ? WHERE id = ?`).run(createdAt, bot.id);
 
+  // Боты уже "прошли вход" — иначе не попадут в ленту.
+  db.prepare(`UPDATE users SET terms_accepted_at = ? WHERE id = ?`).run(createdAt, bot.id);
+
   if (bot.likesYou) {
     // бот лайкает dev-пользователя; сам dev-пользователь ещё не свайпал,
     // поэтому мэтча пока нет — он появится после ответного лайка.

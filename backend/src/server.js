@@ -46,6 +46,14 @@ app.put('/api/me', (req, res) => {
   res.json(model.getFullProfile(req.user.id));
 });
 
+// Обязательный вход: принять правила + подтвердить 18 + имя/возраст/пол + фото.
+// { acceptAge, acceptRules, name, age, gender, photos: [url] }
+app.post('/api/onboarding', (req, res) => {
+  const out = model.acceptOnboarding(req.user.id, req.body || {});
+  if (out.error) return res.status(400).json({ error: out.error });
+  res.json(out.profile);
+});
+
 // Лента для свайпов (+ необязательные фильтры в query-параметрах)
 app.get('/api/feed', (req, res) => {
   const q = req.query;

@@ -125,3 +125,11 @@ export function IconChevronLeft() {
     </svg>
   );
 }
+
+export function IconCheck() {
+  return (
+    <svg {...base}>
+      <path d="M4 12l5 5L20 6" />
+    </svg>
+  );
+}
