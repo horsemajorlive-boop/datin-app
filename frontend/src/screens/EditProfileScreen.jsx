@@ -3,6 +3,7 @@ import { fileToCompressedDataUrl } from '../lib/image';
 import { api } from '../api';
 import InterestPicker from '../components/InterestPicker';
 import ChoiceRow from '../components/ChoiceRow';
+import CityInput from '../components/CityInput';
 import { HOUSING, CAR, EMPLOYMENT } from '../data/lifestyle';
 
 // Экран редактирования анкеты — форма с загрузкой фото.
@@ -167,15 +168,14 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
           />
         </label>
 
-        <label className="field">
+        <div className="field">
           <span>Город</span>
-          <input
+          <CityInput
             value={form.city ?? ''}
-            onChange={(e) => updateField('city', e.target.value)}
-            maxLength={40}
-            placeholder="Москва"
+            onChange={(v) => updateField('city', v)}
+            placeholder="Начните вводить, напр. Екатер"
           />
-        </label>
+        </div>
 
         <label className="field">
           <span>О себе</span>

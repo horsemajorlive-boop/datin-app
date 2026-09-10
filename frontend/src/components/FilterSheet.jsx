@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { DEFAULT_FILTERS } from '../lib/filters';
 import { HOUSING, CAR, EMPLOYMENT } from '../data/lifestyle';
+import CityInput from './CityInput';
+import { isPremium } from '../premium';
+
+const SORTS = [
+  { code: '', label: 'Сейчас активны' },
+  { code: 'new', label: 'Новенькие', premium: true },
+];
 
 // Шторка с фильтрами ленты поиска.
 //
@@ -38,6 +45,7 @@ function OneRow({ label, options, value, onPick }) {
 
 export default function FilterSheet({ value, onApply, onClose }) {
   const [f, setF] = useState(value);
+  const premium = isPremium();
 
   const set = (patch) => setF((cur) => ({ ...cur, ...patch }));
 
@@ -80,12 +88,32 @@ export default function FilterSheet({ value, onApply, onClose }) {
 
             <div className="field">
               <span>Город</span>
-              <input
+              <CityInput
                 value={f.city}
-                onChange={(e) => set({ city: e.target.value })}
+                onChange={(v) => set({ city: v })}
                 placeholder="Любой"
-                maxLength={40}
               />
+            </div>
+
+            <div className="field">
+              <span>Сортировка</span>
+              <div className="choice">
+                {SORTS.map((o) => {
+                  const locked = o.premium && !premium;
+                  return (
+                    <button
+                      key={o.code || 'default'}
+                      type="button"
+                      className={`chipbtn ${f.sort === o.code ? 'is-on' : ''}`}
+                      disabled={locked}
+                      onClick={() => set({ sort: o.code })}
+                    >
+                      {o.label}
+                      {o.premium && <span className="chipbtn__pro">PRO</span>}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <OneRow

@@ -87,7 +87,9 @@ const photoUrl = (seed) => `https://picsum.photos/seed/${seed}/600/800`;
 // Заводим dev-пользователя, чтобы на него можно было сослаться в свайпах (внешний ключ).
 upsertUser({ id: DEV_USER_ID, first_name: 'Dev', username: 'dev' });
 
-for (const bot of BOTS) {
+const DAY = 24 * 60 * MINUTE;
+
+BOTS.forEach((bot, i) => {
   upsertUser({ id: bot.id, first_name: bot.first_name, username: null });
   saveProfile(bot.id, bot.profile);
   setPhotos(bot.id, bot.photos.map(photoUrl));
@@ -98,12 +100,16 @@ for (const bot of BOTS) {
     : Date.now() - Math.round((5 + Math.random() * 175)) * MINUTE;
   db.prepare(`UPDATE users SET last_seen_at = ? WHERE id = ?`).run(lastSeen, bot.id);
 
+  // Дата регистрации — с разбросом, чтобы работала сортировка "новенькие".
+  const createdAt = Date.now() - i * 3 * DAY;
+  db.prepare(`UPDATE users SET created_at = ? WHERE id = ?`).run(createdAt, bot.id);
+
   if (bot.likesYou) {
     // бот лайкает dev-пользователя; сам dev-пользователь ещё не свайпал,
     // поэтому мэтча пока нет — он появится после ответного лайка.
     recordSwipe(bot.id, DEV_USER_ID, 'like');
   }
-}
+});
 
 console.log(
   `[seed] добавлено анкет: ${BOTS.length}. ` +

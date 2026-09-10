@@ -1329,6 +1329,104 @@
   color: #fff;
 }
 
+.chipbtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Пометка премиум-опции. */
+.chipbtn__pro {
+  margin-left: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: linear-gradient(120deg, #f6c453, #e8a33d);
+  color: #1a1205;
+  vertical-align: 1px;
+}
+
+/* ================= Поле выбора города ================= */
+
+.cityinput {
+  position: relative;
+}
+
+.cityinput > input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  padding: 11px 34px 11px 13px;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.cityinput > input::placeholder {
+  color: var(--faint);
+}
+
+.cityinput > input:focus {
+  border-color: var(--accent);
+}
+
+.cityinput__clear {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.cityinput__list {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  max-height: 200px;
+  overflow-y: auto;
+  list-style: none;
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  padding: 4px;
+}
+
+.cityinput__list li button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.cityinput__list li button:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.cityinput__empty {
+  padding: 9px 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .planner__preview {
   font-size: 13px;
   color: var(--muted);

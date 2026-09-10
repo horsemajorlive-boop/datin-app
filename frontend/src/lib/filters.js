@@ -9,6 +9,7 @@ export const DEFAULT_FILTERS = {
   housing: [], // массив кодов ('own' | 'rent' | 'parents')
   car: '', // '' | 'yes' | 'no'
   employment: '', // '' | 'working' | 'not_working'
+  sort: '', // '' — сейчас активны (по умолчанию) | 'new' — новенькие (Premium)
 };
 
 const STORAGE_KEY = 'feed-filters';
@@ -40,6 +41,7 @@ export function buildFeedQuery(f) {
   if (f.housing.length) p.set('housing', f.housing.join(','));
   if (f.car) p.set('car', f.car);
   if (f.employment) p.set('employment', f.employment);
+  if (f.sort) p.set('sort', f.sort);
   const s = p.toString();
   return s ? `?${s}` : '';
 }

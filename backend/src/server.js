@@ -59,6 +59,7 @@ app.get('/api/feed', (req, res) => {
       housing: q.housing ? String(q.housing).split(',') : undefined,
       car: q.car,
       employment: q.employment,
+      sort: q.sort,
     })
   );
 });

@@ -180,7 +180,7 @@ function hydrateProfiles(rows) {
 // Базовые условия: видимые, не я, с именем, ещё не свайпнутые.
 // opts — необязательные фильтры: ageMin, ageMax, city, gender, housing[], car, employment.
 export function getFeed(userId, opts = {}) {
-  const { ageMin, ageMax, city, gender, housing, car, employment } = opts;
+  const { ageMin, ageMax, city, gender, housing, car, employment, sort } = opts;
 
   // Собираем WHERE по кусочкам — только те условия, что реально заданы.
   const where = [
@@ -200,8 +200,9 @@ export function getFeed(userId, opts = {}) {
     params.ageMax = ageMax;
   }
   if (city) {
-    where.push('p.city LIKE :city');
-    params.city = `%${city}%`;
+    // город выбирается из списка, поэтому сравниваем точно
+    where.push('p.city = :city');
+    params.city = city;
   }
   if (gender === 'f' || gender === 'm') {
     where.push('p.gender = :gender');
@@ -225,13 +226,19 @@ export function getFeed(userId, opts = {}) {
     params.employment = employment;
   }
 
+  // Сортировка: по умолчанию — недавно активные; 'new' — недавно
+  // зарегистрированные (премиум-опция, но сам порядок безобиден).
+  const orderBy =
+    sort === 'new' ? 'u.created_at DESC, p.updated_at DESC' : 'p.updated_at DESC';
+
   const rows = db
     .prepare(
       `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
               p.housing, p.car, p.employment
          FROM profiles p
+         JOIN users u ON u.id = p.user_id
         WHERE ${where.join(' AND ')}
-        ORDER BY p.updated_at DESC
+        ORDER BY ${orderBy}
         LIMIT :limit`
     )
     .all(params);
