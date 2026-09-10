@@ -26,11 +26,19 @@ export function upsertUser(tgUser) {
 
 // ---------- Анкета ----------
 
-// Допустимые коды полей "образа жизни".
+// Допустимые коды полей "образа жизни" и "здоровья".
 const HOUSING_CODES = ['own', 'rent', 'parents'];
 const CAR_CODES = ['yes', 'no'];
 const EMPLOYMENT_CODES = ['working', 'not_working'];
+const SMOKING_CODES = ['no', 'sometimes', 'yes'];
+const DRINKING_CODES = ['no', 'sometimes', 'yes'];
 const oneOf = (value, codes) => (codes.includes(value) ? value : '');
+
+// Число в диапазоне или null.
+function intInRange(value, min, max) {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= min && n <= max ? Math.round(n) : null;
+}
 
 // Пустая анкета (когда пользователь ещё ничего не заполнил).
 function emptyProfile(userId) {
@@ -46,6 +54,10 @@ function emptyProfile(userId) {
     housing: '',
     car: '',
     employment: '',
+    height: null,
+    weight: null,
+    smoking: '',
+    drinking: '',
     photos: [],
     isVisible: true,
   };
@@ -89,6 +101,10 @@ export function getFullProfile(userId) {
     housing: row.housing || '',
     car: row.car || '',
     employment: row.employment || '',
+    height: row.height ?? null,
+    weight: row.weight ?? null,
+    smoking: row.smoking || '',
+    drinking: row.drinking || '',
     isVisible: !!row.is_visible,
     photos,
     online,
@@ -108,25 +124,30 @@ export function saveProfile(userId, data) {
   db.prepare(
     `INSERT INTO profiles
        (user_id, name, age, city, bio, gender, interests,
-        housing, car, employment, updated_at)
+        housing, car, employment, height, weight, smoking, drinking, updated_at)
      VALUES
        (:user_id, :name, :age, :city, :bio, :gender, :interests,
-        :housing, :car, :employment, :ts)
+        :housing, :car, :employment, :height, :weight, :smoking, :drinking, :ts)
      ON CONFLICT(user_id) DO UPDATE SET
        name = :name, age = :age, city = :city, bio = :bio,
        gender = :gender, interests = :interests,
        housing = :housing, car = :car, employment = :employment,
+       height = :height, weight = :weight, smoking = :smoking, drinking = :drinking,
        updated_at = :ts`
   ).run({
     user_id: userId,
     name: String(data.name ?? '').slice(0, 40),
-    age: data.age ? Number(data.age) : null,
+    age: intInRange(data.age, 18, 100), // младше 18 — не сохраняем
     city: String(data.city ?? '').slice(0, 60),
     bio: String(data.bio ?? '').slice(0, 500),
     gender: ['f', 'm'].includes(data.gender) ? data.gender : '',
     interests: JSON.stringify(
       Array.isArray(data.interests) ? data.interests.slice(0, 12) : []
     ),
+    height: intInRange(data.height, 120, 230),
+    weight: intInRange(data.weight, 35, 250),
+    smoking: oneOf(data.smoking, SMOKING_CODES),
+    drinking: oneOf(data.drinking, DRINKING_CODES),
     housing: oneOf(data.housing, HOUSING_CODES),
     car: oneOf(data.car, CAR_CODES),
     employment: oneOf(data.employment, EMPLOYMENT_CODES),
@@ -172,6 +193,10 @@ function hydrateProfiles(rows) {
     housing: r.housing || '',
     car: r.car || '',
     employment: r.employment || '',
+    height: r.height ?? null,
+    weight: r.weight ?? null,
+    smoking: r.smoking || '',
+    drinking: r.drinking || '',
     photos: photosStmt.all(r.user_id).map((p) => p.url),
   }));
 }
@@ -180,7 +205,20 @@ function hydrateProfiles(rows) {
 // Базовые условия: видимые, не я, с именем, ещё не свайпнутые.
 // opts — необязательные фильтры: ageMin, ageMax, city, gender, housing[], car, employment.
 export function getFeed(userId, opts = {}) {
-  const { ageMin, ageMax, city, gender, housing, car, employment, sort } = opts;
+  const {
+    ageMin,
+    ageMax,
+    city,
+    gender,
+    housing,
+    car,
+    employment,
+    heightMin,
+    heightMax,
+    smoking,
+    drinking,
+    sort,
+  } = opts;
 
   // Собираем WHERE по кусочкам — только те условия, что реально заданы.
   const where = [
@@ -191,13 +229,30 @@ export function getFeed(userId, opts = {}) {
   ];
   const params = { me: userId, limit: Math.min(Number(opts.limit) || 20, 50) };
 
+  // Возраст: минимум всегда не ниже 18.
   if (Number.isFinite(ageMin)) {
     where.push('p.age >= :ageMin');
-    params.ageMin = ageMin;
+    params.ageMin = Math.max(18, Math.min(100, ageMin));
   }
   if (Number.isFinite(ageMax)) {
     where.push('p.age <= :ageMax');
-    params.ageMax = ageMax;
+    params.ageMax = Math.max(18, Math.min(100, ageMax));
+  }
+  if (Number.isFinite(heightMin)) {
+    where.push('p.height >= :heightMin');
+    params.heightMin = heightMin;
+  }
+  if (Number.isFinite(heightMax)) {
+    where.push('p.height <= :heightMax');
+    params.heightMax = heightMax;
+  }
+  if (SMOKING_CODES.includes(smoking)) {
+    where.push('p.smoking = :smoking');
+    params.smoking = smoking;
+  }
+  if (DRINKING_CODES.includes(drinking)) {
+    where.push('p.drinking = :drinking');
+    params.drinking = drinking;
   }
   if (city) {
     // город выбирается из списка, поэтому сравниваем точно
@@ -234,7 +289,8 @@ export function getFeed(userId, opts = {}) {
   const rows = db
     .prepare(
       `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
-              p.housing, p.car, p.employment
+              p.housing, p.car, p.employment,
+              p.height, p.weight, p.smoking, p.drinking
          FROM profiles p
          JOIN users u ON u.id = p.user_id
         WHERE ${where.join(' AND ')}
@@ -251,7 +307,8 @@ export function getMyLikes(userId) {
   const rows = db
     .prepare(
       `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
-              p.housing, p.car, p.employment
+              p.housing, p.car, p.employment,
+              p.height, p.weight, p.smoking, p.drinking
          FROM swipes s
          JOIN profiles p ON p.user_id = s.target_id
         WHERE s.actor_id = :me AND s.direction = 'like'

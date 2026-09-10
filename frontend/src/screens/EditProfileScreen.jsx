@@ -4,7 +4,9 @@ import { api } from '../api';
 import InterestPicker from '../components/InterestPicker';
 import ChoiceRow from '../components/ChoiceRow';
 import CityInput from '../components/CityInput';
+import RangeRow from '../components/RangeRow';
 import { HOUSING, CAR, EMPLOYMENT } from '../data/lifestyle';
+import { SMOKING, DRINKING, HEIGHT_RANGE, WEIGHT_RANGE } from '../data/health';
 
 // Экран редактирования анкеты — форма с загрузкой фото.
 //
@@ -80,7 +82,7 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
     }
     const age = Number(form.age);
     if (!Number.isInteger(age) || age < 18 || age > 100) {
-      setError('Возраст должен быть числом от 18 до 100');
+      setError('Возраст — только от 18 до 100 лет');
       return;
     }
 
@@ -93,6 +95,10 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
       housing: form.housing || '',
       car: form.car || '',
       employment: form.employment || '',
+      height: form.height ?? null,
+      weight: form.weight ?? null,
+      smoking: form.smoking || '',
+      drinking: form.drinking || '',
       photos: form.photos,
     });
   }
@@ -163,8 +169,14 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
             type="number"
             value={form.age ?? ''}
             onChange={(e) => updateField('age', e.target.value)}
+            onBlur={(e) => {
+              // не даём указать младше 18
+              const n = Number(e.target.value);
+              if (e.target.value !== '' && n < 18) updateField('age', 18);
+            }}
             min={18}
             max={100}
+            placeholder="Только с 18 лет"
           />
         </label>
 
@@ -206,6 +218,37 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
           options={EMPLOYMENT}
           value={form.employment || ''}
           onChange={(v) => updateField('employment', v)}
+        />
+
+        <RangeRow
+          label="Рост"
+          unit="см"
+          min={HEIGHT_RANGE.min}
+          max={HEIGHT_RANGE.max}
+          defaultValue={HEIGHT_RANGE.default}
+          value={form.height ?? null}
+          onChange={(v) => updateField('height', v)}
+        />
+        <RangeRow
+          label="Вес"
+          unit="кг"
+          min={WEIGHT_RANGE.min}
+          max={WEIGHT_RANGE.max}
+          defaultValue={WEIGHT_RANGE.default}
+          value={form.weight ?? null}
+          onChange={(v) => updateField('weight', v)}
+        />
+        <ChoiceRow
+          label="Курение"
+          options={SMOKING}
+          value={form.smoking || ''}
+          onChange={(v) => updateField('smoking', v)}
+        />
+        <ChoiceRow
+          label="Алкоголь"
+          options={DRINKING}
+          value={form.drinking || ''}
+          onChange={(v) => updateField('drinking', v)}
         />
 
         <div className="field">

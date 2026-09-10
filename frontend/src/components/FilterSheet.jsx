@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { DEFAULT_FILTERS } from '../lib/filters';
+import { DEFAULT_FILTERS, clampAge } from '../lib/filters';
 import { HOUSING, CAR, EMPLOYMENT } from '../data/lifestyle';
+import { SMOKING, DRINKING, HEIGHT_RANGE } from '../data/health';
 import CityInput from './CityInput';
 import { isPremium } from '../premium';
 
@@ -49,6 +50,15 @@ export default function FilterSheet({ value, onApply, onClose }) {
 
   const set = (patch) => setF((cur) => ({ ...cur, ...patch }));
 
+  // Возраст: по Enter или уходу из поля подтягиваем значение к диапазону 18–100.
+  const fixAge = (field) => set({ [field]: clampAge(f[field]) });
+  const onAgeKeyDown = (field) => (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      fixAge(field);
+    }
+  };
+
   const toggleHousing = (code) =>
     set({
       housing: f.housing.includes(code)
@@ -73,6 +83,8 @@ export default function FilterSheet({ value, onApply, onClose }) {
                   placeholder="от"
                   value={f.ageMin}
                   onChange={(e) => set({ ageMin: e.target.value })}
+                  onBlur={() => fixAge('ageMin')}
+                  onKeyDown={onAgeKeyDown('ageMin')}
                 />
                 <span className="filter__dash">–</span>
                 <input
@@ -82,8 +94,11 @@ export default function FilterSheet({ value, onApply, onClose }) {
                   placeholder="до"
                   value={f.ageMax}
                   onChange={(e) => set({ ageMax: e.target.value })}
+                  onBlur={() => fixAge('ageMax')}
+                  onKeyDown={onAgeKeyDown('ageMax')}
                 />
               </div>
+              <span className="field__hint">Только с 18 лет</span>
             </div>
 
             <div className="field">
@@ -153,6 +168,43 @@ export default function FilterSheet({ value, onApply, onClose }) {
               options={EMPLOYMENT}
               value={f.employment}
               onPick={(v) => set({ employment: v })}
+            />
+
+            <div className="field">
+              <span>Рост, см</span>
+              <div className="filter__age">
+                <input
+                  type="number"
+                  min={HEIGHT_RANGE.min}
+                  max={HEIGHT_RANGE.max}
+                  placeholder="от"
+                  value={f.heightMin}
+                  onChange={(e) => set({ heightMin: e.target.value })}
+                />
+                <span className="filter__dash">–</span>
+                <input
+                  type="number"
+                  min={HEIGHT_RANGE.min}
+                  max={HEIGHT_RANGE.max}
+                  placeholder="до"
+                  value={f.heightMax}
+                  onChange={(e) => set({ heightMax: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <OneRow
+              label="Курение"
+              options={SMOKING}
+              value={f.smoking}
+              onPick={(v) => set({ smoking: v })}
+            />
+
+            <OneRow
+              label="Алкоголь"
+              options={DRINKING}
+              value={f.drinking}
+              onPick={(v) => set({ drinking: v })}
             />
 
             <div className="form__actions">

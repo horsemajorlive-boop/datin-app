@@ -59,6 +59,10 @@ app.get('/api/feed', (req, res) => {
       housing: q.housing ? String(q.housing).split(',') : undefined,
       car: q.car,
       employment: q.employment,
+      heightMin: q.heightMin ? Number(q.heightMin) : undefined,
+      heightMax: q.heightMax ? Number(q.heightMax) : undefined,
+      smoking: q.smoking,
+      drinking: q.drinking,
       sort: q.sort,
     })
   );

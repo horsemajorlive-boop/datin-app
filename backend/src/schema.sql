@@ -22,6 +22,10 @@ CREATE TABLE IF NOT EXISTS profiles (
   housing     TEXT    NOT NULL DEFAULT '',   -- 'own' | 'rent' | 'parents' | ''
   car         TEXT    NOT NULL DEFAULT '',   -- 'yes' | 'no' | ''
   employment  TEXT    NOT NULL DEFAULT '',   -- 'working' | 'not_working' | ''
+  height      INTEGER,                       -- рост в см (NULL = не указан)
+  weight      INTEGER,                       -- вес в кг (NULL = не указан)
+  smoking     TEXT    NOT NULL DEFAULT '',   -- 'no' | 'sometimes' | 'yes' | ''
+  drinking    TEXT    NOT NULL DEFAULT '',   -- 'no' | 'sometimes' | 'yes' | ''
   is_visible  INTEGER NOT NULL DEFAULT 1,    -- 1 = показывать в поиске
   updated_at  INTEGER NOT NULL
 );

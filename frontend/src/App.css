@@ -275,6 +275,11 @@
   opacity: 0.85;
 }
 
+/* на фото-оверлее чипы здоровья держим светлыми, а не приглушёнными */
+.card__info .ichip--plain {
+  color: #fff;
+}
+
 /* последний ряд чипов — отступ до кнопки "Подробнее" */
 .card__info .ichips:last-of-type {
   margin-bottom: 12px;
@@ -639,6 +644,11 @@
 
 /* "+N скрытых" — ещё тише. */
 .ichip--more {
+  color: var(--muted);
+}
+
+/* Чип без иконки (здоровье: рост / вес / курение / алкоголь). */
+.ichip--plain {
   color: var(--muted);
 }
 
@@ -1587,6 +1597,42 @@
   align-self: flex-end;
   font-size: 11px;
   color: var(--muted);
+}
+
+/* Ползунок роста / веса в редакторе анкеты. */
+.range {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.range input[type='range'] {
+  flex: 1;
+  accent-color: var(--accent);
+  height: 22px;
+  cursor: pointer;
+}
+
+.range__val {
+  font-size: 13px;
+  color: var(--muted);
+  min-width: 58px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.range__clear {
+  border: none;
+  background: transparent;
+  color: var(--faint);
+  font-size: 13px;
+  line-height: 1;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.range__clear:hover {
+  color: var(--text);
 }
 
 /* Предпросмотр фото. */

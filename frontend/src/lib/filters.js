@@ -9,8 +9,25 @@ export const DEFAULT_FILTERS = {
   housing: [], // массив кодов ('own' | 'rent' | 'parents')
   car: '', // '' | 'yes' | 'no'
   employment: '', // '' | 'working' | 'not_working'
+  heightMin: '', // рост, см
+  heightMax: '',
+  smoking: '', // '' | 'no' | 'sometimes' | 'yes'
+  drinking: '', // '' | 'no' | 'sometimes' | 'yes'
   sort: '', // '' — сейчас активны (по умолчанию) | 'new' — новенькие (Premium)
 };
+
+// Минимально допустимый возраст в приложении — младше нельзя нигде.
+export const MIN_AGE = 18;
+export const MAX_AGE = 100;
+
+// Приводит введённый возраст к диапазону [18, 100].
+// Пустая строка остаётся пустой (значит "не задано").
+export function clampAge(raw) {
+  if (raw === '' || raw == null) return '';
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return '';
+  return String(Math.min(MAX_AGE, Math.max(MIN_AGE, Math.round(n))));
+}
 
 const STORAGE_KEY = 'feed-filters';
 
@@ -34,13 +51,20 @@ export function saveFilters(filters) {
 // { ageMin: 20, city: 'Москва' }  ->  '?ageMin=20&city=Москва'
 export function buildFeedQuery(f) {
   const p = new URLSearchParams();
-  if (f.ageMin) p.set('ageMin', f.ageMin);
-  if (f.ageMax) p.set('ageMax', f.ageMax);
+  // Возраст всегда прогоняем через clampAge — меньше 18 в запрос не уйдёт.
+  const ageMin = clampAge(f.ageMin);
+  const ageMax = clampAge(f.ageMax);
+  if (ageMin) p.set('ageMin', ageMin);
+  if (ageMax) p.set('ageMax', ageMax);
   if (f.city.trim()) p.set('city', f.city.trim());
   if (f.gender) p.set('gender', f.gender);
   if (f.housing.length) p.set('housing', f.housing.join(','));
   if (f.car) p.set('car', f.car);
   if (f.employment) p.set('employment', f.employment);
+  if (f.heightMin) p.set('heightMin', f.heightMin);
+  if (f.heightMax) p.set('heightMax', f.heightMax);
+  if (f.smoking) p.set('smoking', f.smoking);
+  if (f.drinking) p.set('drinking', f.drinking);
   if (f.sort) p.set('sort', f.sort);
   const s = p.toString();
   return s ? `?${s}` : '';

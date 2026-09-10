@@ -25,10 +25,20 @@ db.exec(schema);
 
 // Мини-миграции: добавляем новые колонки в уже существующую таблицу.
 // ALTER TABLE ... ADD COLUMN бросит ошибку, если колонка уже есть — глотаем её.
-const NEW_PROFILE_COLUMNS = ['housing', 'car', 'employment'];
-for (const col of NEW_PROFILE_COLUMNS) {
+const NEW_TEXT_COLUMNS = ['housing', 'car', 'employment', 'smoking', 'drinking'];
+for (const col of NEW_TEXT_COLUMNS) {
   try {
     db.exec(`ALTER TABLE profiles ADD COLUMN ${col} TEXT NOT NULL DEFAULT ''`);
+    console.log(`[db] миграция: добавлена колонка profiles.${col}`);
+  } catch {
+    /* колонка уже существует — ок */
+  }
+}
+
+const NEW_INT_COLUMNS = ['height', 'weight'];
+for (const col of NEW_INT_COLUMNS) {
+  try {
+    db.exec(`ALTER TABLE profiles ADD COLUMN ${col} INTEGER`);
     console.log(`[db] миграция: добавлена колонка profiles.${col}`);
   } catch {
     /* колонка уже существует — ок */

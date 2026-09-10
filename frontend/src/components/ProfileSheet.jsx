@@ -1,6 +1,7 @@
 import PhotoCarousel from './PhotoCarousel';
 import InterestChips from './InterestChips';
 import LifestyleChips from './LifestyleChips';
+import HealthChips from './HealthChips';
 import { useCarousel } from '../lib/useCarousel';
 
 // Всплывающее окно ("шторка") с полной анкетой.
@@ -37,6 +38,7 @@ export default function ProfileSheet({ profile, onClose }) {
           <p className="muted">{profile.city}</p>
           <p>{profile.bio}</p>
 
+          <HealthChips profile={profile} />
           <LifestyleChips profile={profile} />
           <InterestChips interests={profile.interests} />
 
