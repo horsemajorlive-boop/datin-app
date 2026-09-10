@@ -1,4 +1,5 @@
 import EmptyState from '../components/EmptyState';
+import ScreenHeader from '../components/ScreenHeader';
 import { IconMessage } from '../components/icons';
 
 // Список мэтчей / диалогов. Тап по строке открывает чат.
@@ -27,7 +28,7 @@ export default function MatchesScreen({
   if (matches.length === 0) {
     return (
       <div className="screen">
-        <h1 className="screen__title">{title}</h1>
+        <ScreenHeader title={title} />
         <EmptyState
           icon={<IconMessage />}
           title="Пока нет диалогов"
@@ -41,9 +42,7 @@ export default function MatchesScreen({
 
   return (
     <div className="screen">
-      <h1 className="screen__title">
-        {title} <span className="screen__count">{matches.length}</span>
-      </h1>
+      <ScreenHeader title={title} count={matches.length} />
 
       <div className="matchlist">
         {matches.map(({ matchId, profile, lastMessage }) => (

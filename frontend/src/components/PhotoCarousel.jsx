@@ -32,16 +32,21 @@ export default function PhotoCarousel({
         draggable="false"
       />
 
-      {/* Полоски-индикаторы сверху — только если фото больше одного. */}
+      {/* Полоски-индикаторы + счётчик сверху — только если фото больше одного. */}
       {photos.length > 1 && (
-        <div className="carousel__bars">
-          {photos.map((_, i) => (
-            <span
-              key={i}
-              className={`carousel__bar ${i === safeIndex ? 'is-active' : ''}`}
-            />
-          ))}
-        </div>
+        <>
+          <div className="carousel__bars">
+            {photos.map((_, i) => (
+              <span
+                key={i}
+                className={`carousel__bar ${i === safeIndex ? 'is-active' : ''}`}
+              />
+            ))}
+          </div>
+          <span className="carousel__count">
+            {safeIndex + 1} / {photos.length}
+          </span>
+        </>
       )}
 
       {showZones && (

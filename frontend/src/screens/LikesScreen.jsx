@@ -1,5 +1,6 @@
 import VerifiedBadge from '../components/VerifiedBadge';
 import EmptyState from '../components/EmptyState';
+import ScreenHeader from '../components/ScreenHeader';
 import { IconX, IconHeart } from '../components/icons';
 
 // Экран "Симпатии" — кто лайкнул ВАС и ждёт ответа.
@@ -15,7 +16,7 @@ export default function LikesScreen({ people, onLike, onPass, onBrowse }) {
   if (people.length === 0) {
     return (
       <div className="screen">
-        <h1 className="screen__title">Симпатии</h1>
+        <ScreenHeader title="Симпатии" />
         <EmptyState
           icon={<IconHeart filled />}
           title="Пока никто не лайкнул"
@@ -29,9 +30,7 @@ export default function LikesScreen({ people, onLike, onPass, onBrowse }) {
 
   return (
     <div className="screen">
-      <h1 className="screen__title">
-        Симпатии <span className="screen__count">{people.length}</span>
-      </h1>
+      <ScreenHeader title="Симпатии" count={people.length} />
       <p className="likes__lead">
         Эти люди уже лайкнули вас. Ответьте взаимностью — сразу будет мэтч.
       </p>

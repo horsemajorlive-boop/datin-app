@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import SwipeDeck from '../components/SwipeDeck';
 import ProfileSheet from '../components/ProfileSheet';
 import FilterSheet from '../components/FilterSheet';
+import ScreenHeader from '../components/ScreenHeader';
 import { IconSliders } from '../components/icons';
 import { isFilterActive } from '../lib/filters';
 
@@ -35,13 +36,15 @@ export default function DeckScreen({
 
   return (
     <div className="screen screen--deck">
-      <button
-        className={`deck__filter ${isFilterActive(filters) ? 'is-active' : ''}`}
-        onClick={() => setShowFilters(true)}
-        aria-label="Фильтры"
-      >
-        <IconSliders />
-      </button>
+      <ScreenHeader title="Поиск">
+        <button
+          className={`scrhead__btn ${isFilterActive(filters) ? 'is-active' : ''}`}
+          onClick={() => setShowFilters(true)}
+          aria-label="Фильтры"
+        >
+          <IconSliders />
+        </button>
+      </ScreenHeader>
 
       <SwipeDeck
         profiles={feed}

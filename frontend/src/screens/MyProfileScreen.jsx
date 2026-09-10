@@ -4,6 +4,7 @@ import LifestyleChips from '../components/LifestyleChips';
 import HealthChips from '../components/HealthChips';
 import GoalChips from '../components/GoalChips';
 import VerifiedBadge from '../components/VerifiedBadge';
+import ScreenHeader from '../components/ScreenHeader';
 import { IconVerified, IconSettings } from '../components/icons';
 import { useCarousel } from '../lib/useCarousel';
 
@@ -59,16 +60,15 @@ export default function MyProfileScreen({
   const photo = useCarousel(profile.photos.length);
 
   const header = (
-    <div className="screen__head">
-      <h1 className="screen__title">Мой профиль</h1>
+    <ScreenHeader title="Мой профиль">
       <button
-        className="screen__icon-btn"
+        className="scrhead__btn"
         onClick={onOpenSettings}
         aria-label="Настройки"
       >
         <IconSettings />
       </button>
-    </div>
+    </ScreenHeader>
   );
 
   if (!profile.name) {
