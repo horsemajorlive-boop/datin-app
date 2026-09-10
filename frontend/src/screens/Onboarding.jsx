@@ -8,13 +8,14 @@ import { clampAge } from '../lib/filters';
 import { RULES } from '../data/rules';
 import { HOUSING, CAR, EMPLOYMENT } from '../data/lifestyle';
 import { HEIGHT_RANGE, WEIGHT_RANGE } from '../data/health';
+import { GOAL, INTENT, KIDS } from '../data/goals';
 import { IconChevronLeft, IconCheck, IconHeart } from '../components/icons';
 
 // Обязательный вход в приложение. Пока пользователь не пройдёт все шаги,
 // App не показывает основной интерфейс — обойти экран нельзя.
 //
 // Шаги: 0 приветствие · 1 правила · 2 фото · 3 о себе (+ рост/вес по желанию)
-//       · 4 имущество (жильё/авто/работа) · 5 интересы (минимум 5)
+//       · 4 цели знакомства · 5 имущество · 6 интересы (минимум 5)
 //
 // Props:
 //   onDone(profile) — вызвать с готовой анкетой, когда сервер подтвердил вход
@@ -25,7 +26,7 @@ const GENDERS = [
 ];
 
 const MIN_INTERESTS = 5;
-const STEPS_TOTAL = 6;
+const STEPS_TOTAL = 7;
 
 export default function Onboarding({ onDone }) {
   const [step, setStep] = useState(0);
@@ -38,6 +39,9 @@ export default function Onboarding({ onDone }) {
     gender: '',
     height: null,
     weight: null,
+    goal: '',
+    intent: '',
+    kids: '',
     housing: '',
     car: '',
     employment: '',
@@ -63,6 +67,9 @@ export default function Onboarding({ onDone }) {
         photos: data.photos,
         height: data.height ?? null,
         weight: data.weight ?? null,
+        goal: data.goal,
+        intent: data.intent,
+        kids: data.kids,
         housing: data.housing,
         car: data.car,
         employment: data.employment,
@@ -81,8 +88,9 @@ export default function Onboarding({ onDone }) {
     (step === 1 && data.acceptAge && data.acceptRules) ||
     (step === 2 && data.photos.length > 0) ||
     (step === 3 && data.name.trim() && Number(data.age) >= 18 && data.gender) ||
-    (step === 4 && data.housing && data.car && data.employment) ||
-    (step === 5 && data.interests.length >= MIN_INTERESTS);
+    (step === 4 && data.goal && data.intent) ||
+    (step === 5 && data.housing && data.car && data.employment) ||
+    (step === 6 && data.interests.length >= MIN_INTERESTS);
 
   const interestsLeft = MIN_INTERESTS - data.interests.length;
 
@@ -241,6 +249,33 @@ export default function Onboarding({ onDone }) {
 
         {step === 4 && (
           <div className="form">
+            <h2 className="onb__title">Цели знакомства</h2>
+            <p className="muted onb__hint">
+              Так проще найти тех, кто ищет то же самое.
+            </p>
+            <ChoiceRow
+              label="Что ищете"
+              options={GOAL}
+              value={data.goal}
+              onChange={(v) => set({ goal: v })}
+            />
+            <ChoiceRow
+              label="Насколько серьёзно"
+              options={INTENT}
+              value={data.intent}
+              onChange={(v) => set({ intent: v })}
+            />
+            <ChoiceRow
+              label="Дети · по желанию"
+              options={KIDS}
+              value={data.kids}
+              onChange={(v) => set({ kids: v })}
+            />
+          </div>
+        )}
+
+        {step === 5 && (
+          <div className="form">
             <h2 className="onb__title">Имущество</h2>
             <p className="muted onb__hint">Коротко о быте — это важно для поиска.</p>
             <ChoiceRow
@@ -264,7 +299,7 @@ export default function Onboarding({ onDone }) {
           </div>
         )}
 
-        {step === 5 && (
+        {step === 6 && (
           <div>
             <h2 className="onb__title">Интересы</h2>
             <p className="muted onb__hint">

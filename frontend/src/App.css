@@ -822,6 +822,18 @@
   color: var(--muted);
 }
 
+/* Первый чип целей знакомства (что ищет) — с акцентом. */
+.ichip--goal {
+  background: var(--accent-soft);
+  border-color: var(--accent-soft);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.ichip--goal > svg {
+  color: var(--accent);
+}
+
 /* ================= Выбор интересов (редактор) ================= */
 
 .picker {

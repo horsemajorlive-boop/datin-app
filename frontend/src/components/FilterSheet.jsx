@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { DEFAULT_FILTERS, clampAge } from '../lib/filters';
 import { HOUSING, CAR, EMPLOYMENT } from '../data/lifestyle';
 import { SMOKING, DRINKING, HEIGHT_RANGE } from '../data/health';
+import { GOAL, INTENT, KIDS } from '../data/goals';
 import CityInput from './CityInput';
 import { isPremium } from '../premium';
 
@@ -23,7 +24,7 @@ const GENDERS = [
 ];
 
 // Один ряд чипов "выбрать один код или ничего".
-function OneRow({ label, options, value, onPick }) {
+function OneRow({ label, options, value, onPick, useLabel = false }) {
   return (
     <div className="field">
       <span>{label}</span>
@@ -35,8 +36,7 @@ function OneRow({ label, options, value, onPick }) {
             className={`chipbtn ${value === o.code ? 'is-on' : ''}`}
             onClick={() => onPick(value === o.code ? '' : o.code)}
           >
-            {o.emoji ? `${o.emoji} ` : ''}
-            {o.short || o.label}
+            {useLabel ? o.label : o.short || o.label}
           </button>
         ))}
       </div>
@@ -163,7 +163,7 @@ export default function FilterSheet({ value, onApply, onClose }) {
                     }`}
                     onClick={() => toggleHousing(o.code)}
                   >
-                    {o.emoji} {o.short}
+                    {o.short}
                   </button>
                 ))}
               </div>
@@ -181,6 +181,29 @@ export default function FilterSheet({ value, onApply, onClose }) {
               options={EMPLOYMENT}
               value={f.employment}
               onPick={(v) => set({ employment: v })}
+            />
+
+            <OneRow
+              label="Что ищет"
+              options={GOAL}
+              value={f.goal}
+              onPick={(v) => set({ goal: v })}
+            />
+
+            <OneRow
+              label="Настрой"
+              options={INTENT}
+              value={f.intent}
+              onPick={(v) => set({ intent: v })}
+              useLabel
+            />
+
+            <OneRow
+              label="Дети"
+              options={KIDS}
+              value={f.kids}
+              onPick={(v) => set({ kids: v })}
+              useLabel
             />
 
             <div className="field">

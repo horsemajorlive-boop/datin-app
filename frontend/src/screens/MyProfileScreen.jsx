@@ -2,6 +2,7 @@ import PhotoCarousel from '../components/PhotoCarousel';
 import InterestChips from '../components/InterestChips';
 import LifestyleChips from '../components/LifestyleChips';
 import HealthChips from '../components/HealthChips';
+import GoalChips from '../components/GoalChips';
 import VerifiedBadge from '../components/VerifiedBadge';
 import { IconVerified, IconSettings } from '../components/icons';
 import { useCarousel } from '../lib/useCarousel';
@@ -109,6 +110,13 @@ export default function MyProfileScreen({
       </div>
 
       {profile.bio && <p className="myprofile__bio">{profile.bio}</p>}
+
+      {(profile.goal || profile.intent || profile.kids) && (
+        <section className="sheet__section">
+          <h3>Ищет</h3>
+          <GoalChips profile={profile} />
+        </section>
+      )}
 
       <section className="sheet__section">
         <h3>О себе</h3>

@@ -9,6 +9,9 @@ export const DEFAULT_FILTERS = {
   housing: [], // массив кодов ('own' | 'rent' | 'parents')
   car: '', // '' | 'yes' | 'no'
   employment: '', // '' | 'working' | 'not_working'
+  goal: '', // '' | 'friendship' | 'dating' | 'relationship'
+  intent: '', // '' | 'serious' | 'casual'
+  kids: '', // '' | 'want' | 'have' | 'dont' | 'maybe'
   heightMin: '', // рост, см
   heightMax: '',
   smoking: '', // '' | 'no' | 'sometimes' | 'yes'
@@ -62,6 +65,9 @@ export function buildFeedQuery(f) {
   if (f.housing.length) p.set('housing', f.housing.join(','));
   if (f.car) p.set('car', f.car);
   if (f.employment) p.set('employment', f.employment);
+  if (f.goal) p.set('goal', f.goal);
+  if (f.intent) p.set('intent', f.intent);
+  if (f.kids) p.set('kids', f.kids);
   if (f.heightMin) p.set('heightMin', f.heightMin);
   if (f.heightMax) p.set('heightMax', f.heightMax);
   if (f.smoking) p.set('smoking', f.smoking);

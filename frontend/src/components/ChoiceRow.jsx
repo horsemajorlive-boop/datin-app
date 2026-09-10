@@ -2,7 +2,7 @@
 //
 // Props:
 //   label    — подпись поля
-//   options  — [{ code, label, emoji }]
+//   options  — [{ code, label }]
 //   value    — текущий код ('' если не выбрано)
 //   onChange — onChange(код | '')
 
@@ -18,7 +18,7 @@ export default function ChoiceRow({ label, options, value, onChange }) {
             className={`chipbtn ${value === opt.code ? 'is-on' : ''}`}
             onClick={() => onChange(value === opt.code ? '' : opt.code)}
           >
-            {opt.emoji} {opt.label}
+            {opt.label}
           </button>
         ))}
       </div>

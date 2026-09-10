@@ -3,6 +3,7 @@ import PhotoCarousel from './PhotoCarousel';
 import InterestChips from './InterestChips';
 import LifestyleChips from './LifestyleChips';
 import HealthChips from './HealthChips';
+import GoalChips from './GoalChips';
 import VerifiedBadge from './VerifiedBadge';
 import ReportSheet from './ReportSheet';
 import { IconX } from './icons';
@@ -28,6 +29,7 @@ export default function ProfileSheet({
 
   if (!profile) return null;
 
+  const hasGoals = profile.goal || profile.intent || profile.kids;
   const hasLifestyle =
     profile.housing || profile.car || profile.employment ||
     profile.height || profile.weight || profile.smoking || profile.drinking;
@@ -66,6 +68,13 @@ export default function ProfileSheet({
           </h2>
           {profile.city && <p className="sheet__city">{profile.city}</p>}
           {profile.bio && <p className="sheet__bio">{profile.bio}</p>}
+
+          {hasGoals && (
+            <section className="sheet__section">
+              <h3>Ищет</h3>
+              <GoalChips profile={profile} />
+            </section>
+          )}
 
           {hasLifestyle && (
             <section className="sheet__section">
