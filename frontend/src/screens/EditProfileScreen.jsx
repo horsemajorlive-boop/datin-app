@@ -4,6 +4,7 @@ import ChoiceRow from '../components/ChoiceRow';
 import CityInput from '../components/CityInput';
 import RangeRow from '../components/RangeRow';
 import PhotoGrid from '../components/PhotoGrid';
+import { IconChevronLeft } from '../components/icons';
 import { HOUSING, CAR, EMPLOYMENT } from '../data/lifestyle';
 import { SMOKING, DRINKING, HEIGHT_RANGE, WEIGHT_RANGE } from '../data/health';
 import { GOAL, KIDS } from '../data/goals';
@@ -87,6 +88,9 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
 
   return (
     <div className="screen">
+      <button className="onb__back verify-back" onClick={onCancel} aria-label="Назад">
+        <IconChevronLeft />
+      </button>
       <h1 className="screen__title">Редактирование анкеты</h1>
 
       <form className="form form--sections" onSubmit={handleSubmit}>

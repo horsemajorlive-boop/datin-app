@@ -2611,10 +2611,19 @@
 .verify-row--btn {
   cursor: pointer;
   justify-content: space-between;
+  background: var(--accent-soft);
+  border-color: transparent;
 }
 
 .verify-row--btn:active {
   transform: scale(0.99);
+}
+
+.verify-row--btn svg {
+  width: 19px;
+  height: 19px;
+  color: var(--accent);
+  flex-shrink: 0;
 }
 
 .verify-row__cta {

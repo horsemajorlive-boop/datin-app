@@ -40,6 +40,7 @@ function VerificationRow({ profile, onVerify }) {
   const rejected = profile.verificationStatus === 'rejected';
   return (
     <button className="verify-row verify-row--btn" onClick={onVerify}>
+      <IconVerified />
       <span>
         {rejected
           ? 'Заявка отклонена — можно отправить новое фото'
