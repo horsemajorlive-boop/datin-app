@@ -168,48 +168,11 @@ app.post('/api/admin/hide-profile', requireAdmin, (req, res) => {
   res.json(model.hideProfile(userId));
 });
 
-// --- Все анкеты (только админ) ---
-
-// Список всех пользователей с поиском (?q=имя-или-id) и пагинацией.
-app.get('/api/admin/users', requireAdmin, (req, res) => {
-  res.json(
-    model.adminListProfiles({
-      search: req.query.q,
-      limit: req.query.limit,
-      offset: req.query.offset,
-    })
-  );
-});
-
-// Показать/скрыть анкету из поиска: { visible: boolean }
-app.post('/api/admin/users/:id/visibility', requireAdmin, (req, res) => {
-  res.json(model.adminSetVisibility(Number(req.params.id), !!req.body?.visible));
-});
-
-// Выдать/снять галочку напрямую, без заявки: { verified: boolean }
-app.post('/api/admin/users/:id/verified', requireAdmin, (req, res) => {
-  res.json(model.adminSetVerified(Number(req.params.id), !!req.body?.verified));
-});
-
-// Мэтчи пользователя — чтобы админ мог посмотреть, с кем он переписывается.
-app.get('/api/admin/users/:id/matches', requireAdmin, (req, res) => {
-  res.json(model.adminGetUserMatches(Number(req.params.id)));
-});
-
-// Сообщения одного мэтча — сырой просмотр для админа.
-app.get('/api/admin/matches/:id/messages', requireAdmin, (req, res) => {
-  res.json(model.adminGetMessages(Number(req.params.id)));
-});
-
-// Удалить аккаунт целиком — без необходимости в жалобе.
-app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
-  const userId = Number(req.params.id);
-  if (userId === req.user.id) {
-    return res.status(400).json({ error: 'нельзя удалить себя отсюда' });
-  }
-  deleteAccountEverywhere(userId);
-  res.json({ ok: true });
-});
+// Намеренно НЕТ маршрутов "список всех анкет" / "удалить любого" /
+// "почитать чужую переписку" — даже у настоящего админа. Модерация идёт
+// только через очереди (верификации, жалобы), где по каждому пользователю
+// есть конкретный повод — так один скомпрометированный/угаданный вход
+// не даёт разом почистить или прочитать всю базу.
 
 // Лента для свайпов (+ необязательные фильтры в query-параметрах)
 app.get('/api/feed', (req, res) => {

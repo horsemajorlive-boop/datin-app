@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { api } from '../api';
 import { IconHeart } from './icons';
 
 // Секретная дверь в режим админа — прячется в декоративном сердечке на
@@ -6,12 +7,15 @@ import { IconHeart } from './icons';
 // красиво и ничего не значит. Но если тапнуть 7 раз подряд (не слишком
 // медленно) и затем набрать кодовую фразу, включается вход в админку.
 //
-// Секрет НЕ выдаёт прав сам по себе: как и раньше, сервер на каждый запрос
-// /api/admin/* проверяет users.is_admin для настоящего Telegram-аккаунта.
-// Если код угадал не админ — он просто увидит панель без данных (403).
+// Никакой видимой реакции на сам жест или на неверный код нет и не должно
+// быть — ни подсказок, ни "нет доступа". Тапай сколько хочешь, набирай на
+// клавиатуре что хочешь — снаружи не видно вообще ничего. И даже угаданная
+// фраза не открывает панель сама по себе: она лишь запускает тихую проверку
+// на сервере (users.is_admin для настоящего Telegram-аккаунта); если это
+// не админ — просто ничего не происходит.
 //
 // Props:
-//   onUnlock — код угадан, открыть режим админа
+//   onUnlock — фраза угадана И сервер подтвердил права — открыть режим админа
 
 const TAPS_NEEDED = 7;
 const TAP_WINDOW_MS = 2500; // тапы порознь дальше этого — счётчик сбрасывается
@@ -50,12 +54,18 @@ export default function AdminGate({ onUnlock }) {
     }
   }
 
-  function handleCodeInput(e) {
-    if (e.target.value === CODE) {
-      clearTimeout(hideTimer.current);
-      setListening(false);
-      e.target.value = '';
-      onUnlock?.();
+  async function handleCodeInput(e) {
+    if (e.target.value !== CODE) return;
+    clearTimeout(hideTimer.current);
+    setListening(false);
+    e.target.value = '';
+
+    // Тихая проверка на сервере. Ошиблись местом/аккаунтом — молчим.
+    try {
+      const me = await api.get('/me');
+      if (me.isAdmin) onUnlock?.();
+    } catch {
+      /* ничего не показываем */
     }
   }
 
@@ -80,19 +90,16 @@ export default function AdminGate({ onUnlock }) {
       </button>
 
       {listening && (
-        <>
-          <span className="admgate__dot" />
-          <input
-            ref={inputRef}
-            type="password"
-            className="admgate__code"
-            autoComplete="off"
-            autoCapitalize="off"
-            autoCorrect="off"
-            spellCheck={false}
-            onChange={handleCodeInput}
-          />
-        </>
+        <input
+          ref={inputRef}
+          type="password"
+          className="admgate__code"
+          autoComplete="off"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          onChange={handleCodeInput}
+        />
       )}
     </div>
   );

@@ -2465,30 +2465,8 @@
   }
 }
 
-/* Едва заметная точка — единственный намёк, что жест сработал. */
-.admgate__dot {
-  position: absolute;
-  bottom: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--faint);
-  animation: admgate-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes admgate-pulse {
-  0%,
-  100% {
-    opacity: 0.25;
-  }
-  50% {
-    opacity: 0.9;
-  }
-}
-
-/* Невидимое поле, куда печатается кодовая фраза — просто ловит ввод. */
+/* Невидимое поле, куда печатается кодовая фраза — просто ловит ввод.
+   Никакой видимой подсказки, что оно вообще появилось, — так и задумано. */
 .admgate__code {
   position: absolute;
   top: 0;

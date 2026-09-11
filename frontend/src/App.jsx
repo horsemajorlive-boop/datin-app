@@ -7,7 +7,6 @@ import EditProfileScreen from './screens/EditProfileScreen';
 import VerificationScreen from './screens/VerificationScreen';
 import AdminVerifications from './screens/AdminVerifications';
 import AdminReports from './screens/AdminReports';
-import AdminUsers from './screens/AdminUsers';
 import AdminPanel from './screens/AdminPanel';
 import SettingsScreen from './screens/SettingsScreen';
 import Onboarding from './screens/Onboarding';
@@ -367,9 +366,6 @@ export default function App() {
     if (profileView === 'reports') {
       return <AdminReports onBack={() => setProfileView('view')} />;
     }
-    if (profileView === 'users') {
-      return <AdminUsers onBack={() => setProfileView('view')} />;
-    }
     if (profileView === 'settings') {
       return (
         <SettingsScreen
@@ -391,7 +387,6 @@ export default function App() {
         onVerify={() => setProfileView('verify')}
         onModerate={() => setProfileView('admin')}
         onOpenReports={() => setProfileView('reports')}
-        onOpenUsers={() => setProfileView('users')}
         onOpenSettings={() => setProfileView('settings')}
       />
     );
