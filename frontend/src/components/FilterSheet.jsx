@@ -5,11 +5,11 @@ import { SMOKING, DRINKING, HEIGHT_RANGE } from '../data/health';
 import { GOAL, KIDS } from '../data/goals';
 import CityInput from './CityInput';
 import { IconX } from './icons';
-import { isPremium } from '../premium';
 
+// "Новенькие" пока доступны всем — плашку PRO вернём вместе с премиумом.
 const SORTS = [
   { code: '', label: 'Сейчас активны' },
-  { code: 'new', label: 'Новенькие', premium: true },
+  { code: 'new', label: 'Новенькие' },
 ];
 
 const GENDERS = [
@@ -57,7 +57,6 @@ function OneRow({ label, options, value, onPick, useLabel = false }) {
 
 export default function FilterSheet({ value, onApply, onClose }) {
   const [f, setF] = useState(value);
-  const premium = isPremium();
 
   const set = (patch) => setF((cur) => ({ ...cur, ...patch }));
 
@@ -235,26 +234,13 @@ export default function FilterSheet({ value, onApply, onClose }) {
                 </div>
               </div>
 
-              <div className="field">
-                <span>Сортировка</span>
-                <div className="choice">
-                  {SORTS.map((o) => {
-                    const locked = o.premium && !premium;
-                    return (
-                      <button
-                        key={o.code || 'default'}
-                        type="button"
-                        className={`chipbtn ${f.sort === o.code ? 'is-on' : ''}`}
-                        disabled={locked}
-                        onClick={() => set({ sort: o.code })}
-                      >
-                        {o.label}
-                        {o.premium && <span className="chipbtn__pro">PRO</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              <OneRow
+                label="Сортировка"
+                options={SORTS}
+                value={f.sort}
+                onPick={(v) => set({ sort: v })}
+                useLabel
+              />
             </Group>
 
             <div className="form__actions filtersheet__actions">
