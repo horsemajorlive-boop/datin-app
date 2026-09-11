@@ -5,8 +5,6 @@ import LikesScreen from './screens/LikesScreen';
 import MyProfileScreen from './screens/MyProfileScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
 import VerificationScreen from './screens/VerificationScreen';
-import AdminVerifications from './screens/AdminVerifications';
-import AdminReports from './screens/AdminReports';
 import AdminPanel from './screens/AdminPanel';
 import SettingsScreen from './screens/SettingsScreen';
 import Onboarding from './screens/Onboarding';
@@ -352,20 +350,6 @@ export default function App() {
         />
       );
     }
-    if (profileView === 'admin') {
-      return (
-        <AdminVerifications
-          onBack={() => {
-            setProfileView('view');
-            loadMe(); // вдруг подтвердили в т.ч. себя
-            loadFeed(); // галочки в ленте могли поменяться
-          }}
-        />
-      );
-    }
-    if (profileView === 'reports') {
-      return <AdminReports onBack={() => setProfileView('view')} />;
-    }
     if (profileView === 'settings') {
       return (
         <SettingsScreen
@@ -385,8 +369,6 @@ export default function App() {
         profile={me}
         onEdit={() => setProfileView('edit')}
         onVerify={() => setProfileView('verify')}
-        onModerate={() => setProfileView('admin')}
-        onOpenReports={() => setProfileView('reports')}
         onOpenSettings={() => setProfileView('settings')}
       />
     );

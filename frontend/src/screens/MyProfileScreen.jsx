@@ -15,9 +15,11 @@ import { useCarousel } from '../lib/useCarousel';
 //   profile        — анкета пользователя (из App)
 //   onEdit         — переключиться в режим редактирования
 //   onVerify       — открыть экран верификации
-//   onModerate     — открыть очередь модерации (только у админа)
-//   onOpenReports  — открыть жалобы (только у админа)
 //   onOpenSettings — открыть настройки
+//
+// Модерации здесь нет и не должно быть ни в каком виде — даже скрытой
+// за проверкой isAdmin. Единственный вход в неё — секретный жест на
+// сердечке онбординга (AdminGate/AdminPanel), см. App.jsx.
 
 function VerificationRow({ profile, onVerify }) {
   if (profile.verified) {
@@ -54,8 +56,6 @@ export default function MyProfileScreen({
   profile,
   onEdit,
   onVerify,
-  onModerate,
-  onOpenReports,
   onOpenSettings,
 }) {
   const photo = useCarousel(profile.photos.length);
@@ -139,20 +139,6 @@ export default function MyProfileScreen({
       <button className="btn-wide" onClick={onEdit}>
         Редактировать анкету
       </button>
-
-      {profile.isAdmin && (
-        <div className="plist">
-          <div className="plist__head">Модерация</div>
-          <button className="plist__row" onClick={onModerate}>
-            <span>Верификации</span>
-            <span className="plist__chev">›</span>
-          </button>
-          <button className="plist__row" onClick={onOpenReports}>
-            <span>Жалобы</span>
-            <span className="plist__chev">›</span>
-          </button>
-        </div>
-      )}
     </div>
   );
 }
