@@ -83,9 +83,10 @@ app.patch('/api/me/settings', (req, res) => {
   res.json({ ...profile, isAdmin: isAdmin(req.user.id) });
 });
 
-// Удалить аккаунт целиком. Строки БД уходят каскадом, файлы чистим здесь.
-app.delete('/api/me', (req, res) => {
-  const { uploadFiles, verificationFile } = model.deleteAccount(req.user.id);
+// Удалить аккаунт целиком: БД (каскадом) + файлы на диске. Общая для
+// собственного "Удалить аккаунт" и для админского удаления чужого.
+function deleteAccountEverywhere(userId) {
+  const { uploadFiles, verificationFile } = model.deleteAccount(userId);
   for (const f of uploadFiles) {
     fs.rm(path.join(UPLOAD_DIR, path.basename(f)), { force: true }, () => {});
   }
@@ -96,6 +97,10 @@ app.delete('/api/me', (req, res) => {
       () => {}
     );
   }
+}
+
+app.delete('/api/me', (req, res) => {
+  deleteAccountEverywhere(req.user.id);
   res.json({ ok: true });
 });
 
@@ -161,6 +166,49 @@ app.post('/api/admin/hide-profile', requireAdmin, (req, res) => {
   const userId = Number(req.body?.userId);
   if (!userId) return res.status(400).json({ error: 'bad userId' });
   res.json(model.hideProfile(userId));
+});
+
+// --- Все анкеты (только админ) ---
+
+// Список всех пользователей с поиском (?q=имя-или-id) и пагинацией.
+app.get('/api/admin/users', requireAdmin, (req, res) => {
+  res.json(
+    model.adminListProfiles({
+      search: req.query.q,
+      limit: req.query.limit,
+      offset: req.query.offset,
+    })
+  );
+});
+
+// Показать/скрыть анкету из поиска: { visible: boolean }
+app.post('/api/admin/users/:id/visibility', requireAdmin, (req, res) => {
+  res.json(model.adminSetVisibility(Number(req.params.id), !!req.body?.visible));
+});
+
+// Выдать/снять галочку напрямую, без заявки: { verified: boolean }
+app.post('/api/admin/users/:id/verified', requireAdmin, (req, res) => {
+  res.json(model.adminSetVerified(Number(req.params.id), !!req.body?.verified));
+});
+
+// Мэтчи пользователя — чтобы админ мог посмотреть, с кем он переписывается.
+app.get('/api/admin/users/:id/matches', requireAdmin, (req, res) => {
+  res.json(model.adminGetUserMatches(Number(req.params.id)));
+});
+
+// Сообщения одного мэтча — сырой просмотр для админа.
+app.get('/api/admin/matches/:id/messages', requireAdmin, (req, res) => {
+  res.json(model.adminGetMessages(Number(req.params.id)));
+});
+
+// Удалить аккаунт целиком — без необходимости в жалобе.
+app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
+  const userId = Number(req.params.id);
+  if (userId === req.user.id) {
+    return res.status(400).json({ error: 'нельзя удалить себя отсюда' });
+  }
+  deleteAccountEverywhere(userId);
+  res.json({ ok: true });
 });
 
 // Лента для свайпов (+ необязательные фильтры в query-параметрах)

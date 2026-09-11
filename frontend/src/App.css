@@ -2426,6 +2426,80 @@
   height: 34px;
 }
 
+/* Секретная дверь в админку, спрятанная в декоративном сердечке. */
+.admgate {
+  position: relative;
+}
+
+.admgate__btn {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.admgate__fly {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  font-size: 18px;
+  pointer-events: none;
+  animation: admgate-fly 0.9s ease-out forwards;
+}
+
+@keyframes admgate-fly {
+  0% {
+    transform: translate(-50%, -50%) scale(0.4);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--dx, 0px)), -80px) scale(1);
+    opacity: 0;
+  }
+}
+
+/* Едва заметная точка — единственный намёк, что жест сработал. */
+.admgate__dot {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--faint);
+  animation: admgate-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes admgate-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+/* Невидимое поле, куда печатается кодовая фраза — просто ловит ввод. */
+.admgate__code {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  border: none;
+  padding: 0;
+}
+
 /* Список правил */
 .onb__rules {
   list-style: none;
@@ -2828,6 +2902,130 @@
 
 .modcard__actions .btn-wide {
   margin-top: 0;
+}
+
+/* ================= Админ-панель: "Все анкеты" ================= */
+
+.adm__search {
+  margin: 2px 0 14px;
+}
+
+.adm__noph {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--surface-2);
+}
+
+.adm__tag {
+  flex-shrink: 0;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.adm__detail-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.adm__detail-ava {
+  width: 64px;
+  height: 64px;
+}
+
+.adm__detail-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.adm__reports-note {
+  margin: -6px 0 14px;
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.adm__thread {
+  margin-top: 4px;
+  padding: 0;
+}
+
+.adm__thread .chat__msg {
+  cursor: default;
+}
+
+/* ================= Режим администратора (отдельный шелл) ================= */
+
+.adm-shell {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.adm-shell__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 2px;
+  flex-shrink: 0;
+}
+
+.adm-shell__exit {
+  margin: 0;
+}
+
+.adm-shell__title {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.adm-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 12px 16px 14px;
+  flex-shrink: 0;
+}
+
+.adm-tabs__btn {
+  flex: 1;
+  padding: 9px 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.adm-tabs__btn.is-on {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+}
+
+.adm-shell__body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
 }
 
 /* ================= Настройки ================= */

@@ -19,6 +19,11 @@ export const db = new DatabaseSync(DB_PATH);
 // Включаем контроль внешних ключей (по умолчанию в SQLite он выключен).
 db.exec('PRAGMA foreign_keys = ON;');
 
+// Встроенные LOWER()/LIKE в SQLite складывают регистр только для ASCII —
+// «Аня» и «аня» для них разные строки. Свой LOWER на JS понимает кириллицу
+// и вообще любой Unicode; используем его в поиске по анкетам (admin.users).
+db.function('lower_ru', (s) => (s == null ? s : String(s).toLowerCase()));
+
 // Применяем схему: создаём таблицы, если их ещё нет.
 const schema = fs.readFileSync(path.join(here, 'schema.sql'), 'utf8');
 db.exec(schema);

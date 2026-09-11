@@ -7,6 +7,8 @@ import EditProfileScreen from './screens/EditProfileScreen';
 import VerificationScreen from './screens/VerificationScreen';
 import AdminVerifications from './screens/AdminVerifications';
 import AdminReports from './screens/AdminReports';
+import AdminUsers from './screens/AdminUsers';
+import AdminPanel from './screens/AdminPanel';
 import SettingsScreen from './screens/SettingsScreen';
 import Onboarding from './screens/Onboarding';
 import MatchScreen from './components/MatchScreen';
@@ -27,6 +29,7 @@ import './App.css';
 
 export default function App() {
   const [tab, setTab] = useState('deck');
+  const [adminMode, setAdminMode] = useState(false); // секретный вход с AdminGate
 
   const [me, setMe] = useState(null); // null = ещё грузится
   const [feed, setFeed] = useState([]);
@@ -364,6 +367,9 @@ export default function App() {
     if (profileView === 'reports') {
       return <AdminReports onBack={() => setProfileView('view')} />;
     }
+    if (profileView === 'users') {
+      return <AdminUsers onBack={() => setProfileView('view')} />;
+    }
     if (profileView === 'settings') {
       return (
         <SettingsScreen
@@ -385,15 +391,32 @@ export default function App() {
         onVerify={() => setProfileView('verify')}
         onModerate={() => setProfileView('admin')}
         onOpenReports={() => setProfileView('reports')}
+        onOpenUsers={() => setProfileView('users')}
         onOpenSettings={() => setProfileView('settings')}
       />
+    );
+  }
+
+  // Секретный жест на приветственном экране — отдельный режим без знакомств.
+  if (adminMode) {
+    return (
+      <div className="app">
+        <main className="app__body">
+          <AdminPanel onExit={() => setAdminMode(false)} />
+        </main>
+      </div>
     );
   }
 
   // Обязательный вход: пока анкета не готова (правила + фото + имя/возраст/пол),
   // показываем ТОЛЬКО экран онбординга — ни ленты, ни навигации.
   if (me && !me.onboarded) {
-    return <Onboarding onDone={(profile) => setMe(profile)} />;
+    return (
+      <Onboarding
+        onDone={(profile) => setMe(profile)}
+        onAdminUnlock={() => setAdminMode(true)}
+      />
+    );
   }
 
   return (

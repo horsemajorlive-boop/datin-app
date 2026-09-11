@@ -3,13 +3,14 @@ import PhotoGrid from '../components/PhotoGrid';
 import RangeRow from '../components/RangeRow';
 import ChoiceRow from '../components/ChoiceRow';
 import InterestPicker from '../components/InterestPicker';
+import AdminGate from '../components/AdminGate';
 import { api, normalizeProfile } from '../api';
 import { clampAge } from '../lib/filters';
 import { RULES } from '../data/rules';
 import { HOUSING, CAR, EMPLOYMENT } from '../data/lifestyle';
 import { HEIGHT_RANGE, WEIGHT_RANGE } from '../data/health';
 import { GOAL, KIDS } from '../data/goals';
-import { IconChevronLeft, IconCheck, IconHeart } from '../components/icons';
+import { IconChevronLeft, IconCheck } from '../components/icons';
 
 // Обязательный вход в приложение. Пока пользователь не пройдёт все шаги,
 // App не показывает основной интерфейс — обойти экран нельзя.
@@ -19,6 +20,7 @@ import { IconChevronLeft, IconCheck, IconHeart } from '../components/icons';
 //
 // Props:
 //   onDone(profile) — вызвать с готовой анкетой, когда сервер подтвердил вход
+//   onAdminUnlock() — сработал секретный жест на сердечке (см. AdminGate)
 
 const GENDERS = [
   { code: 'f', label: 'Женщина' },
@@ -28,7 +30,7 @@ const GENDERS = [
 const MIN_INTERESTS = 5;
 const STEPS_TOTAL = 7;
 
-export default function Onboarding({ onDone }) {
+export default function Onboarding({ onDone, onAdminUnlock }) {
   const [step, setStep] = useState(0);
   const [data, setData] = useState({
     acceptAge: false,
@@ -118,9 +120,7 @@ export default function Onboarding({ onDone }) {
       <div className="onb__body">
         {step === 0 && (
           <div className="onb__welcome">
-            <div className="onb__logo">
-              <IconHeart filled />
-            </div>
+            <AdminGate onUnlock={onAdminUnlock} />
             <h1>Знакомства</h1>
             <p className="muted">
               Здесь ищут серьёзные отношения. Пара минут на анкету — и можно

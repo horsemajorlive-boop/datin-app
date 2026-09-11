@@ -17,6 +17,7 @@ import { useCarousel } from '../lib/useCarousel';
 //   onVerify       — открыть экран верификации
 //   onModerate     — открыть очередь модерации (только у админа)
 //   onOpenReports  — открыть жалобы (только у админа)
+//   onOpenUsers    — открыть список всех анкет (только у админа)
 //   onOpenSettings — открыть настройки
 
 function VerificationRow({ profile, onVerify }) {
@@ -56,6 +57,7 @@ export default function MyProfileScreen({
   onVerify,
   onModerate,
   onOpenReports,
+  onOpenUsers,
   onOpenSettings,
 }) {
   const photo = useCarousel(profile.photos.length);
@@ -143,6 +145,10 @@ export default function MyProfileScreen({
       {profile.isAdmin && (
         <div className="plist">
           <div className="plist__head">Модерация</div>
+          <button className="plist__row" onClick={onOpenUsers}>
+            <span>Все анкеты</span>
+            <span className="plist__chev">›</span>
+          </button>
           <button className="plist__row" onClick={onModerate}>
             <span>Верификации</span>
             <span className="plist__chev">›</span>
