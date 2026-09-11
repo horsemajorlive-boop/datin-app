@@ -6,10 +6,13 @@ import { InterestIcon } from './interestIcons';
 // Props:
 //   value    — массив выбранных интересов (строки)
 //   onChange — вызвать с новым массивом
+//   tall     — не зажимать список в маленькое окошко со своим скроллом
+//              (когда это единственное на экране, как в онбординге —
+//              пусть каталог из ~200 интересов пролистывается на весь экран)
 
 const MAX_INTERESTS = 15;
 
-export default function InterestPicker({ value, onChange }) {
+export default function InterestPicker({ value, onChange, tall = false }) {
   const has = (name) => value.some((v) => v.toLowerCase() === name.toLowerCase());
   const isFull = value.length >= MAX_INTERESTS;
 
@@ -22,7 +25,7 @@ export default function InterestPicker({ value, onChange }) {
   }
 
   return (
-    <div className="picker">
+    <div className={`picker ${tall ? 'picker--tall' : ''}`}>
       {value.length > 0 && (
         <div className="picker__row">
           {value.map((name) => (

@@ -302,6 +302,7 @@ export default function Onboarding({ onDone, onAdminUnlock }) {
             <InterestPicker
               value={data.interests}
               onChange={(interests) => set({ interests })}
+              tall
             />
           </div>
         )}
