@@ -80,6 +80,22 @@ export default function App() {
     }
   }, []);
 
+  // Отметить переписку прочитанной: сразу гасим счётчик локально, потом сервер.
+  const markRead = useCallback(
+    async (matchId) => {
+      setMatches((prev) =>
+        prev.map((m) => (m.matchId === matchId ? { ...m, unread: 0 } : m))
+      );
+      try {
+        await api.post(`/matches/${matchId}/read`);
+      } catch {
+        /* не критично — счётчик поправится при следующей загрузке */
+      }
+      loadMatches();
+    },
+    [loadMatches]
+  );
+
   // Первая загрузка при запуске.
   useEffect(() => {
     initTelegram();
@@ -98,10 +114,20 @@ export default function App() {
     saveFilters(filters);
   }, [filters]);
 
-  // Открыли чат — подгружаем его сообщения.
+  // Открыт чат и мы на вкладке «Чат» — подгружаем сообщения и отмечаем
+  // переписку прочитанной (в т.ч. при возврате на вкладку с уже открытым чатом).
   useEffect(() => {
-    if (activeChatId != null) loadChat(activeChatId);
-  }, [activeChatId, loadChat]);
+    if (tab === 'chat' && activeChatId != null) {
+      loadChat(activeChatId);
+      markRead(activeChatId);
+    }
+  }, [tab, activeChatId, loadChat, markRead]);
+
+  // Что сейчас на экране — для обработчика входящих сообщений (без пересборки сокета).
+  const viewRef = useRef({ tab, activeChatId });
+  useEffect(() => {
+    viewRef.current = { tab, activeChatId };
+  }, [tab, activeChatId]);
 
   // ---------- живое соединение (WebSocket) ----------
 
@@ -129,7 +155,11 @@ export default function App() {
           delete next[matchId]; // дописал — статус убираем
           return next;
         });
-        loadMatches(); // обновить превью и порядок в списке
+        // Смотрим ли мы прямо сейчас на этот чат? Тогда сразу «прочитано»
+        // (markRead сам перезагрузит список). Иначе — обновляем превью и счётчик.
+        const v = viewRef.current;
+        if (v.tab === 'chat' && v.activeChatId === matchId) markRead(matchId);
+        else loadMatches();
       }),
 
       // реакция на сообщение
@@ -178,7 +208,7 @@ export default function App() {
     ];
 
     return () => offs.forEach((off) => off());
-  }, [loadMatches, loadIncoming, loadChat, activeChatId]);
+  }, [loadMatches, loadIncoming, loadChat, markRead, activeChatId]);
 
   // ---------- действия ----------
 
@@ -283,6 +313,12 @@ export default function App() {
   const activeChat = useMemo(
     () => matches.find((m) => m.matchId === activeChatId)?.profile || null,
     [matches, activeChatId]
+  );
+
+  // Всего непрочитанных сообщений — для бейджа на вкладке «Чат».
+  const totalUnread = useMemo(
+    () => matches.reduce((sum, m) => sum + (m.unread || 0), 0),
+    [matches]
   );
 
   function renderProfileTab() {
@@ -403,6 +439,7 @@ export default function App() {
 
       <BottomNav
         active={tab}
+        chatBadge={totalUnread}
         onChange={(t) => {
           // повторный тап по «Чат» из открытой переписки — назад к списку
           if (t === 'chat' && tab === 'chat') setActiveChatId(null);

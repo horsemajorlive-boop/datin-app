@@ -269,6 +269,13 @@ app.get('/api/matches/:id/messages', (req, res) => {
   res.json(list);
 });
 
+// Отметить переписку прочитанной (открыл чат / увидел новое сообщение).
+app.post('/api/matches/:id/read', (req, res) => {
+  const out = model.markMatchRead(Number(req.params.id), req.user.id);
+  if (out === null) return res.status(403).json({ error: 'not your match' });
+  res.json(out);
+});
+
 // Отправить сообщение: { type, text?, photo? }
 app.post('/api/matches/:id/messages', (req, res) => {
   const matchId = Number(req.params.id);

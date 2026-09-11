@@ -45,9 +45,9 @@ export default function MatchesScreen({
       <ScreenHeader title={title} count={matches.length} />
 
       <div className="matchlist">
-        {matches.map(({ matchId, profile, lastMessage }) => (
+        {matches.map(({ matchId, profile, lastMessage, unread }) => (
           <button
-            className="matchlist__item"
+            className={`matchlist__item ${unread ? 'is-unread' : ''}`}
             key={matchId}
             onClick={() => onOpenChat(matchId)}
           >
@@ -60,12 +60,20 @@ export default function MatchesScreen({
                 {profile.name}, {profile.age}
               </span>
               <span
-                className={`matchlist__hint ${!lastMessage ? 'is-new' : ''}`}
+                className={`matchlist__hint ${!lastMessage ? 'is-new' : ''} ${
+                  unread ? 'is-unread' : ''
+                }`}
               >
                 {previewText(lastMessage)}
               </span>
             </div>
-            {!lastMessage && <span className="matchlist__badge" />}
+            {unread > 0 ? (
+              <span className="matchlist__badge matchlist__badge--count">
+                {unread > 9 ? '9+' : unread}
+              </span>
+            ) : (
+              !lastMessage && <span className="matchlist__badge" />
+            )}
           </button>
         ))}
       </div>

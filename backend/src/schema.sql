@@ -90,6 +90,14 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at INTEGER NOT NULL
 );
 
+-- Докуда пользователь дочитал переписку. Нет строки — не читал вовсе.
+CREATE TABLE IF NOT EXISTS match_reads (
+  match_id     INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+  user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  last_read_at INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (match_id, user_id)
+);
+
 -- Блокировки: blocker заблокировал blocked. Действует в обе стороны
 -- (они не видят друг друга нигде). Пара уникальна.
 CREATE TABLE IF NOT EXISTS blocks (

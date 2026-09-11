@@ -680,11 +680,31 @@
 }
 
 .nav__icon {
+  position: relative;
   width: 22px;
   height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Бейдж непрочитанных на вкладке «Чат». */
+.nav__badge {
+  position: absolute;
+  top: -5px;
+  left: 11px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--surface);
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 12px;
+  text-align: center;
 }
 
 .nav__icon svg {
@@ -1266,6 +1286,16 @@
   color: var(--accent);
 }
 
+/* Непрочитанная переписка — имя и превью заметнее. */
+.matchlist__item.is-unread .matchlist__name {
+  font-weight: 700;
+}
+
+.matchlist__hint.is-unread {
+  color: var(--text);
+  font-weight: 600;
+}
+
 .matchlist__badge {
   flex-shrink: 0;
   width: 9px;
@@ -1273,6 +1303,20 @@
   border-radius: 50%;
   background: var(--accent);
   margin-right: 6px;
+}
+
+/* Тот же бейдж, но с числом непрочитанных. */
+.matchlist__badge--count {
+  width: auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
 }
 
 /* ================= Вкладка "Чат" ================= */

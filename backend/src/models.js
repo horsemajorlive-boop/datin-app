@@ -603,18 +603,34 @@ export function matchPartners(userId) {
 }
 
 export function getMatches(userId) {
+  // Порядок — по времени последней активности (последнее сообщение, а если
+  // сообщений нет — момент создания мэтча), свежие сверху.
   const rows = db
     .prepare(
-      `SELECT id, user_a, user_b, created_at
+      `SELECT id, user_a, user_b, created_at,
+              COALESCE(
+                (SELECT MAX(created_at) FROM messages WHERE match_id = matches.id),
+                created_at
+              ) AS activity_at
          FROM matches
         WHERE user_a = :me OR user_b = :me
-        ORDER BY created_at DESC`
+        ORDER BY activity_at DESC`
     )
     .all({ me: userId });
 
   const lastMsgStmt = db.prepare(
     `SELECT type, text, sender_id FROM messages
       WHERE match_id = ? ORDER BY created_at DESC LIMIT 1`
+  );
+  // Сколько сообщений от собеседника пришло после того, как я в последний раз
+  // открывал этот чат (нет строки в match_reads — считаем, что не открывал).
+  const unreadStmt = db.prepare(
+    `SELECT COUNT(*) AS n FROM messages
+      WHERE match_id = :m AND sender_id <> :me
+        AND created_at > COALESCE(
+          (SELECT last_read_at FROM match_reads WHERE match_id = :m AND user_id = :me),
+          0
+        )`
   );
 
   return rows.map((r) => {
@@ -624,6 +640,7 @@ export function getMatches(userId) {
       matchId: r.id,
       createdAt: r.created_at,
       profile: getFullProfile(otherId, { forOther: true }),
+      unread: unreadStmt.get({ m: r.id, me: userId }).n,
       lastMessage: last
         ? {
             type: last.type,
@@ -633,6 +650,17 @@ export function getMatches(userId) {
         : null,
     };
   });
+}
+
+// Отметить переписку прочитанной до текущего момента.
+export function markMatchRead(matchId, userId) {
+  if (partnerOf(matchId, userId) === null) return null;
+  db.prepare(
+    `INSERT INTO match_reads (match_id, user_id, last_read_at)
+     VALUES (:m, :u, :ts)
+     ON CONFLICT(match_id, user_id) DO UPDATE SET last_read_at = :ts`
+  ).run({ m: matchId, u: userId, ts: now() });
+  return { ok: true };
 }
 
 export function getMessages(matchId, userId) {
