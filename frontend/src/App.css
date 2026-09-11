@@ -2582,6 +2582,68 @@
   color: var(--text);
 }
 
+/* ================= Прогресс заполнения анкеты ================= */
+
+.strength {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.strength__title {
+  font-size: 13.5px;
+  font-weight: 650;
+}
+
+.strength__bar {
+  margin-top: 10px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--fill-2);
+  overflow: hidden;
+}
+
+.strength__fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--accent), var(--gold));
+  transition: width 0.3s ease;
+}
+
+.strength__tips {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.strength__tip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 9px 11px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.strength__tip::after {
+  content: '›';
+  flex-shrink: 0;
+  color: var(--faint);
+  font-size: 16px;
+  line-height: 1;
+  margin-left: 8px;
+}
+
 /* Компактный список действий (напр. блок «Модерация» у админа). */
 .plist {
   margin-top: 20px;

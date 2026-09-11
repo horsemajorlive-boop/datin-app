@@ -5,6 +5,7 @@ import HealthChips from '../components/HealthChips';
 import GoalChips from '../components/GoalChips';
 import VerifiedBadge from '../components/VerifiedBadge';
 import ScreenHeader from '../components/ScreenHeader';
+import ProfileStrength from '../components/ProfileStrength';
 import { IconVerified, IconSettings } from '../components/icons';
 import { useCarousel } from '../lib/useCarousel';
 
@@ -108,6 +109,8 @@ export default function MyProfileScreen({
           {profile.city && <p className="card__city">{profile.city}</p>}
         </div>
       </div>
+
+      <ProfileStrength profile={profile} onEdit={onEdit} />
 
       {profile.bio && <p className="myprofile__bio">{profile.bio}</p>}
 
