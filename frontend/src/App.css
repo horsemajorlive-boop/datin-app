@@ -933,12 +933,6 @@
   font-size: 14px;
 }
 
-.sheet__bio {
-  margin-top: 12px;
-  line-height: 1.55;
-  color: var(--text);
-}
-
 .sheet__section {
   margin-top: 22px;
 }
@@ -2226,6 +2220,7 @@
   font-weight: 600;
   font-size: 16px;
   line-height: 1.4;
+  overflow-wrap: break-word;
 }
 
 /* Ползунок роста / веса в редакторе анкеты. */
@@ -2833,12 +2828,6 @@
 }
 
 /* Свой bio на экране профиля. */
-.myprofile__bio {
-  margin-top: 14px;
-  line-height: 1.55;
-  color: var(--text);
-}
-
 /* ================= Прогресс заполнения анкеты ================= */
 
 .strength {

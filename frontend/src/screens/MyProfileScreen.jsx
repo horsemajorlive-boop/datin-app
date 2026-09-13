@@ -7,6 +7,7 @@ import VerifiedBadge from '../components/VerifiedBadge';
 import ScreenHeader from '../components/ScreenHeader';
 import ProfileStrength from '../components/ProfileStrength';
 import PromptCards from '../components/PromptCards';
+import BioCard from '../components/BioCard';
 import { IconVerified, IconSettings } from '../components/icons';
 import { useCarousel } from '../lib/useCarousel';
 
@@ -114,7 +115,7 @@ export default function MyProfileScreen({
 
       <ProfileStrength profile={profile} onEdit={onEdit} />
 
-      {profile.bio && <p className="myprofile__bio">{profile.bio}</p>}
+      <BioCard text={profile.bio} />
       {profile.prompts?.length > 0 && <PromptCards prompts={profile.prompts} />}
 
       {(profile.goal || profile.kids) && (
@@ -125,7 +126,7 @@ export default function MyProfileScreen({
       )}
 
       <section className="sheet__section">
-        <h3>О себе</h3>
+        <h3>Мой быт</h3>
         <HealthChips profile={profile} />
         <LifestyleChips profile={profile} />
       </section>

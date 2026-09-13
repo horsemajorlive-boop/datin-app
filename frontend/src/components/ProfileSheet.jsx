@@ -7,6 +7,7 @@ import GoalChips from './GoalChips';
 import VerifiedBadge from './VerifiedBadge';
 import ReportSheet from './ReportSheet';
 import PromptCards from './PromptCards';
+import BioCard from './BioCard';
 import { IconX } from './icons';
 import { useCarousel } from '../lib/useCarousel';
 import { cityWithDistance } from '../lib/location';
@@ -71,7 +72,7 @@ export default function ProfileSheet({
           {(profile.city || profile.distanceKm != null) && (
             <p className="sheet__city">{cityWithDistance(profile.city, profile.distanceKm)}</p>
           )}
-          {profile.bio && <p className="sheet__bio">{profile.bio}</p>}
+          <BioCard text={profile.bio} />
           {profile.prompts?.length > 0 && <PromptCards prompts={profile.prompts} />}
 
           {hasGoals && (
@@ -83,7 +84,7 @@ export default function ProfileSheet({
 
           {hasLifestyle && (
             <section className="sheet__section">
-              <h3>О себе</h3>
+              <h3>Быт</h3>
               <HealthChips profile={profile} />
               <LifestyleChips profile={profile} />
             </section>
