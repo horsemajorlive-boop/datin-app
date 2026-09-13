@@ -432,6 +432,10 @@ export default function App() {
             likesLeft={me?.likesLeft}
             superlikesLeft={me?.superlikesLeft}
             isPremium={!!me?.isPremium}
+            onOpenPremium={() => {
+              setTab('me');
+              setProfileView('settings');
+            }}
           />
         )}
         {tab === 'likes' && (

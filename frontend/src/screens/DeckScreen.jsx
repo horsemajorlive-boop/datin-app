@@ -20,6 +20,7 @@ import { isFilterActive } from '../lib/filters';
 //   likesLeft       — сколько обычных лайков осталось сегодня
 //   superlikesLeft  — сколько суперлайков осталось сегодня
 //   isPremium       — есть ли Premium (снимает лимиты, открывает "Вернуть" и фильтр по быту)
+//   onOpenPremium   — перейти к оформлению Premium (настройки)
 
 export default function DeckScreen({
   feed,
@@ -35,14 +36,16 @@ export default function DeckScreen({
   likesLeft,
   superlikesLeft,
   isPremium,
+  onOpenPremium,
 }) {
   const [opened, setOpened] = useState(null);
-  const [hint, setHint] = useState('');
+  const [hint, setHint] = useState(null); // строка либо { text, cta }
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     if (!hint) return;
-    const timer = setTimeout(() => setHint(''), 2500);
+    // с кнопкой "оформить" даём больше времени успеть нажать
+    const timer = setTimeout(() => setHint(null), hint.cta ? 5000 : 2500);
     return () => clearTimeout(timer);
   }, [hint]);
 
@@ -69,7 +72,22 @@ export default function DeckScreen({
         isPremium={isPremium}
       />
 
-      {hint && <div className="paywall-hint">{hint}</div>}
+      {hint && (
+        <div
+          className={`paywall-hint ${hint.cta ? 'paywall-hint--action' : ''}`}
+          onClick={
+            hint.cta
+              ? () => {
+                  setHint(null);
+                  onOpenPremium?.();
+                }
+              : undefined
+          }
+        >
+          {typeof hint === 'string' ? hint : hint.text}
+          {hint.cta && <span className="paywall-hint__cta">{hint.cta}</span>}
+        </div>
+      )}
 
       <ProfileSheet
         profile={opened}

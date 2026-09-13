@@ -13,7 +13,8 @@ import { IconX, IconHeart, IconStar, IconRotateCcw, IconSearch } from './icons';
 //   onSwipe        — onSwipe(profile, 'like' | 'pass', { isSuper })
 //   onUndo         — onUndo(profile) — откат последнего свайпа на сервере
 //   onOpen         — открыть полную анкету
-//   onHint         — показать всплывающую подсказку-ограничение (текст строкой)
+//   onHint         — показать всплывающую подсказку-ограничение: строка либо
+//                    { text, cta } — с cta подсказка кликабельна (открыть Premium)
 //   likesLeft      — сколько обычных лайков осталось сегодня (null = без лимита, Premium)
 //   superlikesLeft — сколько суперлайков осталось сегодня
 //   isPremium      — есть ли Premium (нужен для "Вернуть")
@@ -41,7 +42,11 @@ export default function SwipeDeck({
 
     if (kind === 'like') {
       if (isSuper && superlikesLeft != null && superlikesLeft <= 0) {
-        onHint?.('Суперлайк на сегодня уже использован');
+        onHint?.(
+          isPremium
+            ? 'Суперлайк на сегодня уже использован'
+            : { text: 'Суперлайки на сегодня закончились', cta: 'Оформить Premium — 5 в день' }
+        );
         return;
       }
       if (!isSuper && likesLeft != null && likesLeft <= 0) {
@@ -131,7 +136,7 @@ export default function SwipeDeck({
         <button
           className="btn btn--sm btn--super"
           onClick={() => handleSwipe('right', { isSuper: true })}
-          disabled={!hasCard || (superlikesLeft != null && superlikesLeft <= 0)}
+          disabled={!hasCard}
           aria-label="Суперлайк"
         >
           <IconStar filled />
