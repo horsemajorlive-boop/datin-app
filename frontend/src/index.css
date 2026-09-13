@@ -9,41 +9,49 @@
    :root — СВЕТЛАЯ палитра по умолчанию. Тёмную включаем в блоках ниже. */
 
 :root {
-  /* поверхности — светлая тема с лёгкой тёплой ноткой */
-  --bg: #f3f2f5; /* фон приложения */
-  --surface: #ffffff; /* панели, карточки */
-  --surface-2: #edecf1; /* приподнятые элементы (кнопки, инпуты) */
+  /* шрифты — Fraunces для заголовков и личных моментов (имя, анкета),
+     Manrope для основного текста и интерфейса */
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    sans-serif;
+
+  /* поверхности — светлая тема с тёплым бордовым подтоном ("бархат" днём) */
+  --bg: #f7f1f1; /* фон приложения */
+  --surface: #fffbfa; /* панели, карточки */
+  --surface-2: #f1e4e5; /* приподнятые элементы (кнопки, инпуты) */
 
   /* полупрозрачные заливки (чипы, ховеры) — по светлому фону затемняют */
-  --fill: rgba(20, 18, 30, 0.045);
-  --fill-2: rgba(20, 18, 30, 0.08);
+  --fill: rgba(60, 18, 28, 0.05);
+  --fill-2: rgba(60, 18, 28, 0.09);
 
   /* текст */
-  --text: #1b1a20;
-  --muted: #6c6a76; /* второстепенный */
-  --faint: #9c9aa6; /* третьестепенный, иконки без фокуса */
+  --text: #271419;
+  --muted: #816d71; /* второстепенный */
+  --faint: #ac989c; /* третьестепенный, иконки без фокуса */
 
   /* линии */
-  --line: rgba(20, 18, 30, 0.1);
-  --line-2: rgba(20, 18, 30, 0.16);
+  --line: rgba(60, 18, 28, 0.1);
+  --line-2: rgba(60, 18, 28, 0.17);
 
   /* акценты */
-  --accent: #ff4d6d; /* основной, для главных действий */
-  --accent-soft: rgba(255, 77, 109, 0.13);
+  --accent: #c14f62; /* глубокая роза, для главных действий */
+  --accent-soft: rgba(193, 79, 98, 0.14);
   --like: #17b866;
-  --nope: #8b8b93;
-  --gold: #d99a00; /* галочка верификации — темнее, чтобы читалась на белом */
+  --nope: #8f7f83;
+  --gold: #b3790f; /* галочка верификации — тёплое золото, тёмное для контраста на белом */
 
   /* геометрия */
-  --radius-lg: 22px; /* карточки, шторки */
+  --radius-lg: 24px; /* карточки, шторки */
   --radius: 16px;
   --radius-sm: 12px;
   --radius-pill: 999px;
 
-  /* тени — дают глубину поверхностям */
-  --shadow-sm: 0 1px 2px rgba(20, 18, 40, 0.06), 0 4px 12px rgba(20, 18, 40, 0.06);
-  --shadow: 0 8px 24px rgba(20, 18, 40, 0.12);
-  --shadow-lg: 0 20px 48px rgba(20, 18, 40, 0.18);
+  /* тени — дают глубину поверхностям, с тёплым (не чёрным) подтоном */
+  --shadow-sm: 0 1px 2px rgba(50, 14, 22, 0.07), 0 4px 12px rgba(50, 14, 22, 0.06);
+  --shadow: 0 8px 24px rgba(50, 14, 22, 0.13);
+  --shadow-lg: 0 20px 48px rgba(50, 14, 22, 0.18);
+  /* лёгкое бархатное свечение акцентом — для карточки анкеты и кнопки лайка */
+  --shadow-accent: 0 16px 32px -16px rgba(193, 79, 98, 0.4);
 
   color-scheme: light;
 }
@@ -53,45 +61,49 @@
    2) явно выбранная тёмная тема. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #100f14;
-    --surface: #1a1920;
-    --surface-2: #24232c;
-    --fill: rgba(255, 255, 255, 0.06);
-    --fill-2: rgba(255, 255, 255, 0.11);
-    --text: #f3f2f6;
-    --muted: #9d9baa;
-    --faint: #6a6875;
-    --line: rgba(255, 255, 255, 0.1);
-    --line-2: rgba(255, 255, 255, 0.17);
-    --accent-soft: rgba(255, 77, 109, 0.16);
-    --like: #2fd07a;
-    --nope: #7a7986;
-    --gold: #f4c430;
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.35);
-    --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.6);
+    --bg: #150d14;
+    --surface: #1f1420;
+    --surface-2: #2a1c29;
+    --fill: rgba(255, 226, 232, 0.06);
+    --fill-2: rgba(255, 226, 232, 0.11);
+    --text: #f5ece9;
+    --muted: #b89aa0;
+    --faint: #7d636b;
+    --line: rgba(255, 220, 225, 0.1);
+    --line-2: rgba(255, 220, 225, 0.17);
+    --accent: #d8687a;
+    --accent-soft: rgba(216, 104, 122, 0.2);
+    --like: #35c98a;
+    --nope: #8a7880;
+    --gold: #e3b567;
+    --shadow-sm: 0 1px 2px rgba(15, 6, 11, 0.4), 0 4px 14px rgba(15, 6, 11, 0.35);
+    --shadow: 0 10px 30px rgba(15, 6, 11, 0.5);
+    --shadow-lg: 0 24px 60px rgba(15, 6, 11, 0.6);
+    --shadow-accent: 0 18px 34px -16px rgba(216, 104, 122, 0.5);
     color-scheme: dark;
   }
 }
 
 :root[data-theme='dark'] {
-  --bg: #100f14;
-  --surface: #1a1920;
-  --surface-2: #24232c;
-  --fill: rgba(255, 255, 255, 0.06);
-  --fill-2: rgba(255, 255, 255, 0.11);
-  --text: #f3f2f6;
-  --muted: #9d9baa;
-  --faint: #6a6875;
-  --line: rgba(255, 255, 255, 0.1);
-  --line-2: rgba(255, 255, 255, 0.17);
-  --accent-soft: rgba(255, 77, 109, 0.16);
-  --like: #2fd07a;
-  --nope: #7a7986;
-  --gold: #f4c430;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.35);
-  --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.6);
+  --bg: #150d14;
+  --surface: #1f1420;
+  --surface-2: #2a1c29;
+  --fill: rgba(255, 226, 232, 0.06);
+  --fill-2: rgba(255, 226, 232, 0.11);
+  --text: #f5ece9;
+  --muted: #b89aa0;
+  --faint: #7d636b;
+  --line: rgba(255, 220, 225, 0.1);
+  --line-2: rgba(255, 220, 225, 0.17);
+  --accent: #d8687a;
+  --accent-soft: rgba(216, 104, 122, 0.2);
+  --like: #35c98a;
+  --nope: #8a7880;
+  --gold: #e3b567;
+  --shadow-sm: 0 1px 2px rgba(15, 6, 11, 0.4), 0 4px 14px rgba(15, 6, 11, 0.35);
+  --shadow: 0 10px 30px rgba(15, 6, 11, 0.5);
+  --shadow-lg: 0 24px 60px rgba(15, 6, 11, 0.6);
+  --shadow-accent: 0 18px 34px -16px rgba(216, 104, 122, 0.5);
   color-scheme: dark;
 }
 
@@ -110,11 +122,10 @@ body,
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    sans-serif;
+  font-family: var(--font-body);
   font-size: 14px;
   line-height: 1.5;
-  letter-spacing: -0.011em; /* Inter чуть плотнее смотрится с отрицательным трекингом */
+  letter-spacing: -0.006em;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overscroll-behavior: none;
@@ -123,9 +134,10 @@ body {
 h1,
 h2,
 h3 {
+  font-family: var(--font-display);
   font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
 }
 
 img {

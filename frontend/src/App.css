@@ -38,9 +38,9 @@
 
 /* Заголовок второстепенных экранов (верификация, настройки, админка…). */
 .screen__title {
-  font-size: 21px;
+  font-size: 22px;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.005em;
   margin-bottom: 18px;
 }
 
@@ -63,9 +63,9 @@
 
 .scrhead__title {
   margin: 0;
-  font-size: 22px;
+  font-size: 23px;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.005em;
   display: flex;
   align-items: baseline;
   gap: 8px;
@@ -297,7 +297,7 @@
   overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--line-2);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-lg), var(--shadow-accent);
   cursor: grab;
   user-select: none;
   touch-action: none;          /* отключаем прокрутку браузера — свайп ловим сами */
@@ -350,14 +350,18 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 25px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 27px;
+  font-weight: 600;
+  letter-spacing: 0;
   color: #fff;
   text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35);
 }
 
 .card__age {
+  font-family: var(--font-body);
+  font-style: normal;
   font-weight: 400;
   opacity: 0.92;
 }
@@ -572,7 +576,7 @@
   color: #fff;
   border-color: transparent;
   background: var(--accent);
-  box-shadow: 0 6px 18px var(--accent-soft), var(--shadow-sm);
+  box-shadow: 0 10px 22px -4px var(--accent-soft), var(--shadow-sm);
 }
 
 .btn--nope {
@@ -654,7 +658,9 @@
 .nav {
   display: flex;
   border-top: 1px solid var(--line);
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   padding-bottom: env(safe-area-inset-bottom); /* отступ под "чёлку"/жест-бар */
 }
 
@@ -2412,7 +2418,8 @@
 }
 
 .onb__welcome h1 {
-  font-size: 30px;
+  font-style: italic;
+  font-size: 32px;
 }
 
 .onb__welcome .muted {

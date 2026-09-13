@@ -12,7 +12,7 @@ export const THEMES = [
 ];
 
 export const ACCENTS = [
-  { id: 'pink', label: 'Розовый', color: '#ff4d6d', soft: 'rgba(255, 77, 109, 0.14)' },
+  { id: 'pink', label: 'Розовый', color: '#d8687a', soft: 'rgba(216, 104, 122, 0.18)' },
   { id: 'violet', label: 'Фиолетовый', color: '#8b5cf6', soft: 'rgba(139, 92, 246, 0.16)' },
   { id: 'blue', label: 'Синий', color: '#3b82f6', soft: 'rgba(59, 130, 246, 0.16)' },
   { id: 'green', label: 'Зелёный', color: '#10b981', soft: 'rgba(16, 185, 129, 0.16)' },
