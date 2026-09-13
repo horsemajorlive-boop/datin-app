@@ -276,6 +276,21 @@ export default function App() {
     loadFeed(); // имя/видимость могли поменяться
   }
 
+  // Геопозиция для поиска "рядом" — отдельно от формы анкеты (кнопка в фильтрах).
+  async function handleShareLocation(lat, lng) {
+    const res = await api.post('/me/location', { lat, lng });
+    setMe((prev) => (prev ? { ...prev, hasLocation: res.hasLocation } : prev));
+    loadFeed(); // теперь можно посчитать расстояние до анкет
+  }
+
+  async function handleClearLocation() {
+    const res = await api.post('/me/location', { clear: true });
+    setMe((prev) => (prev ? { ...prev, hasLocation: res.hasLocation } : prev));
+    // без геопозиции радиус всё равно ни на что не влияет — не оставляем
+    // фильтр висеть "включённым" вхолостую
+    setFilters((f) => (f.radiusKm ? { ...f, radiusKm: '' } : f));
+  }
+
   async function handleSend(payload) {
     const matchId = activeChatId;
     const sent = await api.post(`/matches/${matchId}/messages`, payload);
@@ -408,6 +423,9 @@ export default function App() {
             onUndoSwipe={handleUndoSwipe}
             onBlockOrReport={refreshAfterBlock}
             myInterests={me?.interests || []}
+            hasLocation={!!me?.hasLocation}
+            onShareLocation={handleShareLocation}
+            onClearLocation={handleClearLocation}
           />
         )}
         {tab === 'likes' && (

@@ -3,6 +3,8 @@ import { DEFAULT_FILTERS, clampAge } from '../lib/filters';
 import { HOUSING, CAR, EMPLOYMENT } from '../data/lifestyle';
 import { SMOKING, DRINKING, HEIGHT_RANGE } from '../data/health';
 import { GOAL, KIDS } from '../data/goals';
+import { RADII_KM } from '../lib/location';
+import { requestLocation } from '../telegram';
 import CityInput from './CityInput';
 import { IconX } from './icons';
 
@@ -55,10 +57,37 @@ function OneRow({ label, options, value, onPick, useLabel = false }) {
   );
 }
 
-export default function FilterSheet({ value, onApply, onClose }) {
+export default function FilterSheet({
+  value,
+  onApply,
+  onClose,
+  hasLocation,
+  onShareLocation,
+  onClearLocation,
+}) {
   const [f, setF] = useState(value);
+  const [geoBusy, setGeoBusy] = useState(false);
+  const [geoError, setGeoError] = useState('');
 
   const set = (patch) => setF((cur) => ({ ...cur, ...patch }));
+
+  async function handleShareLocation() {
+    setGeoError('');
+    setGeoBusy(true);
+    try {
+      const { lat, lng } = await requestLocation();
+      await onShareLocation?.(lat, lng);
+    } catch (err) {
+      setGeoError(err.message || 'Не получилось определить геопозицию');
+    } finally {
+      setGeoBusy(false);
+    }
+  }
+
+  function handleForgetLocation() {
+    set({ radiusKm: '' });
+    onClearLocation?.();
+  }
 
   const fixAge = (field) => set({ [field]: clampAge(f[field]) });
   const onAgeKeyDown = (field) => (e) => {
@@ -125,6 +154,41 @@ export default function FilterSheet({ value, onApply, onClose }) {
                   onChange={(v) => set({ city: v })}
                   placeholder="Любой"
                 />
+              </div>
+
+              <div className="field">
+                <span>Рядом со мной</span>
+                {hasLocation ? (
+                  <>
+                    <div className="choice">
+                      {RADII_KM.map((km) => (
+                        <button
+                          key={km}
+                          type="button"
+                          className={`chipbtn ${f.radiusKm === km ? 'is-on' : ''}`}
+                          onClick={() => set({ radiusKm: f.radiusKm === km ? '' : km })}
+                        >
+                          до {km} км
+                        </button>
+                      ))}
+                    </div>
+                    <button type="button" className="geo-forget" onClick={handleForgetLocation}>
+                      Забыть геопозицию
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="btn-wide btn-wide--ghost geo-share"
+                      onClick={handleShareLocation}
+                      disabled={geoBusy}
+                    >
+                      {geoBusy ? 'Определяем…' : 'Поделиться геопозицией'}
+                    </button>
+                    {geoError && <p className="form__error">{geoError}</p>}
+                  </>
+                )}
               </div>
 
               <OneRow

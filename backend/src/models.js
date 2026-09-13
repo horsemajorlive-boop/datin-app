@@ -5,6 +5,19 @@ import { db } from './db.js';
 
 const now = () => Date.now();
 
+// Расстояние между двумя точками по прямой (формула гаверсинуса), в км.
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 // ---------- Пользователи ----------
 
 // Создать пользователя или обновить имя/username и отметку "был онлайн".
@@ -64,6 +77,7 @@ function emptyProfile(userId) {
     smoking: '',
     drinking: '',
     photos: [],
+    hasLocation: false,
     isVisible: true,
     showOnline: true,
     notifyMatches: true,
@@ -191,6 +205,7 @@ export function getFullProfile(userId, { forOther = false } = {}) {
     weight: row.weight ?? null,
     smoking: row.smoking || '',
     drinking: row.drinking || '',
+    hasLocation: row.lat != null && row.lng != null,
     isVisible: !!row.is_visible,
     photos,
     termsAcceptedAt,
@@ -247,6 +262,15 @@ export function saveProfile(userId, data) {
     kids: oneOf(data.kids, KIDS_CODES),
     ts: now(),
   });
+}
+
+// Геопозиция для поиска "рядом" — отдельно от остальной анкеты: делится ей
+// пользователь по кнопке в фильтрах/настройках, а не через форму редактирования.
+// lat=null, lng=null — убрать геопозицию (перестать участвовать в поиске "рядом").
+export function setLocation(userId, lat, lng) {
+  db.prepare(
+    `UPDATE profiles SET lat = :lat, lng = :lng, updated_at = :ts WHERE user_id = :userId`
+  ).run({ lat, lng, ts: now(), userId });
 }
 
 // Обязательный вход ("онбординг"). Проверяем всё на сервере, чтобы нельзя было
@@ -340,7 +364,10 @@ export function setPhotos(userId, urls) {
 // ---------- Лента и симпатии ----------
 
 // Превращает строки анкет в объекты для фронтенда (+ подтягивает фото).
-function hydrateProfiles(rows) {
+// viewerLoc — { lat, lng } смотрящего, если он поделился геопозицией; тогда
+// каждой анкете с известными координатами добавляем distanceKm (округлённо).
+// Сами координаты наружу не отдаём — только расстояние.
+function hydrateProfiles(rows, viewerLoc = null) {
   const photosStmt = db.prepare(
     `SELECT url FROM photos WHERE user_id = ? ORDER BY position`
   );
@@ -362,13 +389,18 @@ function hydrateProfiles(rows) {
     smoking: r.smoking || '',
     drinking: r.drinking || '',
     verified: r.verified_at != null,
+    distanceKm:
+      viewerLoc && r.lat != null && r.lng != null
+        ? Math.round(haversineKm(viewerLoc.lat, viewerLoc.lng, r.lat, r.lng))
+        : null,
     photos: photosStmt.all(r.user_id).map((p) => p.url),
   }));
 }
 
 // Кого показывать в поиске.
 // Базовые условия: видимые, не я, с именем, ещё не свайпнутые.
-// opts — необязательные фильтры: ageMin, ageMax, city, gender, housing[], car, employment.
+// opts — необязательные фильтры: ageMin, ageMax, city, gender, housing[], car, employment,
+// radiusKm (нужна своя геопозиция — см. setLocation).
 export function getFeed(userId, opts = {}) {
   const {
     ageMin,
@@ -386,6 +418,7 @@ export function getFeed(userId, opts = {}) {
     drinking,
     verified,
     sort,
+    radiusKm,
   } = opts;
 
   // Собираем WHERE по кусочкам — только те условия, что реально заданы.
@@ -401,7 +434,23 @@ export function getFeed(userId, opts = {}) {
        SELECT blocker_id FROM blocks WHERE blocked_id = :me
      )`,
   ];
-  const params = { me: userId, limit: Math.min(Number(opts.limit) || 20, 50) };
+  const rawLimit = Math.min(Number(opts.limit) || 20, 50);
+  const params = { me: userId, limit: rawLimit };
+
+  // "Рядом со мной" работает только если сам поделился геопозицией.
+  const viewerLoc = db
+    .prepare(`SELECT lat, lng FROM profiles WHERE user_id = ?`)
+    .get(userId);
+  const hasViewerLoc = !!(viewerLoc && viewerLoc.lat != null && viewerLoc.lng != null);
+  const wantsNear = hasViewerLoc && (Number.isFinite(radiusKm) || sort === 'near');
+  if (wantsNear) {
+    // считаем точное расстояние в JS (см. ниже), а тут — только кандидаты
+    // с известными координатами. При заметном росте базы сюда стоит добавить
+    // предварительный отбор по bounding box в SQL — пока хватает и так.
+    where.push('p.lat IS NOT NULL AND p.lng IS NOT NULL');
+    // берём кандидатов с запасом: часть отсеется по точному радиусу
+    params.limit = Math.min(rawLimit * 5, 300);
+  }
 
   // Возраст: минимум всегда не ниже 18.
   if (Number.isFinite(ageMin)) {
@@ -475,7 +524,7 @@ export function getFeed(userId, opts = {}) {
     .prepare(
       `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
               p.housing, p.car, p.employment, p.goal, p.kids,
-              p.height, p.weight, p.smoking, p.drinking, u.verified_at
+              p.height, p.weight, p.smoking, p.drinking, p.lat, p.lng, u.verified_at
          FROM profiles p
          JOIN users u ON u.id = p.user_id
         WHERE ${where.join(' AND ')}
@@ -484,7 +533,17 @@ export function getFeed(userId, opts = {}) {
     )
     .all(params);
 
-  return hydrateProfiles(rows);
+  let profiles = hydrateProfiles(rows, hasViewerLoc ? viewerLoc : null);
+
+  if (wantsNear) {
+    profiles = profiles.filter((p) => p.distanceKm != null);
+    if (Number.isFinite(radiusKm)) {
+      profiles = profiles.filter((p) => p.distanceKm <= radiusKm);
+    }
+    profiles.sort((a, b) => a.distanceKm - b.distanceKm);
+  }
+
+  return profiles.slice(0, rawLimit);
 }
 
 // Кто лайкнул ВАС и ждёт ответа (вкладка "Симпатии").
@@ -495,7 +554,7 @@ export function getIncomingLikes(userId) {
     .prepare(
       `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
               p.housing, p.car, p.employment, p.goal, p.kids,
-              p.height, p.weight, p.smoking, p.drinking, u.verified_at
+              p.height, p.weight, p.smoking, p.drinking, p.lat, p.lng, u.verified_at
          FROM swipes s
          JOIN profiles p ON p.user_id = s.actor_id
          JOIN users u ON u.id = p.user_id
@@ -512,7 +571,11 @@ export function getIncomingLikes(userId) {
         ORDER BY s.created_at DESC`
     )
     .all({ me: userId });
-  return hydrateProfiles(rows);
+  const viewerLoc = db
+    .prepare(`SELECT lat, lng FROM profiles WHERE user_id = ?`)
+    .get(userId);
+  const hasViewerLoc = !!(viewerLoc && viewerLoc.lat != null && viewerLoc.lng != null);
+  return hydrateProfiles(rows, hasViewerLoc ? viewerLoc : null);
 }
 
 // ---------- Свайпы и мэтчи ----------

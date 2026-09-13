@@ -17,6 +17,7 @@ export const DEFAULT_FILTERS = {
   drinking: '', // '' | 'no' | 'sometimes' | 'yes'
   verified: false, // true — только с подтверждённым фото
   sort: '', // '' — сейчас активны (по умолчанию) | 'new' — новенькие (Premium)
+  radiusKm: '', // радиус поиска "рядом" в км — работает только если поделились геопозицией
 };
 
 // Минимально допустимый возраст в приложении — младше нельзя нигде.
@@ -72,6 +73,7 @@ export function buildFeedQuery(f) {
   if (f.drinking) p.set('drinking', f.drinking);
   if (f.verified) p.set('verified', '1');
   if (f.sort) p.set('sort', f.sort);
+  if (f.radiusKm) p.set('radiusKm', f.radiusKm);
   const s = p.toString();
   return s ? `?${s}` : '';
 }

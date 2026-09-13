@@ -4,6 +4,7 @@ import InterestChips from './InterestChips';
 import VerifiedBadge from './VerifiedBadge';
 import { IconChevronLeft } from './icons';
 import { useCarousel } from '../lib/useCarousel';
+import { cityWithDistance } from '../lib/location';
 
 // Одна карточка анкеты в колоде.
 // Одними и теми же событиями указателя ловим ДВА жеста:
@@ -96,7 +97,9 @@ export default function ProfileCard({ profile, active, onSwipe, onOpen }) {
           </span>
           {profile.verified && <VerifiedBadge />}
         </h2>
-        {profile.city && <p className="card__city">{profile.city}</p>}
+        {(profile.city || profile.distanceKm != null) && (
+          <p className="card__city">{cityWithDistance(profile.city, profile.distanceKm)}</p>
+        )}
         <InterestChips interests={profile.interests} limit={3} />
         <button
           className="card__more"

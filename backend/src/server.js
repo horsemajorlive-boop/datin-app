@@ -83,6 +83,23 @@ app.patch('/api/me/settings', (req, res) => {
   res.json({ ...profile, isAdmin: isAdmin(req.user.id) });
 });
 
+// Геопозиция для поиска "рядом": { lat, lng } — поделиться, { clear: true } — забыть.
+// Координаты наружу никому не отдаются — только расстояние в км (см. getFeed).
+app.post('/api/me/location', (req, res) => {
+  if (req.body?.clear) {
+    model.setLocation(req.user.id, null, null);
+    return res.json({ hasLocation: false });
+  }
+  const lat = Number(req.body?.lat);
+  const lng = Number(req.body?.lng);
+  const valid =
+    Number.isFinite(lat) && Number.isFinite(lng) &&
+    lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+  if (!valid) return res.status(400).json({ error: 'некорректные координаты' });
+  model.setLocation(req.user.id, lat, lng);
+  res.json({ hasLocation: true });
+});
+
 // Удалить аккаунт целиком: БД (каскадом) + файлы на диске. Общая для
 // собственного "Удалить аккаунт" и для админского удаления чужого.
 function deleteAccountEverywhere(userId) {
@@ -195,6 +212,7 @@ app.get('/api/feed', (req, res) => {
       drinking: q.drinking,
       verified: q.verified ? true : undefined,
       sort: q.sort,
+      radiusKm: q.radiusKm ? Number(q.radiusKm) : undefined,
     })
   );
 });

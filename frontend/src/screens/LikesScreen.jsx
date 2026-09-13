@@ -2,6 +2,7 @@ import VerifiedBadge from '../components/VerifiedBadge';
 import EmptyState from '../components/EmptyState';
 import ScreenHeader from '../components/ScreenHeader';
 import { IconX, IconHeart } from '../components/icons';
+import { cityWithDistance } from '../lib/location';
 
 // Экран "Симпатии" — кто лайкнул ВАС и ждёт ответа.
 // Лайк в ответ = мгновенный мэтч; «пропустить» убирает человека из списка.
@@ -46,7 +47,9 @@ export default function LikesScreen({ people, onLike, onPass, onBrowse }) {
                 {p.name}, {p.age}
                 {p.verified && <VerifiedBadge />}
               </span>
-              {p.city && <span className="likecard__city">{p.city}</span>}
+              {(p.city || p.distanceKm != null) && (
+                <span className="likecard__city">{cityWithDistance(p.city, p.distanceKm)}</span>
+              )}
             </div>
             <div className="likecard__actions">
               <button

@@ -8,6 +8,7 @@ import VerifiedBadge from './VerifiedBadge';
 import ReportSheet from './ReportSheet';
 import { IconX } from './icons';
 import { useCarousel } from '../lib/useCarousel';
+import { cityWithDistance } from '../lib/location';
 
 // Всплывающее окно ("шторка") с полной анкетой.
 //
@@ -66,7 +67,9 @@ export default function ProfileSheet({
             </span>
             {profile.verified && <VerifiedBadge />}
           </h2>
-          {profile.city && <p className="sheet__city">{profile.city}</p>}
+          {(profile.city || profile.distanceKm != null) && (
+            <p className="sheet__city">{cityWithDistance(profile.city, profile.distanceKm)}</p>
+          )}
           {profile.bio && <p className="sheet__bio">{profile.bio}</p>}
 
           {hasGoals && (

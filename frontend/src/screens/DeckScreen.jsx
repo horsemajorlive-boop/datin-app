@@ -14,6 +14,9 @@ import { isFilterActive } from '../lib/filters';
 //   onChangeFilters — применить новые фильтры
 //   onSwipe         — onSwipe(profile, 'like' | 'pass')
 //   onUndoSwipe     — onUndoSwipe(profile)
+//   hasLocation     — поделился ли пользователь геопозицией (для фильтра "рядом")
+//   onShareLocation — onShareLocation(lat, lng)
+//   onClearLocation — забыть геопозицию
 
 export default function DeckScreen({
   feed,
@@ -23,6 +26,9 @@ export default function DeckScreen({
   onUndoSwipe,
   onBlockOrReport,
   myInterests,
+  hasLocation,
+  onShareLocation,
+  onClearLocation,
 }) {
   const [opened, setOpened] = useState(null);
   const [locked, setLocked] = useState(false);
@@ -76,6 +82,9 @@ export default function DeckScreen({
             setShowFilters(false);
           }}
           onClose={() => setShowFilters(false)}
+          hasLocation={hasLocation}
+          onShareLocation={onShareLocation}
+          onClearLocation={onClearLocation}
         />
       )}
     </div>

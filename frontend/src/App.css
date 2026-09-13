@@ -2127,6 +2127,21 @@
   font-size: 14px;
 }
 
+.geo-share {
+  margin-top: 0;
+}
+
+.geo-forget {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* Сетка фотографий в редакторе. */
 .photos {
   display: flex;

@@ -93,4 +93,14 @@ for (const col of ['notify_matches', 'notify_messages', 'notify_likes']) {
   }
 }
 
+// Геопозиция для поиска "рядом" — необязательная, пользователь делится ей сам.
+for (const col of ['lat', 'lng']) {
+  try {
+    db.exec(`ALTER TABLE profiles ADD COLUMN ${col} REAL`);
+    console.log(`[db] миграция: добавлена колонка profiles.${col}`);
+  } catch {
+    /* колонка уже существует — ок */
+  }
+}
+
 console.log('[db] готова:', DB_PATH);
