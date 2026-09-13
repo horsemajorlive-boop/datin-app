@@ -111,4 +111,12 @@ try {
   /* колонка уже существует — ок */
 }
 
+// Суперлайк — тот же лайк, но выделенный: 1 в день, отмечаем отдельным флагом.
+try {
+  db.exec(`ALTER TABLE swipes ADD COLUMN is_super INTEGER NOT NULL DEFAULT 0`);
+  console.log('[db] миграция: добавлена колонка swipes.is_super');
+} catch {
+  /* колонка уже существует — ок */
+}
+
 console.log('[db] готова:', DB_PATH);

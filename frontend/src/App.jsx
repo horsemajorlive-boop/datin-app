@@ -217,11 +217,12 @@ export default function App() {
     setTab('chat');
   }
 
-  async function handleSwipe(profile, direction) {
+  async function handleSwipe(profile, direction, { isSuper = false } = {}) {
     try {
       const res = await api.post('/swipes', {
         targetId: profile.id,
         direction,
+        superlike: isSuper,
       });
       if (res.match) {
         await loadMatches();
@@ -232,6 +233,8 @@ export default function App() {
       }
       // мог свайпнуть того, кто уже лайкал меня — обновим «Симпатии»
       loadIncoming();
+      // лайк потратил дневной лимит — обновим остаток
+      if (direction === 'like') loadMe();
     } catch (err) {
       console.error('swipe failed', err);
     }
@@ -426,6 +429,8 @@ export default function App() {
             hasLocation={!!me?.hasLocation}
             onShareLocation={handleShareLocation}
             onClearLocation={handleClearLocation}
+            likesLeft={me?.likesLeft}
+            superlikesLeft={me?.superlikesLeft}
           />
         )}
         {tab === 'likes' && (

@@ -20,9 +20,10 @@ export function notifyNewMatch(userA, userB) {
   }
 }
 
-export function notifyNewLike(actorId, targetId) {
+export function notifyNewLike(actorId, targetId, { isSuper = false } = {}) {
   if (!away(targetId) || !getNotifyPrefs(targetId).likes) return;
-  notify(targetId, '💜 Вы кому-то понравились', { buttonText: 'Посмотреть' });
+  const text = isSuper ? '🌟 Вас суперлайкнули!' : '💜 Вы кому-то понравились';
+  notify(targetId, text, { buttonText: 'Посмотреть' });
 }
 
 export function notifyNewMessage(matchId, senderId) {

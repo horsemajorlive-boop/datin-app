@@ -43,6 +43,7 @@ export default function LikesScreen({ people, onLike, onPass, onBrowse }) {
               <img src={p.photos[0]} alt={p.name} />
             </div>
             <div className="likecard__info">
+              {p.isSuper && <span className="likecard__super">🌟 Суперлайк</span>}
               <span className="likecard__name">
                 {p.name}, {p.age}
                 {p.verified && <VerifiedBadge />}

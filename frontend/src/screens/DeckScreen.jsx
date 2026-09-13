@@ -17,6 +17,8 @@ import { isFilterActive } from '../lib/filters';
 //   hasLocation     — поделился ли пользователь геопозицией (для фильтра "рядом")
 //   onShareLocation — onShareLocation(lat, lng)
 //   onClearLocation — забыть геопозицию
+//   likesLeft       — сколько обычных лайков осталось сегодня
+//   superlikesLeft  — сколько суперлайков осталось сегодня
 
 export default function DeckScreen({
   feed,
@@ -29,16 +31,18 @@ export default function DeckScreen({
   hasLocation,
   onShareLocation,
   onClearLocation,
+  likesLeft,
+  superlikesLeft,
 }) {
   const [opened, setOpened] = useState(null);
-  const [locked, setLocked] = useState(false);
+  const [hint, setHint] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    if (!locked) return;
-    const timer = setTimeout(() => setLocked(false), 2500);
+    if (!hint) return;
+    const timer = setTimeout(() => setHint(''), 2500);
     return () => clearTimeout(timer);
-  }, [locked]);
+  }, [hint]);
 
   return (
     <div className="screen screen--deck">
@@ -57,12 +61,12 @@ export default function DeckScreen({
         onSwipe={onSwipe}
         onUndo={onUndoSwipe}
         onOpen={setOpened}
-        onPremiumLocked={() => setLocked(true)}
+        onHint={setHint}
+        likesLeft={likesLeft}
+        superlikesLeft={superlikesLeft}
       />
 
-      {locked && (
-        <div className="paywall-hint">Возврат анкеты — функция премиума</div>
-      )}
+      {hint && <div className="paywall-hint">{hint}</div>}
 
       <ProfileSheet
         profile={opened}

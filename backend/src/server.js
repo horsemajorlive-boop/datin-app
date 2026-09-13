@@ -217,14 +217,25 @@ app.get('/api/feed', (req, res) => {
   );
 });
 
-// Свайп: { targetId, direction: 'like' | 'pass' }
+// Свайп: { targetId, direction: 'like' | 'pass', superlike?: boolean }
+// Лайки (и отдельно суперлайки) ограничены дневной нормой — см. DAILY_LIKE_LIMIT
+// в models.js. Лимит исчерпан -> 429, свайп не записывается.
+const LIMIT_MESSAGES = {
+  like_limit: 'Дневной лимит лайков исчерпан — возвращайтесь завтра',
+  superlike_limit: 'Суперлайк на сегодня уже использован',
+};
+
 app.post('/api/swipes', (req, res) => {
   const targetId = Number(req.body?.targetId);
   const direction = req.body?.direction === 'like' ? 'like' : 'pass';
+  const isSuper = direction === 'like' && !!req.body?.superlike;
   if (!targetId || targetId === req.user.id) {
     return res.status(400).json({ error: 'bad targetId' });
   }
-  const result = model.recordSwipe(req.user.id, targetId, direction);
+  const result = model.recordSwipe(req.user.id, targetId, direction, { isSuper });
+  if (result.error) {
+    return res.status(429).json({ error: LIMIT_MESSAGES[result.error] || 'Лимит исчерпан' });
+  }
   res.json(result);
 
   if (result.match) {
@@ -232,7 +243,7 @@ app.post('/api/swipes', (req, res) => {
     emitMatch([req.user.id, targetId]);
     notifyNewMatch(req.user.id, targetId);
   } else if (direction === 'like') {
-    notifyNewLike(req.user.id, targetId);
+    notifyNewLike(req.user.id, targetId, { isSuper });
   }
 });
 

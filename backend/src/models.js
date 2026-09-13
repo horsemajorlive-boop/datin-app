@@ -121,6 +121,44 @@ function emptyProfile(userId) {
 // Сколько интересов минимум нужно указать при входе.
 const ONBOARDING_MIN_INTERESTS = 5;
 
+// ---------- Дневные лимиты лайков ----------
+// Пока без премиума — просто разумная дневная норма для всех: не давит,
+// но даёт повод возвращаться каждый день. "Сегодня" — по местному времени
+// сервера (полночь-полночь), без учёта часовых поясов пользователей —
+// для нынешнего масштаба этого достаточно.
+export const DAILY_LIKE_LIMIT = 30;
+export const DAILY_SUPERLIKE_LIMIT = 1;
+
+function startOfTodayMs() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+// Сколько лайков (обычных или супер) actor уже поставил сегодня.
+// Отменённый через "Вернуть" свайп удаляется из таблицы — значит и лимит
+// за него возвращается, это ожидаемо.
+function countTodaySwipes(actorId, isSuper) {
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM swipes
+        WHERE actor_id = :a AND direction = 'like' AND is_super = :s
+          AND created_at >= :since`
+    )
+    .get({ a: actorId, s: isSuper ? 1 : 0, since: startOfTodayMs() });
+  return row.n;
+}
+
+// { likesLeft, superlikesLeft, dailyLikeLimit, dailySuperlikeLimit } для анкеты.
+function likeLimitFields(userId) {
+  return {
+    likesLeft: Math.max(0, DAILY_LIKE_LIMIT - countTodaySwipes(userId, false)),
+    superlikesLeft: Math.max(0, DAILY_SUPERLIKE_LIMIT - countTodaySwipes(userId, true)),
+    dailyLikeLimit: DAILY_LIKE_LIMIT,
+    dailySuperlikeLimit: DAILY_SUPERLIKE_LIMIT,
+  };
+}
+
 // Прошёл ли пользователь обязательный вход: принял правила + подтвердил 18,
 // заполнил имя/возраст (18+)/пол, добавил фото, указал цель на сайте,
 // жильё/авто/работу и минимум 5 интересов. Рост, вес и «дети» — необязательные.
@@ -208,6 +246,7 @@ export function getFullProfile(userId, { forOther = false } = {}) {
       photos,
       termsAcceptedAt,
       ...verifyFields,
+      ...likeLimitFields(userId),
       online,
       lastSeen,
     };
@@ -238,6 +277,7 @@ export function getFullProfile(userId, { forOther = false } = {}) {
     photos,
     termsAcceptedAt,
     ...verifyFields,
+    ...likeLimitFields(userId),
     online,
     lastSeen,
   };
@@ -420,6 +460,7 @@ function hydrateProfiles(rows, viewerLoc = null) {
     drinking: r.drinking || '',
     prompts: JSON.parse(r.prompts || '[]'),
     verified: r.verified_at != null,
+    isSuper: !!r.is_super,
     distanceKm:
       viewerLoc && r.lat != null && r.lng != null
         ? Math.round(haversineKm(viewerLoc.lat, viewerLoc.lng, r.lat, r.lng))
@@ -585,7 +626,8 @@ export function getIncomingLikes(userId) {
     .prepare(
       `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
               p.housing, p.car, p.employment, p.goal, p.kids,
-              p.height, p.weight, p.smoking, p.drinking, p.prompts, p.lat, p.lng, u.verified_at
+              p.height, p.weight, p.smoking, p.drinking, p.prompts, p.lat, p.lng,
+              s.is_super, u.verified_at
          FROM swipes s
          JOIN profiles p ON p.user_id = s.actor_id
          JOIN users u ON u.id = p.user_id
@@ -599,7 +641,7 @@ export function getIncomingLikes(userId) {
             UNION
             SELECT blocker_id FROM blocks WHERE blocked_id = :me
           )
-        ORDER BY s.created_at DESC`
+        ORDER BY s.is_super DESC, s.created_at DESC`
     )
     .all({ me: userId });
   const viewerLoc = db
@@ -612,14 +654,23 @@ export function getIncomingLikes(userId) {
 // ---------- Свайпы и мэтчи ----------
 
 // Возвращает { match: boolean, matchId?: number, withUser?: profile }
-export function recordSwipe(actorId, targetId, direction) {
+// либо { match: false, error: 'like_limit' | 'superlike_limit' }, если
+// дневная норма лайков/суперлайков уже исчерпана — тогда свайп НЕ пишем.
+export function recordSwipe(actorId, targetId, direction, { isSuper = false } = {}) {
   if (isBlockedEitherWay(actorId, targetId)) return { match: false };
 
+  if (direction === 'like') {
+    const limit = isSuper ? DAILY_SUPERLIKE_LIMIT : DAILY_LIKE_LIMIT;
+    if (countTodaySwipes(actorId, isSuper) >= limit) {
+      return { match: false, error: isSuper ? 'superlike_limit' : 'like_limit' };
+    }
+  }
+
   db.prepare(
-    `INSERT INTO swipes (actor_id, target_id, direction, created_at)
-     VALUES (:a, :t, :d, :ts)
-     ON CONFLICT(actor_id, target_id) DO UPDATE SET direction = :d, created_at = :ts`
-  ).run({ a: actorId, t: targetId, d: direction, ts: now() });
+    `INSERT INTO swipes (actor_id, target_id, direction, is_super, created_at)
+     VALUES (:a, :t, :d, :s, :ts)
+     ON CONFLICT(actor_id, target_id) DO UPDATE SET direction = :d, is_super = :s, created_at = :ts`
+  ).run({ a: actorId, t: targetId, d: direction, s: isSuper ? 1 : 0, ts: now() });
 
   if (direction !== 'like') return { match: false };
 
