@@ -545,19 +545,23 @@
 
 /* ================= Круглые кнопки колоды ================= */
 
+/* Кнопки колоды нарочно светлые в любой теме — они лежат на фоне
+   произвольной яркости (фото, тёмный/светлый фон приложения), и только
+   стабильно светлое лицо кнопки гарантирует, что её будет видно всегда.
+   Тот же приём, что у всех крупных дейтинг-приложений. */
 .btn {
   position: relative;
   width: 58px;
   height: 58px;
   border-radius: 50%;
-  border: 1.5px solid var(--line-2);
+  border: none;
   cursor: pointer;
-  background: var(--surface-2);
-  color: var(--text);
+  background: #fbf6f1;
+  color: #5b4c4f;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 22px rgba(10, 4, 8, 0.45), 0 2px 6px rgba(10, 4, 8, 0.3);
   transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -583,17 +587,16 @@
 /* Лайк — заливной акцент, главная кнопка. */
 .btn--like {
   color: #fff;
-  border-color: transparent;
   background: var(--accent);
-  box-shadow: 0 10px 22px -4px var(--accent-soft), var(--shadow-sm),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 24px -2px var(--accent-soft), 0 2px 6px rgba(10, 4, 8, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .btn--nope {
-  color: var(--muted);
+  color: #5b4c4f;
 }
 
-/* Кнопка "Вернуть" — чуть меньше, приглушённая. */
+/* Кнопка "Вернуть" — чуть меньше. */
 .btn--sm {
   width: 48px;
   height: 48px;
@@ -605,23 +608,25 @@
 }
 
 /* Показывается только при пропущенной симпатии — потому и золотая,
-   а не приглушённая: это не рутинная кнопка, а конкретная возможность. */
+   а не рутинно-белая: это не обычная кнопка, а конкретная возможность. */
 .btn--undo {
-  color: var(--gold);
-  border-color: var(--gold);
+  color: #a9720b;
+  background: linear-gradient(160deg, #fff3da, #f6dfa8);
 }
 
 /* Место в ряду держим всегда — иначе остальные кнопки скакали бы при
-   появлении/исчезновении "Вернуть"; когда нечего возвращать, просто гасим. */
-.btn--undo-hidden {
+   появлении/исчезновении "Вернуть"; когда нечего возвращать, просто гасим.
+   Специфичность (.btn.btn--undo-hidden) нужна, чтобы перебить .btn:disabled
+   ниже по каскаду — иначе тот выставляет свои opacity:0.5 поверх этого. */
+.btn.btn--undo-hidden {
   opacity: 0;
   pointer-events: none;
 }
 
-/* Суперлайк — отдельный от лайка ресурс, поэтому и цвет свой (золото). */
+/* Суперлайк — отдельный от лайка ресурс, поэтому и лицо у кнопки другое. */
 .btn--super {
-  color: var(--gold);
-  border-color: var(--gold);
+  color: #8a5a00;
+  background: linear-gradient(160deg, #fff3da, #f6dfa8);
 }
 
 /* Счётчик остатка (суперлайков в день) в углу кнопки. */
