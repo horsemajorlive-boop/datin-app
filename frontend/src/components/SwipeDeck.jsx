@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ProfileCard from './ProfileCard';
 import LikeFx from './LikeFx';
 import EmptyState from './EmptyState';
@@ -7,6 +7,13 @@ import { IconX, IconHeart, IconHeartTriple, IconRotateCcw, IconSearch } from './
 // "Колода" карточек. Помнит:
 //   - index   : на какой анкете мы сейчас
 //   - history : список уже сделанных свайпов [{ profile, direction }] — нужен для "Вернуть"
+//
+// Сам свайп (палец или кнопка) не решает судьбу карточки мгновенно: сперва
+// ProfileCard спрашивает через onSwipeAttempt, можно ли вообще свайпнуть
+// (лимиты и т.п.), и только если да — улетает за край и лишь тогда зовёт
+// onFlyEnd, где мы уже фиксируем ход. Кнопки под колодой свайпают ту же
+// активную карточку императивно через cardRef — жест выглядит одинаково,
+// откуда бы он ни пришёл.
 //
 // Props:
 //   profiles       — массив анкет (лента с сервера)
@@ -36,6 +43,7 @@ export default function SwipeDeck({
   const [index, setIndex] = useState(0);
   const [history, setHistory] = useState([]);
   const [likeFx, setLikeFx] = useState(0); // счётчик лайков — триггер для "салюта"
+  const cardRef = useRef(null); // текущая верхняя карточка — для свайпа с кнопок
 
   // Пропустили того, кто уже лайкнул, — сами предлагаем вернуться. Как только
   // возможность пропадает (вернули анкету или сделали новый свайп) — если
@@ -53,27 +61,34 @@ export default function SwipeDeck({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasMissedLike]);
 
-  function handleSwipe(direction, opts = {}) {
+  // Можно ли вообще совершить этот свайп — спрашивает активная карточка,
+  // ДО того как полететь за край; если нет — просто пружинит обратно.
+  function handleSwipeAttempt(direction, meta = {}) {
+    if (direction !== 'right') return true; // пропуск ничем не ограничен
+
+    const isSuper = !!meta.isSuper;
+    if (isSuper && superlikesLeft != null && superlikesLeft <= 0) {
+      onHint?.(
+        isPremium
+          ? 'Суперлайк на сегодня уже использован'
+          : { text: 'Суперлайки на сегодня закончились', cta: 'Оформить Premium — 5 в день' }
+      );
+      return false;
+    }
+    if (!isSuper && likesLeft != null && likesLeft <= 0) {
+      onHint?.('Дневной лимит лайков исчерпан — возвращайтесь завтра');
+      return false;
+    }
+    return true;
+  }
+
+  // Карточка долетела до края и погасла — теперь фиксируем ход по-настоящему.
+  function handleFlyEnd(direction, meta = {}) {
     const current = profiles[index];
     if (!current) return;
 
     const kind = direction === 'right' ? 'like' : 'pass';
-    const isSuper = kind === 'like' && !!opts.isSuper;
-
-    if (kind === 'like') {
-      if (isSuper && superlikesLeft != null && superlikesLeft <= 0) {
-        onHint?.(
-          isPremium
-            ? 'Суперлайк на сегодня уже использован'
-            : { text: 'Суперлайки на сегодня закончились', cta: 'Оформить Premium — 5 в день' }
-        );
-        return;
-      }
-      if (!isSuper && likesLeft != null && likesLeft <= 0) {
-        onHint?.('Дневной лимит лайков исчерпан — возвращайтесь завтра');
-        return;
-      }
-    }
+    const isSuper = kind === 'like' && !!meta.isSuper;
 
     onSwipe(current, kind, { isSuper });
     if (kind === 'like') setLikeFx((n) => n + 1); // запускаем сердечки
@@ -81,6 +96,11 @@ export default function SwipeDeck({
     // запоминаем ход, чтобы его можно было отменить
     setHistory((h) => [...h, { profile: current, direction }]);
     setIndex((i) => i + 1);
+  }
+
+  // Кнопки под колодой свайпают ту же карточку, что и палец, — тем же путём.
+  function triggerSwipe(direction, meta) {
+    cardRef.current?.swipe(direction, meta);
   }
 
   function handleUndo() {
@@ -120,9 +140,11 @@ export default function SwipeDeck({
               }}
             >
               <ProfileCard
+                ref={i === 0 ? cardRef : undefined}
                 profile={profile}
                 active={i === 0}
-                onSwipe={handleSwipe}
+                onSwipeAttempt={handleSwipeAttempt}
+                onFlyEnd={handleFlyEnd}
                 onOpen={() => onOpen(profile)}
               />
             </div>
@@ -150,7 +172,7 @@ export default function SwipeDeck({
         )}
         <button
           className="btn btn--nope"
-          onClick={() => handleSwipe('left')}
+          onClick={() => triggerSwipe('left')}
           disabled={!hasCard}
           aria-label="Пропустить"
         >
@@ -158,7 +180,7 @@ export default function SwipeDeck({
         </button>
         <button
           className="btn btn--sm btn--super"
-          onClick={() => handleSwipe('right', { isSuper: true })}
+          onClick={() => triggerSwipe('right', { isSuper: true })}
           disabled={!hasCard}
           aria-label="Суперлайк"
         >
@@ -167,7 +189,7 @@ export default function SwipeDeck({
         </button>
         <button
           className="btn btn--like"
-          onClick={() => handleSwipe('right')}
+          onClick={() => triggerSwipe('right')}
           disabled={!hasCard || (likesLeft != null && likesLeft <= 0)}
           aria-label="Лайк"
         >

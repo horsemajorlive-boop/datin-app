@@ -421,32 +421,37 @@
   transform: rotate(180deg); /* IconChevronLeft -> смотрит вправо */
 }
 
-/* Штампы "ЛАЙК" / "НЕТ" при перетаскивании. */
+/* Метки "Лайк" / "Пропустить" при перетаскивании — мягкие стеклянные
+   плашки поверх фото (тот же приём, что у счётчика фото), а не обводка
+   жирным маркером — так чище смотрится на любом снимке. */
 .card__stamp {
   position: absolute;
-  top: 24px;
-  padding: 5px 13px;
-  border: 2px solid;
-  border-radius: 8px;
-  font-size: 17px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
+  top: 28px;
+  padding: 8px 20px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #fff;
   z-index: 3;
   pointer-events: none;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
 }
 
 .card__stamp--like {
-  left: 18px;
-  color: var(--accent);
-  border-color: var(--accent);
-  transform: rotate(-12deg);
+  left: 20px;
+  background: color-mix(in srgb, var(--accent) 75%, transparent);
+  transform: rotate(-8deg);
 }
 
 .card__stamp--nope {
-  right: 18px;
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.7);
-  transform: rotate(12deg);
+  right: 20px;
+  background: rgba(20, 14, 18, 0.55);
+  transform: rotate(8deg);
 }
 
 /* ================= Листалка фотографий ================= */
