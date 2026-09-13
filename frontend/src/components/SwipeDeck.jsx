@@ -139,14 +139,15 @@ export default function SwipeDeck({
       </div>
 
       <div className="deck__actions">
-        <button
-          className={`btn btn--sm btn--undo ${hasMissedLike ? '' : 'btn--undo-hidden'}`}
-          onClick={handleUndo}
-          disabled={!hasMissedLike}
-          aria-label="Вернуть анкету — вы пропустили того, кто вас лайкнул"
-        >
-          <IconRotateCcw />
-        </button>
+        {hasMissedLike && (
+          <button
+            className="btn btn--sm btn--undo"
+            onClick={handleUndo}
+            aria-label="Вернуть анкету — вы пропустили того, кто вас лайкнул"
+          >
+            <IconRotateCcw />
+          </button>
+        )}
         <button
           className="btn btn--nope"
           onClick={() => handleSwipe('left')}
