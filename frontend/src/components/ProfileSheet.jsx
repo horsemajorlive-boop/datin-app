@@ -71,11 +71,8 @@ export default function ProfileSheet({
           {(profile.city || profile.distanceKm != null) && (
             <p className="sheet__city">{cityWithDistance(profile.city, profile.distanceKm)}</p>
           )}
-          {profile.prompts?.length > 0 ? (
-            <PromptCards prompts={profile.prompts} />
-          ) : (
-            profile.bio && <p className="sheet__bio">{profile.bio}</p>
-          )}
+          {profile.bio && <p className="sheet__bio">{profile.bio}</p>}
+          {profile.prompts?.length > 0 && <PromptCards prompts={profile.prompts} />}
 
           {hasGoals && (
             <section className="sheet__section">

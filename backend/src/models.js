@@ -43,7 +43,7 @@ export function upsertUser(tgUser) {
 const HOUSING_CODES = ['own', 'rent', 'parents'];
 const CAR_CODES = ['yes', 'no'];
 const EMPLOYMENT_CODES = ['working', 'not_working'];
-const SMOKING_CODES = ['no', 'sometimes', 'yes'];
+const SMOKING_CODES = ['no', 'sometimes', 'yes', 'vape'];
 const DRINKING_CODES = ['no', 'sometimes', 'yes'];
 // Цель на сайте + отношение к детям.
 const GOAL_CODES = ['friendship', 'date', 'flirt', 'relationship'];

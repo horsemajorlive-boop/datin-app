@@ -114,11 +114,8 @@ export default function MyProfileScreen({
 
       <ProfileStrength profile={profile} onEdit={onEdit} />
 
-      {profile.prompts?.length > 0 ? (
-        <PromptCards prompts={profile.prompts} />
-      ) : (
-        profile.bio && <p className="myprofile__bio">{profile.bio}</p>
-      )}
+      {profile.bio && <p className="myprofile__bio">{profile.bio}</p>}
+      {profile.prompts?.length > 0 && <PromptCards prompts={profile.prompts} />}
 
       {(profile.goal || profile.kids) && (
         <section className="sheet__section">

@@ -158,10 +158,25 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
         </Section>
 
         <Section title="О себе">
-          <PromptEditor
-            value={form.prompts ?? []}
-            onChange={(prompts) => updateField('prompts', prompts)}
-          />
+          <label className="field">
+            <span>Пара слов о себе</span>
+            <textarea
+              rows={4}
+              value={form.bio ?? ''}
+              onChange={(e) => updateField('bio', e.target.value)}
+              maxLength={300}
+              placeholder="Чем занимаетесь, что ищете, что важно — пишите как удобно"
+            />
+            <span className="field__hint">{(form.bio ?? '').length}/300</span>
+          </label>
+
+          <div className="field">
+            <span>Подсказки · по желанию</span>
+            <PromptEditor
+              value={form.prompts ?? []}
+              onChange={(prompts) => updateField('prompts', prompts)}
+            />
+          </div>
         </Section>
 
         <Section title="Цели знакомства">

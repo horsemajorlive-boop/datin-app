@@ -7,6 +7,7 @@ export const SMOKING = [
   { code: 'no', label: 'Не курю', short: 'Не курю' },
   { code: 'sometimes', label: 'Иногда курю', short: 'Иногда курит' },
   { code: 'yes', label: 'Курю', short: 'Курит' },
+  { code: 'vape', label: 'Балуюсь одноразками', short: 'Балуется одноразками' },
 ];
 
 export const DRINKING = [

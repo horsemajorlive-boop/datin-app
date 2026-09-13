@@ -36,11 +36,14 @@
   flex-direction: column;
 }
 
-/* Заголовок второстепенных экранов (верификация, настройки, админка…). */
+/* Заголовок второстепенных экранов (верификация, настройки, админка…).
+   Fraunces хорош для эмоционального — имени в анкете, подсказок; для
+   служебных заголовков экрана нужен чёткий гротеск, а не курсивная засечка. */
 .screen__title {
+  font-family: var(--font-body);
   font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.005em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   margin-bottom: 18px;
 }
 
@@ -52,20 +55,24 @@
   justify-content: space-between;
   gap: 12px;
   min-height: 40px;
-  padding: 2px 0 14px;
+  padding: 2px 0 16px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4px;
 }
 
 /* На экране «Поиск» (.screen--deck без внутренних отступов) шапке нужны свои. */
 .screen--deck > .scrhead {
-  padding: 12px 16px;
+  padding: 12px 16px 16px;
+  margin-bottom: 0;
   flex-shrink: 0;
 }
 
 .scrhead__title {
   margin: 0;
-  font-size: 23px;
-  font-weight: 700;
-  letter-spacing: -0.005em;
+  font-family: var(--font-body);
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   display: flex;
   align-items: baseline;
   gap: 8px;
@@ -97,6 +104,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  box-shadow: var(--shadow-sm);
   transition: background 0.15s ease;
 }
 
@@ -2186,6 +2194,7 @@
 
 /* Показ подсказок на самом профиле (свой и чужой) — отдельными карточками. */
 .promptcards {
+  margin-top: 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
