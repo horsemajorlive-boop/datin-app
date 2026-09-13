@@ -17,23 +17,25 @@ const TABS = [
 export default function BottomNav({ active, chatBadge = 0, onChange }) {
   return (
     <nav className="nav">
-      {TABS.map(({ id, label, Icon }) => (
-        <button
-          key={id}
-          className={`nav__item ${active === id ? 'is-active' : ''}`}
-          onClick={() => onChange(id)}
-        >
-          <span className="nav__icon">
-            <Icon />
-            {id === 'chat' && chatBadge > 0 && (
-              <span className="nav__badge">
-                {chatBadge > 9 ? '9+' : chatBadge}
-              </span>
-            )}
-          </span>
-          <span className="nav__label">{label}</span>
-        </button>
-      ))}
+      <div className="nav__pill">
+        {TABS.map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            className={`nav__item ${active === id ? 'is-active' : ''}`}
+            onClick={() => onChange(id)}
+            aria-label={label}
+          >
+            <span className="nav__icon">
+              <Icon />
+              {id === 'chat' && chatBadge > 0 && (
+                <span className="nav__badge">
+                  {chatBadge > 9 ? '9+' : chatBadge}
+                </span>
+              )}
+            </span>
+          </button>
+        ))}
+      </div>
     </nav>
   );
 }

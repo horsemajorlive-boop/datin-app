@@ -655,40 +655,48 @@
 
 /* ================= Нижняя навигация ================= */
 
+/* Панель — не полоса, а плавающий остров: подписей нет, капсула
+   отделена от краёв экрана, фон и линия — только у самой капсулы. */
 .nav {
   display: flex;
-  border-top: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  padding-bottom: env(safe-area-inset-bottom); /* отступ под "чёлку"/жест-бар */
+  justify-content: center;
+  padding: 4px 16px calc(4px + env(safe-area-inset-bottom));
+}
+
+.nav__pill {
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--surface-2) 86%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--shadow);
 }
 
 .nav__item {
-  flex: 1;
-  min-width: 0;
+  width: 32px;
+  height: 32px;
   background: none;
   border: none;
+  border-radius: 50%;
   color: var(--faint);
-  padding: 9px 0 8px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  font-size: 10px;
-  font-weight: 600;
+  justify-content: center;
   cursor: pointer;
-  transition: color 0.15s ease;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 
 .nav__item.is-active {
   color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .nav__icon {
   position: relative;
-  width: 22px;
-  height: 22px;
+  width: 17px;
+  height: 17px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -697,25 +705,25 @@
 /* Бейдж непрочитанных на вкладке «Чат». */
 .nav__badge {
   position: absolute;
-  top: -5px;
-  left: 11px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
+  top: -6px;
+  right: -7px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
   box-sizing: border-box;
   border-radius: var(--radius-pill);
-  border: 2px solid var(--surface);
+  border: 2px solid var(--surface-2);
   background: var(--accent);
   color: #fff;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  line-height: 12px;
+  line-height: 10px;
   text-align: center;
 }
 
 .nav__icon svg {
-  width: 22px;
-  height: 22px;
+  width: 17px;
+  height: 17px;
 }
 
 /* ================= Всплывающая анкета (шторка) ================= */
