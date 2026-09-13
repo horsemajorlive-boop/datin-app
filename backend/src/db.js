@@ -8,11 +8,13 @@ import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DATA_DIR } from './paths.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
-// Файл БД. По умолчанию backend/data.db (в .gitignore).
-const DB_PATH = process.env.DB_PATH || path.join(here, '..', 'data.db');
+// Файл БД. По умолчанию DATA_DIR/data.db (в .gitignore) — см. paths.js.
+fs.mkdirSync(DATA_DIR, { recursive: true }); // на случай кастомного DATA_DIR (volume на проде)
+const DB_PATH = process.env.DB_PATH || path.join(DATA_DIR, 'data.db');
 
 export const db = new DatabaseSync(DB_PATH);
 

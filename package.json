@@ -1,0 +1,13 @@
+{
+  "name": "dating-app",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Корневой манифест только для хостинга (Railway и т.п.) — собирает фронтенд и ставит зависимости бэкенда одной командой. Для локальной разработки см. README.md — там frontend/ и backend/ запускаются раздельно (npm run dev в каждой папке).",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "npm install --prefix frontend && npm run build --prefix frontend && npm install --prefix backend",
+    "start": "npm start --prefix backend"
+  }
+}

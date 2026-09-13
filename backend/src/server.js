@@ -16,6 +16,7 @@ import { requireAdmin, isAdmin, bootstrapEnvAdmins } from './admin.js';
 import * as model from './models.js';
 import { scheduleBotReply } from './bot.js';
 import { attachRealtime, emitMessage, emitReaction, emitMatch } from './realtime.js';
+import { DATA_DIR } from './paths.js';
 import {
   notifyNewMatch,
   notifyNewLike,
@@ -23,13 +24,19 @@ import {
 } from './notifications.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const UPLOAD_DIR = path.join(here, '..', 'uploads');
+const UPLOAD_DIR = path.join(DATA_DIR, 'uploads');
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 // Селфи для верификации — в отдельной папке, которая НЕ раздаётся как статика.
 // Их видит только админ через защищённый маршрут.
-const VERIFY_DIR = path.join(here, '..', 'verification-uploads');
+const VERIFY_DIR = path.join(DATA_DIR, 'verification-uploads');
 fs.mkdirSync(VERIFY_DIR, { recursive: true });
+
+// Собранный фронтенд (frontend/dist) — на проде отдаём его же с этого сервиса,
+// чтобы не поднимать второй хостинг и не думать про CORS. Локально в dev-режиме
+// фронтенд обычно поднят отдельно на :5173 (см. README), поэтому если dist ещё
+// не собран — просто ничего не подключаем.
+const FRONTEND_DIST = path.join(here, '..', '..', 'frontend', 'dist');
 
 // Разбирает "data:image/...;base64,..." и пишет файл в dir. { file } либо { error, status }.
 function writeImageDataUrl(dataUrl, dir) {
@@ -429,6 +436,26 @@ app.post('/api/upload', (req, res) => {
   fs.writeFileSync(path.join(UPLOAD_DIR, name), buf);
   res.status(201).json({ url: `/uploads/${name}` });
 });
+
+// Отдаём собранный фронтенд, если он есть (npm run build в frontend/) —
+// маршрут должен идти ПОСЛЕ всех /api, /uploads, /telegram выше по файлу.
+if (fs.existsSync(FRONTEND_DIST)) {
+  app.use(express.static(FRONTEND_DIST));
+  // Без пути — просто мидлвар-заглушка на любой оставшийся GET (Express 5
+  // больше не понимает голую '*' как путь маршрута, см. path-to-regexp v6+).
+  app.use((req, res, next) => {
+    if (
+      req.method !== 'GET' ||
+      req.path.startsWith('/api') ||
+      req.path.startsWith('/uploads') ||
+      req.path.startsWith('/telegram')
+    ) {
+      return next();
+    }
+    res.sendFile(path.join(FRONTEND_DIST, 'index.html'));
+  });
+  console.log('[api] отдаю собранный фронтенд из', FRONTEND_DIST);
+}
 
 bootstrapEnvAdmins(); // проставить is_admin тем, кто в ADMIN_IDS
 
