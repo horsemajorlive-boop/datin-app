@@ -3,7 +3,6 @@ import ProfileCard from './ProfileCard';
 import LikeFx from './LikeFx';
 import EmptyState from './EmptyState';
 import { IconX, IconHeart, IconStar, IconRotateCcw, IconSearch } from './icons';
-import { isPremium } from '../premium';
 
 // "Колода" карточек. Помнит:
 //   - index   : на какой анкете мы сейчас
@@ -15,8 +14,9 @@ import { isPremium } from '../premium';
 //   onUndo         — onUndo(profile) — откат последнего свайпа на сервере
 //   onOpen         — открыть полную анкету
 //   onHint         — показать всплывающую подсказку-ограничение (текст строкой)
-//   likesLeft      — сколько обычных лайков осталось сегодня
+//   likesLeft      — сколько обычных лайков осталось сегодня (null = без лимита, Premium)
 //   superlikesLeft — сколько суперлайков осталось сегодня
+//   isPremium      — есть ли Premium (нужен для "Вернуть")
 
 export default function SwipeDeck({
   profiles,
@@ -24,8 +24,9 @@ export default function SwipeDeck({
   onUndo,
   onOpen,
   onHint,
-  likesLeft = Infinity,
-  superlikesLeft = Infinity,
+  likesLeft = null,
+  superlikesLeft = null,
+  isPremium = false,
 }) {
   const [index, setIndex] = useState(0);
   const [history, setHistory] = useState([]);
@@ -39,11 +40,11 @@ export default function SwipeDeck({
     const isSuper = kind === 'like' && !!opts.isSuper;
 
     if (kind === 'like') {
-      if (isSuper && superlikesLeft <= 0) {
+      if (isSuper && superlikesLeft != null && superlikesLeft <= 0) {
         onHint?.('Суперлайк на сегодня уже использован');
         return;
       }
-      if (!isSuper && likesLeft <= 0) {
+      if (!isSuper && likesLeft != null && likesLeft <= 0) {
         onHint?.('Дневной лимит лайков исчерпан — возвращайтесь завтра');
         return;
       }
@@ -60,9 +61,8 @@ export default function SwipeDeck({
   function handleUndo() {
     if (history.length === 0) return;
 
-    // Премиум-проверка. Пока isPremium() === true, поэтому просто работает.
-    if (!isPremium()) {
-      onHint?.('Возврат анкеты — функция премиума');
+    if (!isPremium) {
+      onHint?.('Возврат анкеты — функция Premium');
       return;
     }
 
@@ -131,7 +131,7 @@ export default function SwipeDeck({
         <button
           className="btn btn--sm btn--super"
           onClick={() => handleSwipe('right', { isSuper: true })}
-          disabled={!hasCard || superlikesLeft <= 0}
+          disabled={!hasCard || (superlikesLeft != null && superlikesLeft <= 0)}
           aria-label="Суперлайк"
         >
           <IconStar filled />
@@ -140,7 +140,7 @@ export default function SwipeDeck({
         <button
           className="btn btn--like"
           onClick={() => handleSwipe('right')}
-          disabled={!hasCard || likesLeft <= 0}
+          disabled={!hasCard || (likesLeft != null && likesLeft <= 0)}
           aria-label="Лайк"
         >
           <IconHeart filled />

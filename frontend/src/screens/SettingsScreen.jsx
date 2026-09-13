@@ -10,6 +10,8 @@ import {
 import { RULES } from '../data/rules';
 import { IconChevronLeft } from '../components/icons';
 import { assetUrl } from '../api';
+import { getTelegram } from '../telegram';
+import { PREMIUM_PRICE_STARS } from '../premium';
 import pkg from '../../package.json';
 
 // Экран настроек в профиле.
@@ -51,6 +53,38 @@ export default function SettingsScreen({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
+  const [buying, setBuying] = useState(false);
+  const [buyError, setBuyError] = useState('');
+
+  async function buyPremium() {
+    setBuyError('');
+    setBuying(true);
+    try {
+      const { url } = await api.post('/premium/invoice');
+      const tg = getTelegram();
+      if (tg?.openInvoice) {
+        tg.openInvoice(url, async (status) => {
+          // 'paid' | 'cancelled' | 'failed' | 'pending' — сам Premium выдаёт
+          // сервер по вебхуку от Telegram, тут просто подтягиваем анкету заново.
+          if (status === 'paid') {
+            try {
+              onChangedProfile(normalizeProfile(await api.get('/me')));
+            } catch {
+              /* анкета подтянется при следующем открытии — не критично */
+            }
+          }
+          setBuying(false);
+        });
+      } else {
+        // Вне Telegram (или старый клиент без openInvoice) — открываем ссылку как есть.
+        window.open(url, '_blank');
+        setBuying(false);
+      }
+    } catch (err) {
+      setBuyError(err.message || 'Не получилось начать оплату');
+      setBuying(false);
+    }
+  }
 
   async function toggleBlocked() {
     const next = !showBlocked;
@@ -112,6 +146,38 @@ export default function SettingsScreen({
         <IconChevronLeft />
       </button>
       <h1 className="screen__title">Настройки</h1>
+
+      {/* PREMIUM */}
+      <div className="set-group">
+        <div className="set-group__head set-group__head--premium">Premium</div>
+
+        {profile.isPremium ? (
+          <div className="set-row">
+            <span className="set-row__text">
+              Premium активен
+              <small>
+                До {new Date(profile.premiumUntil).toLocaleDateString('ru-RU')}
+              </small>
+            </span>
+          </div>
+        ) : (
+          <div className="premium-pitch">
+            <p className="muted">
+              Безлимитные лайки, 5 суперлайков в день, возврат анкеты,
+              сортировка «Новенькие» и фильтр по быту.
+            </p>
+            <button
+              type="button"
+              className="btn-wide"
+              onClick={buyPremium}
+              disabled={buying}
+            >
+              {buying ? 'Открываем оплату…' : `Оформить за ${PREMIUM_PRICE_STARS} ⭐`}
+            </button>
+            {buyError && <p className="form__error">{buyError}</p>}
+          </div>
+        )}
+      </div>
 
       {/* ВНЕШНИЙ ВИД */}
       <div className="set-group">

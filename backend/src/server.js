@@ -55,6 +55,41 @@ app.use('/uploads', express.static(UPLOAD_DIR));
 // --- Публичный эндпоинт (без авторизации) ---
 app.get('/api/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
 
+// --- Вебхук Telegram (Stars-платежи) — без нашей авторизации: сюда стучится
+// сам Telegram, а не наш фронтенд. Проверяем секрет из setWebhook вместо
+// заголовка X-Dev-User/tma. Путь намеренно вне /api, чтобы не попасть
+// под общий requireAuth ниже. ---
+const BOT_TOKEN = process.env.BOT_TOKEN || '';
+const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || '';
+
+app.post('/telegram/webhook', async (req, res) => {
+  if (
+    TELEGRAM_WEBHOOK_SECRET &&
+    req.get('X-Telegram-Bot-Api-Secret-Token') !== TELEGRAM_WEBHOOK_SECRET
+  ) {
+    return res.sendStatus(401);
+  }
+
+  const update = req.body || {};
+  try {
+    if (update.pre_checkout_query) {
+      // Обязаны ответить в течение 10 секунд, иначе Telegram отменит платёж.
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerPreCheckoutQuery`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pre_checkout_query_id: update.pre_checkout_query.id, ok: true }),
+      });
+    } else if (update.message?.successful_payment) {
+      const payerId = update.message.from.id;
+      const until = model.grantPremium(payerId);
+      console.log(`[premium] выдан по оплате: user ${payerId} до ${new Date(until).toISOString()}`);
+    }
+  } catch (err) {
+    console.warn('[telegram webhook]', err.message);
+  }
+  res.sendStatus(200); // Telegram ретраит, если не 200 — отвечаем всегда
+});
+
 // --- Всё, что ниже, требует авторизации ---
 app.use('/api', requireAuth);
 
@@ -98,6 +133,36 @@ app.post('/api/me/location', (req, res) => {
   if (!valid) return res.status(400).json({ error: 'некорректные координаты' });
   model.setLocation(req.user.id, lat, lng);
   res.json({ hasLocation: true });
+});
+
+// Счёт на оплату Premium через Telegram Stars. Отдаём ссылку — открывать её
+// должен фронтенд через Telegram.WebApp.openInvoice(url). Сама выдача
+// Premium происходит не здесь, а в /telegram/webhook — только после того,
+// как Telegram подтвердит успешную оплату.
+app.post('/api/premium/invoice', async (req, res) => {
+  if (!BOT_TOKEN) {
+    return res.status(503).json({ error: 'Оплата пока не настроена на сервере' });
+  }
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: `Premium на ${model.PREMIUM_DAYS} дней`,
+        description:
+          'Безлимитные лайки, больше суперлайков, возврат анкеты, сортировка «Новенькие» и поиск по быту',
+        payload: `premium:${req.user.id}:${Date.now()}`,
+        currency: 'XTR',
+        prices: [{ label: 'Premium', amount: model.PREMIUM_PRICE_STARS }],
+      }),
+    });
+    const data = await r.json();
+    if (!data.ok) return res.status(502).json({ error: 'Telegram отклонил запрос на счёт' });
+    res.json({ url: data.result });
+  } catch (err) {
+    console.warn('[premium] createInvoiceLink', err.message);
+    res.status(502).json({ error: 'Не получилось создать счёт' });
+  }
 });
 
 // Удалить аккаунт целиком: БД (каскадом) + файлы на диске. Общая для
@@ -247,12 +312,15 @@ app.post('/api/swipes', (req, res) => {
   }
 });
 
-// Отмена свайпа ("вернуть"): { targetId }
+// Отмена свайпа ("вернуть", только Premium): { targetId }
 app.post('/api/swipes/undo', (req, res) => {
   const targetId = Number(req.body?.targetId);
   if (!targetId) return res.status(400).json({ error: 'bad targetId' });
-  model.undoSwipe(req.user.id, targetId);
-  res.json({ ok: true });
+  const result = model.undoSwipe(req.user.id, targetId);
+  if (result.error) {
+    return res.status(403).json({ error: 'Возврат анкеты доступен с Premium' });
+  }
+  res.json(result);
 });
 
 // --- Блокировки и жалобы ---

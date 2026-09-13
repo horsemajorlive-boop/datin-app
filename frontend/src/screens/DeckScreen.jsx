@@ -19,6 +19,7 @@ import { isFilterActive } from '../lib/filters';
 //   onClearLocation — забыть геопозицию
 //   likesLeft       — сколько обычных лайков осталось сегодня
 //   superlikesLeft  — сколько суперлайков осталось сегодня
+//   isPremium       — есть ли Premium (снимает лимиты, открывает "Вернуть" и фильтр по быту)
 
 export default function DeckScreen({
   feed,
@@ -33,6 +34,7 @@ export default function DeckScreen({
   onClearLocation,
   likesLeft,
   superlikesLeft,
+  isPremium,
 }) {
   const [opened, setOpened] = useState(null);
   const [hint, setHint] = useState('');
@@ -64,6 +66,7 @@ export default function DeckScreen({
         onHint={setHint}
         likesLeft={likesLeft}
         superlikesLeft={superlikesLeft}
+        isPremium={isPremium}
       />
 
       {hint && <div className="paywall-hint">{hint}</div>}
@@ -89,6 +92,7 @@ export default function DeckScreen({
           hasLocation={hasLocation}
           onShareLocation={onShareLocation}
           onClearLocation={onClearLocation}
+          isPremium={isPremium}
         />
       )}
     </div>

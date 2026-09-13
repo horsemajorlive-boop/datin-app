@@ -119,4 +119,12 @@ try {
   /* колонка уже существует — ок */
 }
 
+// Premium (оплата Stars) — до какого момента (мс) действует, NULL = обычный.
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN premium_until INTEGER`);
+  console.log('[db] миграция: добавлена колонка users.premium_until');
+} catch {
+  /* колонка уже существует — ок */
+}
+
 console.log('[db] готова:', DB_PATH);

@@ -8,7 +8,9 @@
     "start": "node src/server.js",
     "seed": "node src/seed.js",
     "grant-admin": "node src/grant-admin.js",
-    "revoke-admin": "node src/grant-admin.js --revoke"
+    "revoke-admin": "node src/grant-admin.js --revoke",
+    "grant-premium": "node src/grant-premium.js",
+    "revoke-premium": "node src/grant-premium.js --revoke"
   },
   "dependencies": {
     "cors": "^2.8.5",

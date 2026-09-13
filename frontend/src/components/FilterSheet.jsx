@@ -8,7 +8,7 @@ import { requestLocation } from '../telegram';
 import CityInput from './CityInput';
 import { IconX } from './icons';
 
-// "Новенькие" пока доступны всем — плашку PRO вернём вместе с премиумом.
+// "Новенькие" — только с Premium (см. isPremium ниже).
 const SORTS = [
   { code: '', label: 'Сейчас активны' },
   { code: 'new', label: 'Новенькие' },
@@ -37,7 +37,7 @@ function Group({ title, children }) {
 }
 
 // Один ряд чипов "выбрать один код или ничего".
-function OneRow({ label, options, value, onPick, useLabel = false }) {
+function OneRow({ label, options, value, onPick, useLabel = false, disabled = false }) {
   return (
     <div className="field">
       <span>{label}</span>
@@ -48,6 +48,7 @@ function OneRow({ label, options, value, onPick, useLabel = false }) {
             type="button"
             className={`chipbtn ${value === o.code ? 'is-on' : ''}`}
             onClick={() => onPick(value === o.code ? '' : o.code)}
+            disabled={disabled}
           >
             {useLabel ? o.label : o.short || o.label}
           </button>
@@ -64,6 +65,7 @@ export default function FilterSheet({
   hasLocation,
   onShareLocation,
   onClearLocation,
+  isPremium,
 }) {
   const [f, setF] = useState(value);
   const [geoBusy, setGeoBusy] = useState(false);
@@ -215,7 +217,18 @@ export default function FilterSheet({
               />
             </Group>
 
-            <Group title="Быт">
+            <Group
+              title={
+                <>
+                  Быт {!isPremium && <span className="chipbtn__pro">PRO</span>}
+                </>
+              }
+            >
+              {!isPremium && (
+                <p className="field__hint filter__pro-hint">
+                  Фильтр по жилью, авто и работе — с Premium
+                </p>
+              )}
               <div className="field">
                 <span>Жильё</span>
                 <div className="choice">
@@ -227,6 +240,7 @@ export default function FilterSheet({
                         f.housing.includes(o.code) ? 'is-on' : ''
                       }`}
                       onClick={() => toggleHousing(o.code)}
+                      disabled={!isPremium}
                     >
                       {o.short}
                     </button>
@@ -238,12 +252,14 @@ export default function FilterSheet({
                 options={CAR}
                 value={f.car}
                 onPick={(v) => set({ car: v })}
+                disabled={!isPremium}
               />
               <OneRow
                 label="Работа"
                 options={EMPLOYMENT}
                 value={f.employment}
                 onPick={(v) => set({ employment: v })}
+                disabled={!isPremium}
               />
             </Group>
 
@@ -298,13 +314,26 @@ export default function FilterSheet({
                 </div>
               </div>
 
-              <OneRow
-                label="Сортировка"
-                options={SORTS}
-                value={f.sort}
-                onPick={(v) => set({ sort: v })}
-                useLabel
-              />
+              <div className="field">
+                <span>Сортировка</span>
+                <div className="choice">
+                  {SORTS.map((o) => {
+                    const locked = o.code === 'new' && !isPremium;
+                    return (
+                      <button
+                        key={o.code}
+                        type="button"
+                        className={`chipbtn ${f.sort === o.code ? 'is-on' : ''}`}
+                        onClick={() => !locked && set({ sort: f.sort === o.code ? '' : o.code })}
+                        disabled={locked}
+                      >
+                        {o.label}
+                        {locked && <span className="chipbtn__pro">PRO</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </Group>
 
             <div className="form__actions filtersheet__actions">

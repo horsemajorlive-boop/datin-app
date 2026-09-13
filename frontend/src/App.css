@@ -2248,6 +2248,11 @@
   margin-top: 0;
 }
 
+.filter__pro-hint {
+  align-self: flex-start;
+  margin-top: -8px;
+}
+
 .geo-forget {
   align-self: flex-start;
   padding: 0;
@@ -3190,6 +3195,20 @@
 
 .set-group__head--danger {
   color: var(--accent);
+}
+
+.set-group__head--premium {
+  color: var(--gold);
+}
+
+.premium-pitch {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.premium-pitch .btn-wide {
+  margin-top: 0;
 }
 
 .set-row {

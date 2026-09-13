@@ -431,6 +431,7 @@ export default function App() {
             onClearLocation={handleClearLocation}
             likesLeft={me?.likesLeft}
             superlikesLeft={me?.superlikesLeft}
+            isPremium={!!me?.isPremium}
           />
         )}
         {tab === 'likes' && (

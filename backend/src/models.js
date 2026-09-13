@@ -121,13 +121,40 @@ function emptyProfile(userId) {
 // Сколько интересов минимум нужно указать при входе.
 const ONBOARDING_MIN_INTERESTS = 5;
 
+// ---------- Premium ----------
+// users.premium_until — до какого момента (мс) активен платный доступ,
+// NULL/прошедшая дата = обычный пользователь. Продаётся за Telegram Stars
+// (см. /api/premium/invoice и /telegram/webhook в server.js).
+export const PREMIUM_DAYS = 30;
+export const PREMIUM_PRICE_STARS = 199;
+
+function getPremiumUntil(userId) {
+  const u = db.prepare(`SELECT premium_until FROM users WHERE id = ?`).get(userId);
+  return u?.premium_until ?? null;
+}
+
+export function isPremium(userId) {
+  const until = getPremiumUntil(userId);
+  return until != null && until > Date.now();
+}
+
+// Выдать/продлить Premium. Если он уже активен — считаем от текущей даты
+// окончания (а не от "сейчас"), чтобы повторная покупка не пропадала впустую.
+export function grantPremium(userId, days = PREMIUM_DAYS) {
+  const base = Math.max(Date.now(), getPremiumUntil(userId) ?? 0);
+  const until = base + days * 24 * 60 * 60 * 1000;
+  db.prepare(`UPDATE users SET premium_until = ? WHERE id = ?`).run(until, userId);
+  return until;
+}
+
 // ---------- Дневные лимиты лайков ----------
-// Пока без премиума — просто разумная дневная норма для всех: не давит,
-// но даёт повод возвращаться каждый день. "Сегодня" — по местному времени
-// сервера (полночь-полночь), без учёта часовых поясов пользователей —
-// для нынешнего масштаба этого достаточно.
+// Разумная дневная норма для всех — не давит, но даёт повод возвращаться
+// каждый день; Premium снимает лимит лайков и даёт больше суперлайков.
+// "Сегодня" — по местному времени сервера (полночь-полночь), без учёта
+// часовых поясов пользователей — для нынешнего масштаба этого достаточно.
 export const DAILY_LIKE_LIMIT = 30;
 export const DAILY_SUPERLIKE_LIMIT = 1;
+export const PREMIUM_DAILY_SUPERLIKE_LIMIT = 5;
 
 function startOfTodayMs() {
   const d = new Date();
@@ -149,13 +176,20 @@ function countTodaySwipes(actorId, isSuper) {
   return row.n;
 }
 
-// { likesLeft, superlikesLeft, dailyLikeLimit, dailySuperlikeLimit } для анкеты.
+// { isPremium, premiumUntil, likesLeft, superlikesLeft, dailyLikeLimit,
+//   dailySuperlikeLimit } для анкеты. likesLeft/dailyLikeLimit — null у
+// Premium (без лимита; null, а не Infinity, чтобы нормально уходило в JSON).
 function likeLimitFields(userId) {
+  const premiumUntil = getPremiumUntil(userId);
+  const premium = premiumUntil != null && premiumUntil > Date.now();
+  const superlikeLimit = premium ? PREMIUM_DAILY_SUPERLIKE_LIMIT : DAILY_SUPERLIKE_LIMIT;
   return {
-    likesLeft: Math.max(0, DAILY_LIKE_LIMIT - countTodaySwipes(userId, false)),
-    superlikesLeft: Math.max(0, DAILY_SUPERLIKE_LIMIT - countTodaySwipes(userId, true)),
-    dailyLikeLimit: DAILY_LIKE_LIMIT,
-    dailySuperlikeLimit: DAILY_SUPERLIKE_LIMIT,
+    isPremium: premium,
+    premiumUntil: premium ? premiumUntil : null,
+    likesLeft: premium ? null : Math.max(0, DAILY_LIKE_LIMIT - countTodaySwipes(userId, false)),
+    superlikesLeft: Math.max(0, superlikeLimit - countTodaySwipes(userId, true)),
+    dailyLikeLimit: premium ? null : DAILY_LIKE_LIMIT,
+    dailySuperlikeLimit: superlikeLimit,
   };
 }
 
@@ -558,7 +592,10 @@ export function getFeed(userId, opts = {}) {
     where.push('p.gender = :gender');
     params.gender = gender;
   }
-  if (Array.isArray(housing)) {
+  // Фильтр по быту (жильё/авто/работа) — только с Premium; если его нет,
+  // просто игнорируем эти параметры, а не отказываем в запросе целиком.
+  const premium = isPremium(userId);
+  if (premium && Array.isArray(housing)) {
     const codes = housing.filter((h) => HOUSING_CODES.includes(h));
     if (codes.length) {
       // набор кодов ограничен, поэтому безопасно раскрыть в IN (:h0, :h1, ...)
@@ -567,11 +604,11 @@ export function getFeed(userId, opts = {}) {
       codes.forEach((c, i) => (params[`h${i}`] = c));
     }
   }
-  if (CAR_CODES.includes(car)) {
+  if (premium && CAR_CODES.includes(car)) {
     where.push('p.car = :car');
     params.car = car;
   }
-  if (EMPLOYMENT_CODES.includes(employment)) {
+  if (premium && EMPLOYMENT_CODES.includes(employment)) {
     where.push('p.employment = :employment');
     params.employment = employment;
   }
@@ -588,9 +625,11 @@ export function getFeed(userId, opts = {}) {
   }
 
   // Сортировка: по умолчанию — недавно активные; 'new' — недавно
-  // зарегистрированные (премиум-опция, но сам порядок безобиден).
+  // зарегистрированные, только для Premium (иначе тихо остаёмся на обычной).
   const orderBy =
-    sort === 'new' ? 'u.created_at DESC, p.updated_at DESC' : 'p.updated_at DESC';
+    sort === 'new' && premium
+      ? 'u.created_at DESC, p.updated_at DESC'
+      : 'p.updated_at DESC';
 
   const rows = db
     .prepare(
@@ -660,9 +699,14 @@ export function recordSwipe(actorId, targetId, direction, { isSuper = false } = 
   if (isBlockedEitherWay(actorId, targetId)) return { match: false };
 
   if (direction === 'like') {
-    const limit = isSuper ? DAILY_SUPERLIKE_LIMIT : DAILY_LIKE_LIMIT;
-    if (countTodaySwipes(actorId, isSuper) >= limit) {
-      return { match: false, error: isSuper ? 'superlike_limit' : 'like_limit' };
+    const premium = isPremium(actorId);
+    if (isSuper) {
+      const limit = premium ? PREMIUM_DAILY_SUPERLIKE_LIMIT : DAILY_SUPERLIKE_LIMIT;
+      if (countTodaySwipes(actorId, true) >= limit) {
+        return { match: false, error: 'superlike_limit' };
+      }
+    } else if (!premium && countTodaySwipes(actorId, false) >= DAILY_LIKE_LIMIT) {
+      return { match: false, error: 'like_limit' };
     }
   }
 
@@ -703,9 +747,12 @@ export function recordSwipe(actorId, targetId, direction, { isSuper = false } = 
   };
 }
 
-// Отмена последнего свайпа (кнопка "вернуть"). Удаляет свайп; если из-за него
-// был мэтч — удаляет и мэтч со всеми сообщениями (каскадом).
+// Отмена последнего свайпа (кнопка "вернуть") — доступна только с Premium
+// (на клиенте это тоже проверяется, но решает всегда сервер). Удаляет свайп;
+// если из-за него был мэтч — удаляет и мэтч со всеми сообщениями (каскадом).
 export function undoSwipe(actorId, targetId) {
+  if (!isPremium(actorId)) return { error: 'premium_required' };
+
   db.prepare(`DELETE FROM swipes WHERE actor_id = ? AND target_id = ?`).run(
     actorId,
     targetId
@@ -713,6 +760,7 @@ export function undoSwipe(actorId, targetId) {
   const a = Math.min(actorId, targetId);
   const b = Math.max(actorId, targetId);
   db.prepare(`DELETE FROM matches WHERE user_a = ? AND user_b = ?`).run(a, b);
+  return { ok: true };
 }
 
 // ---------- Мэтчи и переписка ----------
