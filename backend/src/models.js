@@ -716,7 +716,17 @@ export function recordSwipe(actorId, targetId, direction, { isSuper = false } = 
      ON CONFLICT(actor_id, target_id) DO UPDATE SET direction = :d, is_super = :s, created_at = :ts`
   ).run({ a: actorId, t: targetId, d: direction, s: isSuper ? 1 : 0, ts: now() });
 
-  if (direction !== 'like') return { match: false };
+  if (direction !== 'like') {
+    // Пропустили того, кто уже лайкнул нас, — теперь он пропадёт из "Симпатий"
+    // (getIncomingLikes исключает уже свайпнутых). Сообщаем фронту, чтобы
+    // предложить вернуться, пока свайп ещё можно отменить.
+    const alreadyLiked = db
+      .prepare(
+        `SELECT 1 FROM swipes WHERE actor_id = :t AND target_id = :a AND direction = 'like'`
+      )
+      .get({ a: actorId, t: targetId });
+    return { match: false, missedLike: !!alreadyLiked };
+  }
 
   // Лайкнул ли target нас раньше?
   const back = db

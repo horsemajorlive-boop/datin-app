@@ -21,6 +21,7 @@ import { isFilterActive } from '../lib/filters';
 //   superlikesLeft  — сколько суперлайков осталось сегодня
 //   isPremium       — есть ли Premium (снимает лимиты, открывает "Вернуть" и фильтр по быту)
 //   onOpenPremium   — перейти к оформлению Premium (настройки)
+//   hasMissedLike   — последний свайп пропустил того, кто уже лайкнул (см. SwipeDeck)
 
 export default function DeckScreen({
   feed,
@@ -37,6 +38,7 @@ export default function DeckScreen({
   superlikesLeft,
   isPremium,
   onOpenPremium,
+  hasMissedLike,
 }) {
   const [opened, setOpened] = useState(null);
   const [hint, setHint] = useState(null); // строка либо { text, cta }
@@ -70,6 +72,7 @@ export default function DeckScreen({
         likesLeft={likesLeft}
         superlikesLeft={superlikesLeft}
         isPremium={isPremium}
+        hasMissedLike={hasMissedLike}
       />
 
       {hint && (
@@ -79,7 +82,7 @@ export default function DeckScreen({
             hint.cta
               ? () => {
                   setHint(null);
-                  onOpenPremium?.();
+                  (hint.action || onOpenPremium)?.();
                 }
               : undefined
           }

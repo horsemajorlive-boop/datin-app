@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import ProfileCard from './ProfileCard';
 import LikeFx from './LikeFx';
 import EmptyState from './EmptyState';
-import { IconX, IconHeart, IconStar, IconRotateCcw, IconSearch } from './icons';
+import { IconX, IconHeart, IconHeartTriple, IconRotateCcw, IconSearch } from './icons';
 
 // "Колода" карточек. Помнит:
 //   - index   : на какой анкете мы сейчас
@@ -13,11 +13,14 @@ import { IconX, IconHeart, IconStar, IconRotateCcw, IconSearch } from './icons';
 //   onSwipe        — onSwipe(profile, 'like' | 'pass', { isSuper })
 //   onUndo         — onUndo(profile) — откат последнего свайпа на сервере
 //   onOpen         — открыть полную анкету
-//   onHint         — показать всплывающую подсказку-ограничение: строка либо
-//                    { text, cta } — с cta подсказка кликабельна (открыть Premium)
+//   onHint         — показать всплывающую подсказку: строка либо { text, cta, action } —
+//                    с cta подсказка кликабельна, action — что сделать по клику
+//                    (по умолчанию, если action не передан, — открыть Premium)
 //   likesLeft      — сколько обычных лайков осталось сегодня (null = без лимита, Premium)
 //   superlikesLeft — сколько суперлайков осталось сегодня
 //   isPremium      — есть ли Premium (нужен для "Вернуть")
+//   hasMissedLike  — последний свайп был пропуском того, кто уже лайкнул вас —
+//                    тогда и только тогда показываем золотую кнопку "Вернуть"
 
 export default function SwipeDeck({
   profiles,
@@ -28,10 +31,27 @@ export default function SwipeDeck({
   likesLeft = null,
   superlikesLeft = null,
   isPremium = false,
+  hasMissedLike = false,
 }) {
   const [index, setIndex] = useState(0);
   const [history, setHistory] = useState([]);
   const [likeFx, setLikeFx] = useState(0); // счётчик лайков — триггер для "салюта"
+
+  // Пропустили того, кто уже лайкнул, — сами предлагаем вернуться. Как только
+  // возможность пропадает (вернули анкету или сделали новый свайп) — если
+  // подсказка ещё висит, она уже неактуальна, гасим её же вызовом.
+  useEffect(() => {
+    if (hasMissedLike) {
+      onHint?.({
+        text: 'Вы пропустили того, кто уже вас лайкнул',
+        cta: 'Вернуться к анкете',
+        action: handleUndo,
+      });
+    } else {
+      onHint?.(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMissedLike]);
 
   function handleSwipe(direction, opts = {}) {
     const current = profiles[index];
@@ -64,10 +84,13 @@ export default function SwipeDeck({
   }
 
   function handleUndo() {
-    if (history.length === 0) return;
+    if (!hasMissedLike || history.length === 0) return;
 
     if (!isPremium) {
-      onHint?.('Возврат анкеты — функция Premium');
+      onHint?.({
+        text: 'Вы пропустили того, кто уже вас лайкнул',
+        cta: 'Оформить Premium — верните анкету',
+      });
       return;
     }
 
@@ -80,7 +103,6 @@ export default function SwipeDeck({
 
   const visible = profiles.slice(index, index + 3);
   const hasCard = visible.length > 0;
-  const canUndo = history.length > 0;
 
   return (
     <div className="deck">
@@ -118,10 +140,10 @@ export default function SwipeDeck({
 
       <div className="deck__actions">
         <button
-          className="btn btn--sm btn--undo"
+          className={`btn btn--sm btn--undo ${hasMissedLike ? '' : 'btn--undo-hidden'}`}
           onClick={handleUndo}
-          disabled={!canUndo}
-          aria-label="Вернуть анкету"
+          disabled={!hasMissedLike}
+          aria-label="Вернуть анкету — вы пропустили того, кто вас лайкнул"
         >
           <IconRotateCcw />
         </button>
@@ -139,7 +161,7 @@ export default function SwipeDeck({
           disabled={!hasCard}
           aria-label="Суперлайк"
         >
-          <IconStar filled />
+          <IconHeartTriple filled />
           {superlikesLeft > 0 && <span className="btn__badge">{superlikesLeft}</span>}
         </button>
         <button

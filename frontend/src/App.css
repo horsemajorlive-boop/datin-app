@@ -550,14 +550,14 @@
   width: 58px;
   height: 58px;
   border-radius: 50%;
-  border: 1px solid var(--line);
+  border: 1.5px solid var(--line-2);
   cursor: pointer;
-  background: var(--surface);
+  background: var(--surface-2);
   color: var(--text);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -585,7 +585,8 @@
   color: #fff;
   border-color: transparent;
   background: var(--accent);
-  box-shadow: 0 10px 22px -4px var(--accent-soft), var(--shadow-sm);
+  box-shadow: 0 10px 22px -4px var(--accent-soft), var(--shadow-sm),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .btn--nope {
@@ -603,15 +604,24 @@
   height: 20px;
 }
 
+/* Показывается только при пропущенной симпатии — потому и золотая,
+   а не приглушённая: это не рутинная кнопка, а конкретная возможность. */
 .btn--undo {
-  color: var(--faint);
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+/* Место в ряду держим всегда — иначе остальные кнопки скакали бы при
+   появлении/исчезновении "Вернуть"; когда нечего возвращать, просто гасим. */
+.btn--undo-hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* Суперлайк — отдельный от лайка ресурс, поэтому и цвет свой (золото). */
 .btn--super {
   color: var(--gold);
   border-color: var(--gold);
-  background: var(--surface);
 }
 
 /* Счётчик остатка (суперлайков в день) в углу кнопки. */

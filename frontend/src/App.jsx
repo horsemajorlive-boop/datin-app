@@ -37,6 +37,8 @@ export default function App() {
 
   const [activeChatId, setActiveChatId] = useState(null);
   const [matchPopup, setMatchPopup] = useState(null);
+  // последний свайп в колоде — пропуск того, кто уже нас лайкнул (см. DeckScreen)
+  const [missedLike, setMissedLike] = useState(false);
   // какой экран показываем во вкладке "Профиль": view | edit | verify | admin
   const [profileView, setProfileView] = useState('view');
   const [filters, setFilters] = useState(loadFilters); // фильтры ленты (из localStorage)
@@ -230,6 +232,12 @@ export default function App() {
           ...normalizeProfile(res.withUser),
           matchId: res.matchId,
         });
+        setMissedLike(false);
+      } else if (direction === 'pass' && res.missedLike) {
+        // пропустили того, кто уже нас лайкнул — предложим вернуться (см. SwipeDeck)
+        setMissedLike(true);
+      } else {
+        setMissedLike(false);
       }
       // мог свайпнуть того, кто уже лайкал меня — обновим «Симпатии»
       loadIncoming();
@@ -250,6 +258,7 @@ export default function App() {
     const affected = matches.find((m) => m.profile.id === profile.id);
     try {
       await api.post('/swipes/undo', { targetId: profile.id });
+      setMissedLike(false);
       if (affected && activeChatId === affected.matchId) setActiveChatId(null);
       await loadMatches();
       loadIncoming(); // отменённый свайп мог вернуть человека в «Симпатии»
@@ -436,6 +445,7 @@ export default function App() {
               setTab('me');
               setProfileView('settings');
             }}
+            hasMissedLike={missedLike}
           />
         )}
         {tab === 'likes' && (
