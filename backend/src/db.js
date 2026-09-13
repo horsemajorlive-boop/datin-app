@@ -103,4 +103,12 @@ for (const col of ['lat', 'lng']) {
   }
 }
 
+// Подсказки анкеты (вопрос-ответ) вместо голого "о себе".
+try {
+  db.exec(`ALTER TABLE profiles ADD COLUMN prompts TEXT NOT NULL DEFAULT '[]'`);
+  console.log('[db] миграция: добавлена колонка profiles.prompts');
+} catch {
+  /* колонка уже существует — ок */
+}
+
 console.log('[db] готова:', DB_PATH);

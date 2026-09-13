@@ -6,6 +6,7 @@ import GoalChips from '../components/GoalChips';
 import VerifiedBadge from '../components/VerifiedBadge';
 import ScreenHeader from '../components/ScreenHeader';
 import ProfileStrength from '../components/ProfileStrength';
+import PromptCards from '../components/PromptCards';
 import { IconVerified, IconSettings } from '../components/icons';
 import { useCarousel } from '../lib/useCarousel';
 
@@ -113,7 +114,11 @@ export default function MyProfileScreen({
 
       <ProfileStrength profile={profile} onEdit={onEdit} />
 
-      {profile.bio && <p className="myprofile__bio">{profile.bio}</p>}
+      {profile.prompts?.length > 0 ? (
+        <PromptCards prompts={profile.prompts} />
+      ) : (
+        profile.bio && <p className="myprofile__bio">{profile.bio}</p>
+      )}
 
       {(profile.goal || profile.kids) && (
         <section className="sheet__section">

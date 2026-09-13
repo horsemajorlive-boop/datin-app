@@ -48,6 +48,32 @@ const DRINKING_CODES = ['no', 'sometimes', 'yes'];
 // Цель на сайте + отношение к детям.
 const GOAL_CODES = ['friendship', 'date', 'flirt', 'relationship'];
 const KIDS_CODES = ['want', 'have', 'dont', 'maybe'];
+
+// Каталог подсказок анкеты (вопрос-ответ вместо голого "о себе") — коды
+// должны совпадать с frontend/src/data/prompts.js.
+const PROMPT_CODES = [
+  'ideal_date', 'two_truths', 'talk_about', 'sunday', 'looking_for',
+  'spontaneous', 'cant_live', 'talent', 'perfect_evening', 'fun_fact',
+  'green_flag', 'win_heart',
+];
+const MAX_PROMPTS = 3;
+
+// Чистим то, что пришло с клиента: только известные коды, непустой ответ
+// (обрезаем до 150 символов), без повторов кода, не больше MAX_PROMPTS штук.
+function sanitizePrompts(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const item of list) {
+    const code = item?.code;
+    const answer = String(item?.answer ?? '').trim().slice(0, 150);
+    if (!PROMPT_CODES.includes(code) || !answer || seen.has(code)) continue;
+    seen.add(code);
+    out.push({ code, answer });
+    if (out.length >= MAX_PROMPTS) break;
+  }
+  return out;
+}
 const oneOf = (value, codes) => (codes.includes(value) ? value : '');
 
 // Число в диапазоне или null.
@@ -76,6 +102,7 @@ function emptyProfile(userId) {
     weight: null,
     smoking: '',
     drinking: '',
+    prompts: [],
     photos: [],
     hasLocation: false,
     isVisible: true,
@@ -205,6 +232,7 @@ export function getFullProfile(userId, { forOther = false } = {}) {
     weight: row.weight ?? null,
     smoking: row.smoking || '',
     drinking: row.drinking || '',
+    prompts: JSON.parse(row.prompts || '[]'),
     hasLocation: row.lat != null && row.lng != null,
     isVisible: !!row.is_visible,
     photos,
@@ -229,17 +257,18 @@ export function saveProfile(userId, data) {
     `INSERT INTO profiles
        (user_id, name, age, city, bio, gender, interests,
         housing, car, employment, goal, kids,
-        height, weight, smoking, drinking, updated_at)
+        height, weight, smoking, drinking, prompts, updated_at)
      VALUES
        (:user_id, :name, :age, :city, :bio, :gender, :interests,
         :housing, :car, :employment, :goal, :kids,
-        :height, :weight, :smoking, :drinking, :ts)
+        :height, :weight, :smoking, :drinking, :prompts, :ts)
      ON CONFLICT(user_id) DO UPDATE SET
        name = :name, age = :age, city = :city, bio = :bio,
        gender = :gender, interests = :interests,
        housing = :housing, car = :car, employment = :employment,
        goal = :goal, kids = :kids,
        height = :height, weight = :weight, smoking = :smoking, drinking = :drinking,
+       prompts = :prompts,
        updated_at = :ts`
   ).run({
     user_id: userId,
@@ -260,6 +289,7 @@ export function saveProfile(userId, data) {
     employment: oneOf(data.employment, EMPLOYMENT_CODES),
     goal: oneOf(data.goal, GOAL_CODES),
     kids: oneOf(data.kids, KIDS_CODES),
+    prompts: JSON.stringify(sanitizePrompts(data.prompts)),
     ts: now(),
   });
 }
@@ -388,6 +418,7 @@ function hydrateProfiles(rows, viewerLoc = null) {
     weight: r.weight ?? null,
     smoking: r.smoking || '',
     drinking: r.drinking || '',
+    prompts: JSON.parse(r.prompts || '[]'),
     verified: r.verified_at != null,
     distanceKm:
       viewerLoc && r.lat != null && r.lng != null
@@ -524,7 +555,7 @@ export function getFeed(userId, opts = {}) {
     .prepare(
       `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
               p.housing, p.car, p.employment, p.goal, p.kids,
-              p.height, p.weight, p.smoking, p.drinking, p.lat, p.lng, u.verified_at
+              p.height, p.weight, p.smoking, p.drinking, p.prompts, p.lat, p.lng, u.verified_at
          FROM profiles p
          JOIN users u ON u.id = p.user_id
         WHERE ${where.join(' AND ')}
@@ -554,7 +585,7 @@ export function getIncomingLikes(userId) {
     .prepare(
       `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
               p.housing, p.car, p.employment, p.goal, p.kids,
-              p.height, p.weight, p.smoking, p.drinking, p.lat, p.lng, u.verified_at
+              p.height, p.weight, p.smoking, p.drinking, p.prompts, p.lat, p.lng, u.verified_at
          FROM swipes s
          JOIN profiles p ON p.user_id = s.actor_id
          JOIN users u ON u.id = p.user_id

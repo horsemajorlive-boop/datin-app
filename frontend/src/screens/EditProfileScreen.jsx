@@ -4,6 +4,7 @@ import ChoiceRow from '../components/ChoiceRow';
 import CityInput from '../components/CityInput';
 import RangeRow from '../components/RangeRow';
 import PhotoGrid from '../components/PhotoGrid';
+import PromptEditor from '../components/PromptEditor';
 import { IconChevronLeft } from '../components/icons';
 import { HOUSING, CAR, EMPLOYMENT } from '../data/lifestyle';
 import { SMOKING, DRINKING, HEIGHT_RANGE, WEIGHT_RANGE } from '../data/health';
@@ -72,6 +73,7 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
       gender: form.gender,
       city: form.city.trim(),
       bio: form.bio.trim(),
+      prompts: form.prompts || [],
       interests: form.interests,
       goal: form.goal || '',
       kids: form.kids || '',
@@ -156,17 +158,10 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
         </Section>
 
         <Section title="О себе">
-          <label className="field">
-            <span>Пара слов о себе</span>
-            <textarea
-              rows={4}
-              value={form.bio ?? ''}
-              onChange={(e) => updateField('bio', e.target.value)}
-              maxLength={300}
-              placeholder="Чем занимаетесь, что ищете, что важно"
-            />
-            <span className="field__hint">{(form.bio ?? '').length}/300</span>
-          </label>
+          <PromptEditor
+            value={form.prompts ?? []}
+            onChange={(prompts) => updateField('prompts', prompts)}
+          />
         </Section>
 
         <Section title="Цели знакомства">
