@@ -158,6 +158,34 @@ export function grantPremium(userId, days = PREMIUM_DAYS) {
   return until;
 }
 
+// ---------- Напоминание об истечении Premium ----------
+// Раз в CHECK_EVERY_MS (см. expiryNotifier.js) шлём пуш тем, у кого до конца
+// подписки остаётся не больше PREMIUM_EXPIRY_WARNING_MS. Каждому — только
+// один раз на конкретную дату окончания: premium_expiry_notified_until
+// хранит, для какого premium_until уже напомнили. Продлил подписку — until
+// изменился — напомним снова, уже про новую дату.
+export const PREMIUM_EXPIRY_WARNING_MS = 24 * 60 * 60 * 1000;
+
+export function getPremiumExpiringSoon(now = Date.now()) {
+  return db
+    .prepare(
+      `SELECT id AS userId, premium_until AS premiumUntil
+         FROM users
+        WHERE premium_until IS NOT NULL
+          AND premium_until > :now
+          AND premium_until <= :soon
+          AND (premium_expiry_notified_until IS NULL
+               OR premium_expiry_notified_until <> premium_until)`
+    )
+    .all({ now, soon: now + PREMIUM_EXPIRY_WARNING_MS });
+}
+
+export function markPremiumExpiryNotified(userId, premiumUntil) {
+  db.prepare(
+    `UPDATE users SET premium_expiry_notified_until = ? WHERE id = ?`
+  ).run(premiumUntil, userId);
+}
+
 // ---------- Дневные лимиты лайков ----------
 // Разумная дневная норма для всех — не давит, но даёт повод возвращаться
 // каждый день; Premium снимает лимит лайков и даёт больше суперлайков.
@@ -785,6 +813,50 @@ export function getIncomingLikes(userId) {
   }));
 }
 
+// Кого вы пропустили ("pass") и ещё можно вернуть в поиск. Продуктовый
+// пробел: раньше вернуть можно было только самый последний свайп (кнопка
+// "Вернуть" в колоде), а любой более ранний пропуск был потерян навсегда.
+// Вернуть — тот же POST /api/swipes/undo, что и раньше (он и без этого умел
+// отменять свайп по произвольному targetId, не только последнему).
+//
+// Без Premium — та же маскировка, что в getIncomingLikes: счётчик виден
+// всем, личности скрыты (только id/возраст/первое фото).
+export function getPassedProfiles(userId) {
+  const rows = db
+    .prepare(
+      `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
+              p.housing, p.car, p.employment, p.goal, p.kids,
+              p.height, p.weight, p.smoking, p.drinking, p.prompts, p.lat, p.lng,
+              u.verified_at
+         FROM swipes s
+         JOIN profiles p ON p.user_id = s.target_id
+         JOIN users u ON u.id = p.user_id
+        WHERE s.actor_id = :me AND s.direction = 'pass'
+          AND p.is_visible = 1 AND p.name <> ''
+          AND s.target_id NOT IN (
+            SELECT blocked_id FROM blocks WHERE blocker_id = :me
+            UNION
+            SELECT blocker_id FROM blocks WHERE blocked_id = :me
+          )
+        ORDER BY s.created_at DESC
+        LIMIT 100`
+    )
+    .all({ me: userId });
+  const viewerLoc = db
+    .prepare(`SELECT lat, lng FROM profiles WHERE user_id = ?`)
+    .get(userId);
+  const hasViewerLoc = !!(viewerLoc && viewerLoc.lat != null && viewerLoc.lng != null);
+  const profiles = hydrateProfiles(rows, hasViewerLoc ? viewerLoc : null);
+
+  if (isPremium(userId)) return profiles;
+  return profiles.map((p) => ({
+    id: p.id,
+    masked: true,
+    age: p.age,
+    photos: p.photos.slice(0, 1),
+  }));
+}
+
 // ---------- Свайпы и мэтчи ----------
 
 // Возвращает { match: boolean, matchId?: number, withUser?: profile }
@@ -948,6 +1020,16 @@ export function getMatches(userId) {
         : null,
     };
   });
+}
+
+// Разматчиться — спокойно разорвать связь без жалобы и без блокировки
+// (в отличие от blockUser/createReport). Свайпы НЕ трогаем — человек не
+// должен снова появиться в ленте после того, как с ним уже расстались.
+// Удаляет мэтч; сообщения и отметки прочтения уходят каскадом.
+export function unmatch(matchId, userId) {
+  if (partnerOf(matchId, userId) === null) return null;
+  db.prepare(`DELETE FROM matches WHERE id = ?`).run(matchId);
+  return { ok: true };
 }
 
 // Отметить переписку прочитанной до текущего момента.

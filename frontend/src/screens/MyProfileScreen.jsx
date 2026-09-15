@@ -22,8 +22,9 @@ import { api, normalizeProfile } from '../api';
 //   onOpenSettings — открыть настройки
 //
 // Модерации здесь нет и не должно быть ни в каком виде — даже скрытой
-// за проверкой isAdmin. Единственный вход в неё — секретный жест на
-// сердечке онбординга (AdminGate/AdminPanel), см. App.jsx.
+// за проверкой isAdmin. Вход в неё — секретный жест (7 тапов + кодовая
+// фраза): на сердечке онбординга (AdminGate) и на логотипе в шапке этого
+// экрана (см. onAdminUnlock/ScreenHeader, ../lib/adminGesture), см. App.jsx.
 
 function VerificationRow({ profile, onVerify }) {
   if (profile.verified) {
@@ -131,11 +132,12 @@ export default function MyProfileScreen({
   onVerify,
   onOpenSettings,
   onChangedProfile,
+  onAdminUnlock,
 }) {
   const photo = useCarousel(profile.photos.length);
 
   const header = (
-    <ScreenHeader title="Мой профиль">
+    <ScreenHeader title="Мой профиль" onAdminUnlock={onAdminUnlock}>
       <button
         className="scrhead__btn"
         onClick={onOpenSettings}

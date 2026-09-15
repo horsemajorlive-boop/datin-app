@@ -34,3 +34,15 @@ export function notifyNewMessage(matchId, senderId) {
     buttonText: 'Ответить',
   });
 }
+
+// Premium заканчивается меньше чем через сутки — см. expiryNotifier.js.
+// Отдельной настройки на этот пуш нет (это не соцактивность, а статус
+// собственного аккаунта), поэтому notify_* сюда не смотрим — только "away".
+export function notifyPremiumExpiringSoon(userId) {
+  if (!away(userId)) return;
+  notify(
+    userId,
+    '⏳ Premium заканчивается меньше чем через сутки — продлите, чтобы не потерять возможности',
+    { buttonText: 'Продлить' }
+  );
+}

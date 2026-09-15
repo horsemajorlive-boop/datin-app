@@ -138,4 +138,14 @@ try {
   /* колонка уже существует — ок */
 }
 
+// Напоминание "Premium скоро закончится" — храним, для какого именно
+// premium_until уже отправили пуш, чтобы не слать его повторно на каждой
+// проверке (см. expiryNotifier.js), но напомнить снова при продлении.
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN premium_expiry_notified_until INTEGER`);
+  console.log('[db] миграция: добавлена колонка users.premium_expiry_notified_until');
+} catch {
+  /* колонка уже существует — ок */
+}
+
 console.log('[db] готова:', DB_PATH);

@@ -3,7 +3,8 @@ import SwipeDeck from '../components/SwipeDeck';
 import ProfileSheet from '../components/ProfileSheet';
 import FilterSheet from '../components/FilterSheet';
 import ScreenHeader from '../components/ScreenHeader';
-import { IconSliders } from '../components/icons';
+import PassedScreen from './PassedScreen';
+import { IconSliders, IconRotateCcw } from '../components/icons';
 import { isFilterActive } from '../lib/filters';
 
 // Экран "Поиск": колода карточек + фильтры + всплывающая анкета.
@@ -22,6 +23,7 @@ import { isFilterActive } from '../lib/filters';
 //   isPremium       — есть ли Premium (снимает лимиты, открывает "Вернуть" и фильтр по быту)
 //   onOpenPremium   — перейти к оформлению Premium (настройки)
 //   hasMissedLike   — последний свайп пропустил того, кто уже лайкнул (см. SwipeDeck)
+//   onPassedRestored — вернули в поиск кого-то из "Кого вы пропустили" — перезагрузить ленту
 
 export default function DeckScreen({
   feed,
@@ -39,10 +41,12 @@ export default function DeckScreen({
   isPremium,
   onOpenPremium,
   hasMissedLike,
+  onPassedRestored,
 }) {
   const [opened, setOpened] = useState(null);
   const [hint, setHint] = useState(null); // строка либо { text, cta }
   const [showFilters, setShowFilters] = useState(false);
+  const [showPassed, setShowPassed] = useState(false);
 
   useEffect(() => {
     if (!hint) return;
@@ -54,6 +58,13 @@ export default function DeckScreen({
   return (
     <div className="screen screen--deck">
       <ScreenHeader title="Поиск">
+        <button
+          className="scrhead__btn"
+          onClick={() => setShowPassed(true)}
+          aria-label="Кого вы пропустили"
+        >
+          <IconRotateCcw />
+        </button>
         <button
           className={`scrhead__btn ${isFilterActive(filters) ? 'is-active' : ''}`}
           onClick={() => setShowFilters(true)}
@@ -114,6 +125,18 @@ export default function DeckScreen({
           onShareLocation={onShareLocation}
           onClearLocation={onClearLocation}
           isPremium={isPremium}
+        />
+      )}
+
+      {showPassed && (
+        <PassedScreen
+          isPremium={isPremium}
+          onUpgrade={() => {
+            setShowPassed(false);
+            onOpenPremium();
+          }}
+          onClose={() => setShowPassed(false)}
+          onRestored={onPassedRestored}
         />
       )}
     </div>

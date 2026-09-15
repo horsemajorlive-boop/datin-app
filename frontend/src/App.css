@@ -152,6 +152,7 @@
 }
 
 .scrhead__mark {
+  position: relative;
   flex: 0 0 auto;
   display: flex;
   align-items: center;
@@ -159,6 +160,32 @@
   min-width: 0;
   overflow: hidden;
   pointer-events: none;
+}
+
+/* Логотип в шапке профиля — тот же секретный жест, что на сердечке
+   онбординга (см. ../lib/adminGesture), но без какой-либо анимации: ни
+   реакции на тап, ни видимого поля под кодовую фразу — снаружи это
+   должно выглядеть как обычный неактивный логотип. */
+.scrhead__markbtn {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.scrhead__markcode {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  border: none;
+  padding: 0;
 }
 
 .scrhead__mark svg {
@@ -1484,6 +1511,12 @@
 .likecard__btn--like {
   color: #fff;
   background: var(--like);
+  border-color: transparent;
+}
+
+.likecard__btn--restore {
+  color: #fff;
+  background: var(--accent);
   border-color: transparent;
 }
 

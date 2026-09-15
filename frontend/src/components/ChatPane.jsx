@@ -22,12 +22,15 @@ import {
 //
 // Props:
 //   match     — анкета собеседника (+ online, lastSeen, gender)
+//   matchId   — id мэтча (для жалобы/разматчивания)
 //   messages  — массив сообщений: [{ id, from, ts, type, text?, photo?, reaction? }]
 //   myProfile — своя анкета (нужна помощнику для общих интересов)
 //   activity  — что делает собеседник сейчас: 'typing' | 'emoji' | 'photo' | undefined
 //   onSend    — отправить сообщение: onSend({ type, text?, photo? })
 //   onReact   — поставить/снять реакцию: onReact(messageId, emoji)
 //   onTyping  — сообщить собеседнику "я печатаю": onTyping(kind)
+//   onLeftChat — вызывается и после жалобы/блокировки, и после разматчивания —
+//                родителю в обоих случаях нужно закрыть чат и обновить списки
 
 const REACTIONS = ['❤️', '😂', '😮', '😢', '👍', '🔥'];
 
@@ -51,6 +54,7 @@ function hasWords(str) {
 
 export default function ChatPane({
   match,
+  matchId,
   messages,
   myProfile,
   activity,
@@ -66,6 +70,8 @@ export default function ChatPane({
   const [showEmoji, setShowEmoji] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  const [showUnmatch, setShowUnmatch] = useState(false);
+  const [unmatching, setUnmatching] = useState(false);
   const [pickerFor, setPickerFor] = useState(null); // id сообщения с открытым выбором реакции
   const [, forceTick] = useState(0); // чтобы "был в сети N назад" обновлялся сам
   const bodyRef = useRef(null);
@@ -96,6 +102,18 @@ export default function ChatPane({
     onSend({ type: hasWords(value) ? 'text' : 'emoji', text: value });
     setText('');
     setShowEmoji(false);
+  }
+
+  async function confirmUnmatch() {
+    setUnmatching(true);
+    try {
+      await api.post(`/matches/${matchId}/unmatch`);
+      setShowUnmatch(false);
+      onLeftChat?.();
+    } catch (err) {
+      console.error('не удалось разматчиться', err);
+      setUnmatching(false);
+    }
   }
 
   async function handlePhoto(e) {
@@ -190,6 +208,15 @@ export default function ChatPane({
                     type="button"
                     onClick={() => {
                       setShowMenu(false);
+                      setShowUnmatch(true);
+                    }}
+                  >
+                    Разматчиться
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMenu(false);
                       setShowReport(true);
                     }}
                   >
@@ -211,6 +238,35 @@ export default function ChatPane({
             onLeftChat?.();
           }}
         />
+      )}
+
+      {showUnmatch && (
+        <div className="sheet" onClick={() => !unmatching && setShowUnmatch(false)}>
+          <div className="sheet__card" onClick={(e) => e.stopPropagation()}>
+            <div className="sheet__body">
+              <h2>Разматчиться с {match.name}?</h2>
+              <p className="muted report__hint">
+                Мэтч и переписка удалятся у вас обоих. Это не блокировка и не
+                жалоба — если снова лайкнёте друг друга, сможете
+                переписываться заново.
+              </p>
+              <button
+                className="btn-wide btn-wide--danger-solid"
+                disabled={unmatching}
+                onClick={confirmUnmatch}
+              >
+                {unmatching ? 'Разматчиваем…' : 'Разматчиться'}
+              </button>
+              <button
+                className="btn-wide btn-wide--ghost"
+                disabled={unmatching}
+                onClick={() => setShowUnmatch(false)}
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="chat__body" ref={bodyRef}>

@@ -23,6 +23,7 @@ import {
   notifyNewLike,
   notifyNewMessage,
 } from './notifications.js';
+import { startExpiryNotifier } from './expiryNotifier.js';
 import {
   apiLimiter,
   uploadLimiter,
@@ -435,6 +436,11 @@ app.get('/api/likes/incoming', (req, res) => {
   res.json(model.getIncomingLikes(req.user.id));
 });
 
+// Кого вы пропустили — Premium может вернуть в поиск через POST /api/swipes/undo.
+app.get('/api/swipes/passed', (req, res) => {
+  res.json(model.getPassedProfiles(req.user.id));
+});
+
 // Список мэтчей
 app.get('/api/matches', (req, res) => {
   res.json(model.getMatches(req.user.id));
@@ -450,6 +456,13 @@ app.get('/api/matches/:id/messages', (req, res) => {
 // Отметить переписку прочитанной (открыл чат / увидел новое сообщение).
 app.post('/api/matches/:id/read', (req, res) => {
   const out = model.markMatchRead(Number(req.params.id), req.user.id);
+  if (out === null) return res.status(403).json({ error: 'not your match' });
+  res.json(out);
+});
+
+// Разматчиться — без жалобы и без блокировки (для этого есть /api/report).
+app.post('/api/matches/:id/unmatch', (req, res) => {
+  const out = model.unmatch(Number(req.params.id), req.user.id);
   if (out === null) return res.status(403).json({ error: 'not your match' });
   res.json(out);
 });
@@ -530,6 +543,7 @@ app.use((err, req, res, next) => {
 });
 
 bootstrapEnvAdmins(); // проставить is_admin тем, кто в ADMIN_IDS
+startExpiryNotifier(); // напоминание "Premium скоро закончится"
 
 const PORT = Number(process.env.PORT) || 3001;
 const server = app.listen(PORT, () => {

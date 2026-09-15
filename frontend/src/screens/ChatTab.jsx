@@ -11,7 +11,7 @@ import ChatPane from '../components/ChatPane';
 //   activities   — { [matchId]: 'typing' | 'emoji' | 'photo' }
 //   myProfile    — своя анкета (для ИИ-помощника)
 //   activeChat   — анкета выбранного собеседника (или null)
-//   activeChatId — matchId выбранного чата (или null)
+//   activeChatId — matchId выбранного чата (или null) — прокидывается в ChatPane как matchId
 //   onSelectChat — выбрать чат / вернуться к списку: onSelectChat(matchId | null)
 //   onBrowse     — уйти на вкладку «Поиск» (кнопка в пустом состоянии)
 //   onSend, onReact, onTyping, onLeftChat — проброс в ChatPane
@@ -36,6 +36,7 @@ export default function ChatTab({
       <div className="chattab">
         <ChatPane
           match={activeChat}
+          matchId={activeChatId}
           messages={messages[activeChatId] || []}
           activity={activities[activeChatId]}
           myProfile={myProfile}

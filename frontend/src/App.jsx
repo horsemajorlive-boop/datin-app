@@ -27,7 +27,7 @@ import './App.css';
 
 export default function App() {
   const [tab, setTab] = useState('deck');
-  const [adminMode, setAdminMode] = useState(false); // секретный вход с AdminGate
+  const [adminMode, setAdminMode] = useState(false); // секретный вход — см. useAdminGesture
 
   // Заставка при запуске: логотип держим на экране минимум SPLASH_MS,
   // затем полсекунды угасает, и только после этого показываем приветствие/приложение.
@@ -421,6 +421,7 @@ export default function App() {
         onVerify={() => setProfileView('verify')}
         onOpenSettings={() => setProfileView('settings')}
         onChangedProfile={setMe}
+        onAdminUnlock={() => setAdminMode(true)}
       />
     );
   }
@@ -429,7 +430,8 @@ export default function App() {
     return <Splash fading={splashDone} />;
   }
 
-  // Секретный жест на приветственном экране — отдельный режим без знакомств.
+  // Секретный жест (сердечко онбординга или логотип в шапке профиля) —
+  // отдельный режим без знакомств.
   if (adminMode) {
     return (
       <div className="app">
@@ -471,6 +473,7 @@ export default function App() {
             isPremium={!!me?.isPremium}
             onOpenPremium={goToPremium}
             hasMissedLike={missedLike}
+            onPassedRestored={loadFeed}
           />
         )}
         {tab === 'likes' && (

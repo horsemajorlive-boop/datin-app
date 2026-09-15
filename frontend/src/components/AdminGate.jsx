@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { api } from '../api';
+import { useAdminGesture } from '../lib/adminGesture';
 import { IconHeart } from './icons';
 
 // Секретная дверь в режим админа — прячется в декоративном сердечке на
@@ -14,21 +14,17 @@ import { IconHeart } from './icons';
 // на сервере (users.is_admin для настоящего Telegram-аккаунта); если это
 // не админ — просто ничего не происходит.
 //
+// Тот же жест (и тот же код) без анимации есть и на логотипе в шапке
+// профиля — см. useAdminGesture (../lib/adminGesture) и ScreenHeader.
+//
 // Props:
 //   onUnlock — фраза угадана И сервер подтвердил права — открыть режим админа
 
-const TAPS_NEEDED = 7;
-const TAP_WINDOW_MS = 2500; // тапы порознь дальше этого — счётчик сбрасывается
-const LISTEN_MS = 15000; // сколько ждём кодовую фразу после 7-го тапа
-const CODE = 'admin07012000admin';
-
 export default function AdminGate({ onUnlock }) {
   const [bursts, setBursts] = useState([]);
-  const [listening, setListening] = useState(false);
-  const tapTimes = useRef([]);
   const burstSeq = useRef(0);
-  const hideTimer = useRef(null);
-  const inputRef = useRef(null);
+  const { listening, inputRef, registerTap, handleCodeInput } =
+    useAdminGesture(onUnlock);
 
   function spawnHeart() {
     const id = burstSeq.current++;
@@ -38,35 +34,7 @@ export default function AdminGate({ onUnlock }) {
 
   function handleTap() {
     spawnHeart();
-
-    const nowTs = Date.now();
-    const recent = [...tapTimes.current, nowTs].filter(
-      (t) => nowTs - t < TAP_WINDOW_MS
-    );
-    tapTimes.current = recent;
-
-    if (recent.length >= TAPS_NEEDED) {
-      tapTimes.current = [];
-      setListening(true);
-      clearTimeout(hideTimer.current);
-      hideTimer.current = setTimeout(() => setListening(false), LISTEN_MS);
-      setTimeout(() => inputRef.current?.focus(), 30);
-    }
-  }
-
-  async function handleCodeInput(e) {
-    if (e.target.value !== CODE) return;
-    clearTimeout(hideTimer.current);
-    setListening(false);
-    e.target.value = '';
-
-    // Тихая проверка на сервере. Ошиблись местом/аккаунтом — молчим.
-    try {
-      const me = await api.get('/me');
-      if (me.isAdmin) onUnlock?.();
-    } catch {
-      /* ничего не показываем */
-    }
+    registerTap();
   }
 
   return (
