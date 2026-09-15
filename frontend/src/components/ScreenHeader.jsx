@@ -10,7 +10,7 @@ export default function ScreenHeader({ title, count, children }) {
   return (
     <header className="scrhead">
       <h1 className="scrhead__title">
-        {title}
+        <span className="scrhead__titletext">{title}</span>
         {count != null && <span className="scrhead__count">{count}</span>}
       </h1>
       <div className="scrhead__mark" aria-hidden="true">

@@ -137,6 +137,10 @@
   align-items: baseline;
   gap: 8px;
   min-width: 0;
+}
+
+.scrhead__titletext {
+  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -169,6 +173,17 @@
   color: var(--text);
   padding-left: 0.08em; /* компенсируем letter-spacing справа */
   white-space: nowrap;
+}
+
+/* На узких экранах (реальные телефоны) месту в шапке негде взяться —
+   оставляем только знак, без имени, чтобы не наезжать на заголовок. */
+@media (max-width: 440px) {
+  .scrhead__markword {
+    display: none;
+  }
+  .scrhead__mark {
+    gap: 0;
+  }
 }
 
 .scrhead__actions {
