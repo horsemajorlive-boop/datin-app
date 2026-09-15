@@ -223,18 +223,63 @@ test('getIncomingLikes скрывает личность без Premium', () => 
   assert.ok(full[0].name);
 });
 
-test('getPassedProfiles скрывает личность без Premium', () => {
+// ---------- остывание пропусков ----------
+
+test('свежий пропуск скрывает анкету из ленты', () => {
   const me = makeUser();
   const passed = makeUser();
+  const now = Date.now();
   model.recordSwipe(me, passed, 'pass');
 
-  const masked = model.getPassedProfiles(me);
-  assert.equal(masked.length, 1);
-  assert.equal(masked[0].masked, true);
+  const feed = model.getFeed(me, { limit: 50, now });
+  assert.ok(!feed.some((p) => p.id === passed));
+});
 
+test('обычный пользователь: пропуск "остывает" через PASS_EXPIRY_HOURS и анкета возвращается в ленту', () => {
+  const me = makeUser();
+  const passed = makeUser();
+  const now = Date.now();
+  model.recordSwipe(me, passed, 'pass', { now });
+
+  const stillHidden = model.getFeed(me, {
+    limit: 50,
+    now: now + (model.PASS_EXPIRY_HOURS * 60 * 60 * 1000) / 2,
+  });
+  assert.ok(!stillHidden.some((p) => p.id === passed));
+
+  const afterExpiry = model.getFeed(me, {
+    limit: 50,
+    now: now + model.PASS_EXPIRY_HOURS * 60 * 60 * 1000 + 1000,
+  });
+  assert.ok(afterExpiry.some((p) => p.id === passed));
+});
+
+test('Premium: окно остывания пропуска короче (PREMIUM_PASS_EXPIRY_HOURS)', () => {
+  const me = makeUser();
   model.grantPremium(me, 30);
-  const full = model.getPassedProfiles(me);
-  assert.ok(full[0].name);
+  const passed = makeUser();
+  const now = Date.now();
+  model.recordSwipe(me, passed, 'pass', { now });
+
+  // после обычного (не премиумного) окна анкета уже должна вернуться
+  const afterPremiumWindow = model.getFeed(me, {
+    limit: 50,
+    now: now + model.PREMIUM_PASS_EXPIRY_HOURS * 60 * 60 * 1000 + 1000,
+  });
+  assert.ok(afterPremiumWindow.some((p) => p.id === passed));
+});
+
+test('лайк, в отличие от пропуска, скрывает анкету из ленты навсегда', () => {
+  const me = makeUser();
+  const liked = makeUser();
+  const now = Date.now();
+  model.recordSwipe(me, liked, 'like', { now });
+
+  const farFuture = model.getFeed(me, {
+    limit: 50,
+    now: now + 365 * 24 * 60 * 60 * 1000,
+  });
+  assert.ok(!farFuture.some((p) => p.id === liked));
 });
 
 // ---------- блокировки ----------

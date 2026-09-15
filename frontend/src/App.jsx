@@ -534,7 +534,6 @@ export default function App() {
             isPremium={!!me?.isPremium}
             onOpenPremium={goToPremium}
             hasMissedLike={missedLike}
-            onPassedRestored={loadFeed}
           />
         )}
         {tab === 'likes' && (

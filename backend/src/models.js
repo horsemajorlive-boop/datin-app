@@ -195,6 +195,16 @@ export const DAILY_LIKE_LIMIT = 30;
 export const DAILY_SUPERLIKE_LIMIT = 1;
 export const PREMIUM_DAILY_SUPERLIKE_LIMIT = 5;
 
+// ---------- Остывание пропусков ----------
+// Пропущенную ("pass") анкету через некоторое время снова показываем в
+// ленте — как и у большинства сайтов знакомств, пропуск не окончательное
+// решение, а просто "не сейчас". Лайк, в отличие от пропуска, скрывает
+// кандидата навсегда независимо от даты (см. getFeed) — если уже лайкнул,
+// видеть его снова незачем. Premium получает более короткое окно —
+// колода обновляется для них чаще.
+export const PASS_EXPIRY_HOURS = 6;
+export const PREMIUM_PASS_EXPIRY_HOURS = 1;
+
 // ---------- Поднятие анкеты (буст) ----------
 // Premium-only: на BOOST_DURATION_MIN минут анкета получает приоритет в
 // ленте (см. ORDER BY в getFeed). Не безлимитно, чтобы не превращалось в
@@ -618,12 +628,24 @@ export function getFeed(userId, opts = {}) {
     now = Date.now(), // необязательный override для симуляции, см. simulate-boosts.js
   } = opts;
 
+  // Премиум нужен и ниже (фильтры по быту), и здесь — окно остывания пропуска.
+  const premium = isPremium(userId);
+  const passExpiryMs =
+    (premium ? PREMIUM_PASS_EXPIRY_HOURS : PASS_EXPIRY_HOURS) * 60 * 60 * 1000;
+
   // Собираем WHERE по кусочкам — только те условия, что реально заданы.
   const where = [
     'p.is_visible = 1',
     'p.user_id <> :me',
     "p.name <> ''",
-    'p.user_id NOT IN (SELECT target_id FROM swipes WHERE actor_id = :me)',
+    // Лайк скрывает навсегда; пропуск — только пока не "остыл" (см.
+    // PASS_EXPIRY_HOURS/PREMIUM_PASS_EXPIRY_HOURS) — дальше анкета сама
+    // возвращается в ленту, отдельного экрана/кнопки для этого не нужно.
+    `p.user_id NOT IN (
+       SELECT target_id FROM swipes
+        WHERE actor_id = :me
+          AND (direction = 'like' OR created_at > :passCutoff)
+     )`,
     // никого, с кем есть блокировка в любую сторону
     `p.user_id NOT IN (
        SELECT blocked_id FROM blocks WHERE blocker_id = :me
@@ -632,7 +654,7 @@ export function getFeed(userId, opts = {}) {
      )`,
   ];
   const rawLimit = Math.min(Number(opts.limit) || 20, 50);
-  const params = { me: userId, limit: rawLimit, now };
+  const params = { me: userId, limit: rawLimit, now, passCutoff: now - passExpiryMs };
 
   // "Рядом со мной" работает только если сам поделился геопозицией.
   const viewerLoc = db
@@ -685,7 +707,6 @@ export function getFeed(userId, opts = {}) {
   }
   // Фильтр по быту (жильё/авто/работа) — только с Premium; если его нет,
   // просто игнорируем эти параметры, а не отказываем в запросе целиком.
-  const premium = isPremium(userId);
   if (premium && Array.isArray(housing)) {
     const codes = housing.filter((h) => HOUSING_CODES.includes(h));
     if (codes.length) {
@@ -813,56 +834,15 @@ export function getIncomingLikes(userId) {
   }));
 }
 
-// Кого вы пропустили ("pass") и ещё можно вернуть в поиск. Продуктовый
-// пробел: раньше вернуть можно было только самый последний свайп (кнопка
-// "Вернуть" в колоде), а любой более ранний пропуск был потерян навсегда.
-// Вернуть — тот же POST /api/swipes/undo, что и раньше (он и без этого умел
-// отменять свайп по произвольному targetId, не только последнему).
-//
-// Без Premium — та же маскировка, что в getIncomingLikes: счётчик виден
-// всем, личности скрыты (только id/возраст/первое фото).
-export function getPassedProfiles(userId) {
-  const rows = db
-    .prepare(
-      `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
-              p.housing, p.car, p.employment, p.goal, p.kids,
-              p.height, p.weight, p.smoking, p.drinking, p.prompts, p.lat, p.lng,
-              u.verified_at
-         FROM swipes s
-         JOIN profiles p ON p.user_id = s.target_id
-         JOIN users u ON u.id = p.user_id
-        WHERE s.actor_id = :me AND s.direction = 'pass'
-          AND p.is_visible = 1 AND p.name <> ''
-          AND s.target_id NOT IN (
-            SELECT blocked_id FROM blocks WHERE blocker_id = :me
-            UNION
-            SELECT blocker_id FROM blocks WHERE blocked_id = :me
-          )
-        ORDER BY s.created_at DESC
-        LIMIT 100`
-    )
-    .all({ me: userId });
-  const viewerLoc = db
-    .prepare(`SELECT lat, lng FROM profiles WHERE user_id = ?`)
-    .get(userId);
-  const hasViewerLoc = !!(viewerLoc && viewerLoc.lat != null && viewerLoc.lng != null);
-  const profiles = hydrateProfiles(rows, hasViewerLoc ? viewerLoc : null);
-
-  if (isPremium(userId)) return profiles;
-  return profiles.map((p) => ({
-    id: p.id,
-    masked: true,
-    age: p.age,
-    photos: p.photos.slice(0, 1),
-  }));
-}
 
 // ---------- Свайпы и мэтчи ----------
 
 // Возвращает { match: boolean, matchId?: number, withUser?: profile }
 // либо { match: false, error: 'like_limit' | 'superlike_limit' }, если
 // дневная норма лайков/суперлайков уже исчерпана — тогда свайп НЕ пишем.
-export function recordSwipe(actorId, targetId, direction, { isSuper = false } = {}) {
+// now — необязательный override для тестов/симуляции (см. simulate-boosts.js),
+// в проде всегда реальное "сейчас".
+export function recordSwipe(actorId, targetId, direction, { isSuper = false, now: nowOverride } = {}) {
   if (isBlockedEitherWay(actorId, targetId)) return { match: false };
 
   if (direction === 'like') {
@@ -877,11 +857,12 @@ export function recordSwipe(actorId, targetId, direction, { isSuper = false } = 
     }
   }
 
+  const ts = nowOverride ?? now();
   db.prepare(
     `INSERT INTO swipes (actor_id, target_id, direction, is_super, created_at)
      VALUES (:a, :t, :d, :s, :ts)
      ON CONFLICT(actor_id, target_id) DO UPDATE SET direction = :d, is_super = :s, created_at = :ts`
-  ).run({ a: actorId, t: targetId, d: direction, s: isSuper ? 1 : 0, ts: now() });
+  ).run({ a: actorId, t: targetId, d: direction, s: isSuper ? 1 : 0, ts });
 
   if (direction !== 'like') {
     // Пропустили того, кто уже лайкнул нас, — теперь он пропадёт из "Симпатий"

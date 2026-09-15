@@ -445,10 +445,6 @@ app.get('/api/likes/incoming', (req, res) => {
   res.json(model.getIncomingLikes(req.user.id));
 });
 
-// Кого вы пропустили — Premium может вернуть в поиск через POST /api/swipes/undo.
-app.get('/api/swipes/passed', (req, res) => {
-  res.json(model.getPassedProfiles(req.user.id));
-});
 
 // Список мэтчей
 app.get('/api/matches', (req, res) => {
