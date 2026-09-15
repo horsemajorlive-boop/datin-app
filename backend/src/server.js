@@ -142,7 +142,7 @@ app.post('/api/me/location', (req, res) => {
   res.json({ hasLocation: true });
 });
 
-// Поднять анкету в поиске (буст, только Premium, раз в день) — см.
+// Поднять анкету в поиске (буст, только Premium, лимит в день) — см.
 // BOOST_DURATION_MIN/PREMIUM_DAILY_BOOST_LIMIT в models.js.
 const BOOST_ERROR_MESSAGES = {
   not_premium: 'Поднятие анкеты доступно с Premium',

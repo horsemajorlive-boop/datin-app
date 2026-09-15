@@ -4,16 +4,16 @@ import ScreenHeader from '../components/ScreenHeader';
 import { IconX, IconHeart, IconLock } from '../components/icons';
 import { cityWithDistance } from '../lib/location';
 
-// Склонение "человек" под число: 1 человек лайкнул, 2 человека лайкнули,
-// 5 человек лайкнули — обычные русские правила (искл. 11–14).
+// Склонение "человек" под число: 1 человек уже лайкнул, 2 человека уже
+// лайкнули, 5 человек уже лайкнули — обычные русские правила (искл. 11–14).
 function likersLine(n) {
   const mod10 = n % 10;
   const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return `${n} человек лайкнул вас`;
+  if (mod10 === 1 && mod100 !== 11) return `${n} человек уже лайкнул вас`;
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
-    return `${n} человека лайкнули вас`;
+    return `${n} человека уже лайкнули вас`;
   }
-  return `${n} человек лайкнули вас`;
+  return `${n} человек уже лайкнули вас`;
 }
 
 // Экран "Симпатии" — кто лайкнул ВАС и ждёт ответа.
@@ -54,20 +54,14 @@ export default function LikesScreen({ people, isPremium, onLike, onPass, onBrows
         <ScreenHeader title="Симпатии" count={people.length} />
         <div className="likes-locked">
           <div className="likes-locked__stack">
-            {people.slice(0, 3).map((p, i) => (
-              <img
-                key={p.id}
-                className="likes-locked__photo"
-                src={p.photos[0]}
-                alt=""
-                style={{ '--i': i }}
-              />
+            {people.slice(0, 4).map((p) => (
+              <img key={p.id} className="likes-locked__photo" src={p.photos[0]} alt="" />
             ))}
           </div>
-          <h2 className="likes-locked__title">{likersLine(people.length)}</h2>
+          <p className="likes-locked__count">{likersLine(people.length)}</p>
+          <h2 className="likes-locked__title">Хотите видеть, кому вы понравились?</h2>
           <p className="likes-locked__text">
-            Кто именно — видно только с Premium. Оформите доступ и отвечайте
-            взаимностью сразу, без угадывания.
+            С TiAmo Premium возможно всё — не упустите свою возможность.
           </p>
           <button type="button" className="btn-wide" onClick={onUpgrade}>
             <IconLock /> Смотреть, кто

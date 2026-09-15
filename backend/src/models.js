@@ -169,10 +169,10 @@ export const PREMIUM_DAILY_SUPERLIKE_LIMIT = 5;
 
 // ---------- Поднятие анкеты (буст) ----------
 // Premium-only: на BOOST_DURATION_MIN минут анкета получает приоритет в
-// ленте (см. ORDER BY в getFeed). Раз в день, чтобы не превращалось в
+// ленте (см. ORDER BY в getFeed). Не безлимитно, чтобы не превращалось в
 // постоянный "вечный буст" при большом числе одновременных Premium.
-export const BOOST_DURATION_MIN = 30;
-export const PREMIUM_DAILY_BOOST_LIMIT = 1;
+export const BOOST_DURATION_MIN = 60;
+export const PREMIUM_DAILY_BOOST_LIMIT = 2;
 
 // now — необязательный override для симуляции (см. simulate-boosts.js),
 // в проде всегда реальное "сейчас".
