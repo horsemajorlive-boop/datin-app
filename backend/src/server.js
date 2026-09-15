@@ -594,12 +594,26 @@ const server = app.listen(PORT, () => {
   // health-check Railway, и деплой посчитают упавшим, хотя процесс просто
   // ещё поднимался.
   startExpiryNotifier(); // напоминание "Premium скоро закончится"
-  // startBackupSchedule() ВРЕМЕННО отключён — после его появления деплой на
-  // Railway стал падать в цикле (successful -> crashed), и перенос вызова
-  // после app.listen() не помог. Похоже, дело не только в тайминге старта;
-  // отключаем, пока не разберёмся по логам Railway, чтобы не ронять прод.
-  // startBackupSchedule();
+  startBackupSchedule(); // периодический снимок базы — по логам Railway не при чём,
+  // видно, что контейнер спокойно жил 10+ минут; см. graceful shutdown ниже
 });
 
 // Подключаем WebSocket к тому же серверу.
 attachRealtime(server);
+
+// Railway (как и любой оркестратор контейнеров) шлёт SIGTERM при штатной
+// замене деплоя новой версией — это НЕ падение приложения. Но Node по
+// умолчанию не ловит SIGTERM и просто убивается им; npm-обёртка (npm start)
+// репортует это как "npm error signal SIGTERM" / "command failed", из-за
+// чего Railway помечает совершенно нормальную замену версии как "Deployment
+// crashed" в активности проекта (см. логи — сервер работал без единой
+// ошибки, потом просто получил "Stopping Container"). Ловим сигнал и
+// завершаемся сами через process.exit(0) — тогда выход чистый, без сигнала.
+function gracefulShutdown(signal) {
+  console.log(`[api] получен ${signal} — завершаемся штатно`);
+  server.close(() => process.exit(0));
+  // не ждём вечно, если что-то зависло (открытые WS-соединения и т.п.)
+  setTimeout(() => process.exit(0), 5000).unref();
+}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
