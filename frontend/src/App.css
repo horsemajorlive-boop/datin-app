@@ -109,10 +109,9 @@
 /* ================= Единая шапка экрана-вкладки ================= */
 
 .scrhead {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-height: 40px;
   padding: 2px 0 16px;
   border-bottom: 1px solid var(--line);
@@ -127,7 +126,7 @@
 }
 
 .scrhead__title {
-  justify-self: start;
+  flex: 0 1 auto;
   margin: 0;
   font-family: var(--font-body);
   font-size: 24px;
@@ -153,10 +152,12 @@
 }
 
 .scrhead__mark {
-  justify-self: center;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
   pointer-events: none;
 }
 
@@ -168,26 +169,17 @@
 
 .scrhead__markword {
   font-family: 'Italiana', var(--font-display), Georgia, serif;
-  font-size: 17px;
-  letter-spacing: 0.08em;
+  font-size: 14px;
+  letter-spacing: 0.06em;
   color: var(--text);
-  padding-left: 0.08em; /* компенсируем letter-spacing справа */
+  padding-left: 0.06em; /* компенсируем letter-spacing справа */
   white-space: nowrap;
-}
-
-/* На узких экранах (реальные телефоны) месту в шапке негде взяться —
-   оставляем только знак, без имени, чтобы не наезжать на заголовок. */
-@media (max-width: 440px) {
-  .scrhead__markword {
-    display: none;
-  }
-  .scrhead__mark {
-    gap: 0;
-  }
+  overflow: hidden;
+  text-overflow: clip;
 }
 
 .scrhead__actions {
-  justify-self: end;
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 8px;
