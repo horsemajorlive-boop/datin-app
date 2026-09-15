@@ -1167,9 +1167,7 @@ export function deleteAccount(userId) {
   db.prepare(`DELETE FROM users WHERE id = ?`).run(userId);
 
   return {
-    uploadFiles: photoFiles
-      .filter((u) => typeof u === 'string' && u.startsWith('/uploads/'))
-      .map((u) => u.slice('/uploads/'.length)),
+    uploadFiles: photoFiles, // полные url — сервер сам отфильтрует свои /uploads/...
     verificationFile: vRow?.photo_file || null,
   };
 }

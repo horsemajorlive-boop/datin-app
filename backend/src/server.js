@@ -6,6 +6,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -22,6 +23,24 @@ import {
   notifyNewLike,
   notifyNewMessage,
 } from './notifications.js';
+import {
+  apiLimiter,
+  uploadLimiter,
+  swipeLimiter,
+  messageLimiter,
+  reportLimiter,
+  webhookLimiter,
+} from './rateLimits.js';
+
+// Что не отловил ни один try/catch (например, в setTimeout у bot.js) — раньше
+// такое молча валило процесс без единой строчки в логах. Логируем явно, но не
+// падаем: платформа (Railway) сама перезапустит сервис, если станет совсем плохо.
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err);
+});
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const UPLOAD_DIR = path.join(DATA_DIR, 'uploads');
@@ -53,6 +72,16 @@ function writeImageDataUrl(dataUrl, dir) {
 }
 
 const app = express();
+
+// За один прокси-хоп (Railway и похожие PaaS) — иначе express-rate-limit не
+// может честно определить IP из X-Forwarded-For и откажется работать.
+app.set('trust proxy', 1);
+
+// contentSecurityPolicy и frameguard выключаем осознанно: Telegram открывает
+// мини-приложение в собственном iframe/webview с чужого домена — стандартные
+// X-Frame-Options/CSP frame-ancestors это заблокируют. Остальные защитные
+// заголовки helmet (noSniff, hsts, referrerPolicy и т.д.) оставляем как есть.
+app.use(helmet({ contentSecurityPolicy: false, frameguard: false }));
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json({ limit: '8mb' })); // фото приходят строкой base64, поэтому лимит побольше
 
@@ -69,7 +98,7 @@ app.get('/api/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
 const BOT_TOKEN = process.env.BOT_TOKEN || '';
 const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || '';
 
-app.post('/telegram/webhook', async (req, res) => {
+app.post('/telegram/webhook', webhookLimiter, async (req, res) => {
   if (
     TELEGRAM_WEBHOOK_SECRET &&
     req.get('X-Telegram-Bot-Api-Secret-Token') !== TELEGRAM_WEBHOOK_SECRET
@@ -98,7 +127,9 @@ app.post('/telegram/webhook', async (req, res) => {
 });
 
 // --- Всё, что ниже, требует авторизации ---
-app.use('/api', requireAuth);
+// Порядок важен: сначала requireAuth (кладёт req.user), потом apiLimiter —
+// иначе лимитер не сможет считать по пользователю и будет считать по IP.
+app.use('/api', requireAuth, apiLimiter);
 
 // Своя анкета
 app.get('/api/me', (req, res) => {
@@ -109,11 +140,15 @@ app.put('/api/me', (req, res) => {
   const before = model.getFullProfile(req.user.id);
   model.saveProfile(req.user.id, req.body || {});
   if (Array.isArray(req.body?.photos)) {
+    const nextPhotos = req.body.photos;
     // фото поменялись — раньше подтверждённая галочка больше не действительна
     const changed =
-      req.body.photos.length !== before.photos.length ||
-      req.body.photos.some((url, i) => url !== before.photos[i]);
-    model.setPhotos(req.user.id, req.body.photos);
+      nextPhotos.length !== before.photos.length ||
+      nextPhotos.some((url, i) => url !== before.photos[i]);
+    model.setPhotos(req.user.id, nextPhotos);
+    // Старые файлы, которых больше нет в новом списке, никому не нужны —
+    // без этого backend/uploads только растёт при каждой смене фото анкеты.
+    deleteUploadUrls(before.photos.filter((url) => !nextPhotos.includes(url)));
     if (changed && before.verified) model.revokeVerification(req.user.id);
   }
   res.json({ ...model.getFullProfile(req.user.id), isAdmin: isAdmin(req.user.id) });
@@ -188,13 +223,21 @@ app.post('/api/premium/invoice', async (req, res) => {
   }
 });
 
+// Удалить с диска файлы анкетных фото по их url (только свои /uploads/...,
+// внешние картинки сид-ботов трогать нельзя и не нужно).
+function deleteUploadUrls(urls) {
+  for (const u of urls) {
+    if (typeof u === 'string' && u.startsWith('/uploads/')) {
+      fs.rm(path.join(UPLOAD_DIR, path.basename(u)), { force: true }, () => {});
+    }
+  }
+}
+
 // Удалить аккаунт целиком: БД (каскадом) + файлы на диске. Общая для
 // собственного "Удалить аккаунт" и для админского удаления чужого.
 function deleteAccountEverywhere(userId) {
   const { uploadFiles, verificationFile } = model.deleteAccount(userId);
-  for (const f of uploadFiles) {
-    fs.rm(path.join(UPLOAD_DIR, path.basename(f)), { force: true }, () => {});
-  }
+  deleteUploadUrls(uploadFiles);
   if (verificationFile) {
     fs.rm(
       path.join(VERIFY_DIR, path.basename(verificationFile)),
@@ -212,15 +255,19 @@ app.delete('/api/me', (req, res) => {
 // Обязательный вход: принять правила + подтвердить 18 + имя/возраст/пол + фото.
 // { acceptAge, acceptRules, name, age, gender, photos: [url] }
 app.post('/api/onboarding', (req, res) => {
+  const before = model.getFullProfile(req.user.id);
   const out = model.acceptOnboarding(req.user.id, req.body || {});
   if (out.error) return res.status(400).json({ error: out.error });
+  // Если это повторная попытка входа (уже были фото до этой) — старые,
+  // которых нет в новом наборе, больше не нужны на диске.
+  deleteUploadUrls(before.photos.filter((url) => !out.profile.photos.includes(url)));
   res.json({ ...out.profile, isAdmin: isAdmin(req.user.id) });
 });
 
 // --- Верификация фото (ручная модерация) ---
 
 // Пользователь присылает селфи: { dataUrl, pose }. Возвращаем свежую анкету.
-app.post('/api/verification', (req, res) => {
+app.post('/api/verification', uploadLimiter, (req, res) => {
   const out = writeImageDataUrl(req.body?.dataUrl, VERIFY_DIR);
   if (out.error) return res.status(out.status).json({ error: out.error });
   model.submitVerification(req.user.id, out.file, req.body?.pose);
@@ -313,7 +360,7 @@ const LIMIT_MESSAGES = {
   superlike_limit: 'Суперлайк на сегодня уже использован',
 };
 
-app.post('/api/swipes', (req, res) => {
+app.post('/api/swipes', swipeLimiter, (req, res) => {
   const targetId = Number(req.body?.targetId);
   const direction = req.body?.direction === 'like' ? 'like' : 'pass';
   const isSuper = direction === 'like' && !!req.body?.superlike;
@@ -370,7 +417,7 @@ app.get('/api/blocked', (req, res) => {
 });
 
 // Пожаловаться: { userId, reason, note? } — заодно блокирует
-app.post('/api/report', (req, res) => {
+app.post('/api/report', reportLimiter, (req, res) => {
   const targetId = Number(req.body?.userId);
   if (!targetId) return res.status(400).json({ error: 'bad userId' });
   const out = model.createReport(
@@ -408,7 +455,7 @@ app.post('/api/matches/:id/read', (req, res) => {
 });
 
 // Отправить сообщение: { type, text?, photo? }
-app.post('/api/matches/:id/messages', (req, res) => {
+app.post('/api/matches/:id/messages', messageLimiter, (req, res) => {
   const matchId = Number(req.params.id);
   const msg = model.addMessage(matchId, req.user.id, req.body || {});
   if (msg === null) return res.status(403).json({ error: 'not your match' });
@@ -437,7 +484,7 @@ app.post('/api/messages/:id/reaction', (req, res) => {
 });
 
 // Загрузка фото: { dataUrl: "data:image/jpeg;base64,..." } -> { url }
-app.post('/api/upload', (req, res) => {
+app.post('/api/upload', uploadLimiter, (req, res) => {
   const dataUrl = String(req.body?.dataUrl || '');
   const m = dataUrl.match(/^data:image\/(png|jpe?g|webp);base64,(.+)$/);
   if (!m) return res.status(400).json({ error: 'bad dataUrl' });
@@ -472,6 +519,15 @@ if (fs.existsSync(FRONTEND_DIST)) {
   });
   console.log('[api] отдаю собранный фронтенд из', FRONTEND_DIST);
 }
+
+// Единый обработчик ошибок — последний мидлвар. Express 5 сам передаёт сюда
+// отклонённые промисы из роутов, так что try/catch в каждом роуте не нужен:
+// без этого такая ошибка падала бы наружу без единообразного JSON-ответа.
+app.use((err, req, res, next) => {
+  console.error('[api error]', req.method, req.path, err);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+});
 
 bootstrapEnvAdmins(); // проставить is_admin тем, кто в ADMIN_IDS
 
