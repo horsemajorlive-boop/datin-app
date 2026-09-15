@@ -39,7 +39,15 @@ function backupOnce() {
   }
 }
 
+// Первый снимок — с задержкой, а не сразу при старте: VACUUM INTO
+// блокирующий (node:sqlite синхронный), и на боевой базе с реальными
+// данными может занять заметное время. Если выполнить его синхронно ДО
+// того, как сервер начал слушать порт, можно не уложиться в таймаут
+// health-check на Railway — деплой посчитают упавшим, хотя сервер просто
+// ещё не успел подняться.
+const FIRST_BACKUP_DELAY_MS = 30_000;
+
 export function startBackupSchedule() {
-  backupOnce(); // сразу при старте — не ждать сутки первого снимка
+  setTimeout(backupOnce, FIRST_BACKUP_DELAY_MS);
   setInterval(backupOnce, INTERVAL_MS);
 }

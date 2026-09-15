@@ -582,8 +582,6 @@ app.use((err, req, res, next) => {
 });
 
 bootstrapEnvAdmins(); // проставить is_admin тем, кто в ADMIN_IDS
-startExpiryNotifier(); // напоминание "Premium скоро закончится"
-startBackupSchedule(); // периодический снимок базы
 
 const PORT = Number(process.env.PORT) || 3001;
 const server = app.listen(PORT, () => {
@@ -591,6 +589,12 @@ const server = app.listen(PORT, () => {
   if (process.env.ALLOW_DEV_AUTH === 'true') {
     console.log('[api] DEV-авторизация включена (X-Dev-User / ?dev=)');
   }
+  // Фоновые задачи запускаем только ПОСЛЕ того, как сервер реально начал
+  // слушать порт — иначе на медленном старте (например, из-за VACUUM INTO
+  // на большой боевой базе) можно не уложиться в таймаут health-check
+  // Railway, и деплой посчитают упавшим, хотя процесс просто ещё поднимался.
+  startExpiryNotifier(); // напоминание "Premium скоро закончится"
+  startBackupSchedule(); // периодический снимок базы
 });
 
 // Подключаем WebSocket к тому же серверу.
