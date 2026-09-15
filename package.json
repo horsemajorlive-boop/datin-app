@@ -8,6 +8,6 @@
   },
   "scripts": {
     "build": "npm install --prefix frontend && npm run build --prefix frontend && npm install --prefix backend",
-    "start": "node backend/src/server.js"
+    "start": "exec node backend/src/server.js"
   }
 }
