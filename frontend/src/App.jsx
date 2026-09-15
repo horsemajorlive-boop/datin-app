@@ -235,6 +235,13 @@ export default function App() {
     setTab('chat');
   }
 
+  // Переход к оформлению Premium (вкладка "Профиль" → "Настройки") —
+  // общий обработчик для всех мест, где предлагают апгрейд.
+  function goToPremium() {
+    setTab('me');
+    setProfileView('settings');
+  }
+
   async function handleSwipe(profile, direction, { isSuper = false } = {}) {
     try {
       const res = await api.post('/swipes', {
@@ -413,6 +420,7 @@ export default function App() {
         onEdit={() => setProfileView('edit')}
         onVerify={() => setProfileView('verify')}
         onOpenSettings={() => setProfileView('settings')}
+        onChangedProfile={setMe}
       />
     );
   }
@@ -461,19 +469,18 @@ export default function App() {
             likesLeft={me?.likesLeft}
             superlikesLeft={me?.superlikesLeft}
             isPremium={!!me?.isPremium}
-            onOpenPremium={() => {
-              setTab('me');
-              setProfileView('settings');
-            }}
+            onOpenPremium={goToPremium}
             hasMissedLike={missedLike}
           />
         )}
         {tab === 'likes' && (
           <LikesScreen
             people={incoming}
+            isPremium={!!me?.isPremium}
             onLike={(p) => handleIncomingDecision(p, 'like')}
             onPass={(p) => handleIncomingDecision(p, 'pass')}
             onBrowse={() => setTab('deck')}
+            onUpgrade={goToPremium}
           />
         )}
         {tab === 'chat' && (

@@ -128,6 +128,8 @@ const ProfileCard = forwardRef(function ProfileCard(
       />
       <div className="card__overlay" />
 
+      {profile.isBoosted && <span className="card__boost">🚀 Поднято</span>}
+
       {showLike && (
         <div className="card__stamp card__stamp--like" style={{ opacity: stampOpacity }}>
           Лайк

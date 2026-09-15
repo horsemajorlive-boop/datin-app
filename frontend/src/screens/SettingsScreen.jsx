@@ -162,10 +162,14 @@ export default function SettingsScreen({
           </div>
         ) : (
           <div className="premium-pitch">
-            <p className="muted">
-              Безлимитные лайки, 5 суперлайков в день, возврат анкеты,
-              сортировка «Новенькие» и фильтр по быту.
-            </p>
+            <ul className="premium-pitch__list">
+              <li>Безлимитные лайки</li>
+              <li>5 суперлайков в день вместо 1</li>
+              <li>Видно, кто вас лайкнул</li>
+              <li>Поднятие анкеты в топ поиска на 30 минут — раз в день</li>
+              <li>Возврат анкеты после пропущенного лайка</li>
+              <li>Сортировка «Новенькие» и фильтр по быту</li>
+            </ul>
             <button
               type="button"
               className="btn-wide"

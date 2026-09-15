@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import PhotoCarousel from '../components/PhotoCarousel';
 import InterestChips from '../components/InterestChips';
 import LifestyleChips from '../components/LifestyleChips';
@@ -8,8 +9,9 @@ import ScreenHeader from '../components/ScreenHeader';
 import ProfileStrength from '../components/ProfileStrength';
 import PromptCards from '../components/PromptCards';
 import BioCard from '../components/BioCard';
-import { IconVerified, IconSettings } from '../components/icons';
+import { IconVerified, IconSettings, IconRocket } from '../components/icons';
 import { useCarousel } from '../lib/useCarousel';
+import { api, normalizeProfile } from '../api';
 
 // Экран "Профиль" — как выглядит анкета самого пользователя.
 //
@@ -55,11 +57,80 @@ function VerificationRow({ profile, onVerify }) {
   );
 }
 
+// Поднятие анкеты в поиске (буст) — см. POST /api/me/boost в server.js.
+// Только Premium, раз в день, на 30 минут анкета в приоритете (см. getFeed).
+function BoostRow({ profile, onUpgrade, onBoosted }) {
+  const [boosting, setBoosting] = useState(false);
+  const [error, setError] = useState('');
+
+  async function boost() {
+    setError('');
+    setBoosting(true);
+    try {
+      await api.post('/me/boost');
+      onBoosted(normalizeProfile(await api.get('/me')));
+    } catch (err) {
+      setError(err.message || 'Не удалось поднять анкету');
+    } finally {
+      setBoosting(false);
+    }
+  }
+
+  if (!profile.isPremium) {
+    return (
+      <button className="verify-row verify-row--btn" onClick={onUpgrade}>
+        <IconRocket />
+        <span>Поднимите анкету в поиске — Premium</span>
+        <span className="verify-row__cta">Оформить</span>
+      </button>
+    );
+  }
+
+  if (profile.boostedUntil > Date.now()) {
+    const minutesLeft = Math.max(1, Math.ceil((profile.boostedUntil - Date.now()) / 60000));
+    return (
+      <div className="verify-row verify-row--ok">
+        <IconRocket />
+        <span>
+          Анкета поднята в поиске
+          <small> — ещё {minutesLeft} мин</small>
+        </span>
+      </div>
+    );
+  }
+
+  if (profile.boostsLeftToday > 0) {
+    return (
+      <>
+        <button
+          type="button"
+          className="verify-row verify-row--btn"
+          onClick={boost}
+          disabled={boosting}
+        >
+          <IconRocket />
+          <span>Поднять анкету в поиске</span>
+          <span className="verify-row__cta">{boosting ? 'Поднимаем…' : 'Поднять'}</span>
+        </button>
+        {error && <p className="form__error">{error}</p>}
+      </>
+    );
+  }
+
+  return (
+    <div className="verify-row">
+      <IconRocket />
+      <span>Поднятие анкеты использовано сегодня — новое будет завтра</span>
+    </div>
+  );
+}
+
 export default function MyProfileScreen({
   profile,
   onEdit,
   onVerify,
   onOpenSettings,
+  onChangedProfile,
 }) {
   const photo = useCarousel(profile.photos.length);
 
@@ -139,6 +210,7 @@ export default function MyProfileScreen({
       )}
 
       <VerificationRow profile={profile} onVerify={onVerify} />
+      <BoostRow profile={profile} onUpgrade={onOpenSettings} onBoosted={onChangedProfile} />
 
       <button className="btn-wide" onClick={onEdit}>
         Редактировать анкету

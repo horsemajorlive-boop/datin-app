@@ -18,6 +18,17 @@ function haversineKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// Fisher–Yates, новый массив (исходный не трогаем) — для честного
+// перемешивания одновременно поднятых анкет в "рядом" (см. getFeed).
+function shuffle(list) {
+  const arr = list.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 // ---------- Пользователи ----------
 
 // Создать пользователя или обновить имя/username и отметку "был онлайн".
@@ -156,8 +167,17 @@ export const DAILY_LIKE_LIMIT = 30;
 export const DAILY_SUPERLIKE_LIMIT = 1;
 export const PREMIUM_DAILY_SUPERLIKE_LIMIT = 5;
 
-function startOfTodayMs() {
-  const d = new Date();
+// ---------- Поднятие анкеты (буст) ----------
+// Premium-only: на BOOST_DURATION_MIN минут анкета получает приоритет в
+// ленте (см. ORDER BY в getFeed). Раз в день, чтобы не превращалось в
+// постоянный "вечный буст" при большом числе одновременных Premium.
+export const BOOST_DURATION_MIN = 30;
+export const PREMIUM_DAILY_BOOST_LIMIT = 1;
+
+// now — необязательный override для симуляции (см. simulate-boosts.js),
+// в проде всегда реальное "сейчас".
+function startOfTodayMs(now = Date.now()) {
+  const d = new Date(now);
   d.setHours(0, 0, 0, 0);
   return d.getTime();
 }
@@ -176,13 +196,27 @@ function countTodaySwipes(actorId, isSuper) {
   return row.n;
 }
 
+// Сколько раз user уже поднимал анкету сегодня.
+function countTodayBoosts(userId, now = Date.now()) {
+  const row = db
+    .prepare(`SELECT COUNT(*) AS n FROM boosts WHERE user_id = :u AND started_at >= :since`)
+    .get({ u: userId, since: startOfTodayMs(now) });
+  return row.n;
+}
+
 // { isPremium, premiumUntil, likesLeft, superlikesLeft, dailyLikeLimit,
-//   dailySuperlikeLimit } для анкеты. likesLeft/dailyLikeLimit — null у
-// Premium (без лимита; null, а не Infinity, чтобы нормально уходило в JSON).
-function likeLimitFields(userId) {
+//   dailySuperlikeLimit, boostedUntil, boostsLeftToday, dailyBoostLimit }
+// для анкеты. likesLeft/dailyLikeLimit — null у Premium (без лимита; null,
+// а не Infinity, чтобы нормально уходило в JSON). Буст — только Premium,
+// поэтому у обычных пользователей dailyBoostLimit/boostsLeftToday всегда 0.
+function likeLimitFields(userId, now = Date.now()) {
   const premiumUntil = getPremiumUntil(userId);
-  const premium = premiumUntil != null && premiumUntil > Date.now();
+  const premium = premiumUntil != null && premiumUntil > now;
   const superlikeLimit = premium ? PREMIUM_DAILY_SUPERLIKE_LIMIT : DAILY_SUPERLIKE_LIMIT;
+  const boostedUntilRaw = db
+    .prepare(`SELECT boosted_until FROM users WHERE id = ?`)
+    .get(userId)?.boosted_until;
+  const boostedUntil = boostedUntilRaw != null && boostedUntilRaw > now ? boostedUntilRaw : null;
   return {
     isPremium: premium,
     premiumUntil: premium ? premiumUntil : null,
@@ -190,7 +224,33 @@ function likeLimitFields(userId) {
     superlikesLeft: Math.max(0, superlikeLimit - countTodaySwipes(userId, true)),
     dailyLikeLimit: premium ? null : DAILY_LIKE_LIMIT,
     dailySuperlikeLimit: superlikeLimit,
+    boostedUntil,
+    boostsLeftToday: premium
+      ? Math.max(0, PREMIUM_DAILY_BOOST_LIMIT - countTodayBoosts(userId, now))
+      : 0,
+    dailyBoostLimit: premium ? PREMIUM_DAILY_BOOST_LIMIT : 0,
   };
+}
+
+// Поднять анкету: на BOOST_DURATION_MIN минут она попадает в приоритетную
+// группу в getFeed (см. ORDER BY там). Только Premium, не чаще
+// PREMIUM_DAILY_BOOST_LIMIT раз в день. Возвращает { boostedUntil } либо
+// { error: 'not_premium' | 'boost_limit' } — свайп в базу не пишем в обоих
+// случаях отказа.
+// now — необязательный override для симуляции (см. simulate-boosts.js).
+export function boostProfile(userId, { now = Date.now() } = {}) {
+  if (!isPremium(userId)) return { error: 'not_premium' };
+  if (countTodayBoosts(userId, now) >= PREMIUM_DAILY_BOOST_LIMIT) {
+    return { error: 'boost_limit' };
+  }
+  const endsAt = now + BOOST_DURATION_MIN * 60 * 1000;
+  db.prepare(`INSERT INTO boosts (user_id, started_at, ends_at) VALUES (?, ?, ?)`).run(
+    userId,
+    now,
+    endsAt
+  );
+  db.prepare(`UPDATE users SET boosted_until = ? WHERE id = ?`).run(endsAt, userId);
+  return { boostedUntil: endsAt };
 }
 
 // Прошёл ли пользователь обязательный вход: принял правила + подтвердил 18,
@@ -471,7 +531,8 @@ export function setPhotos(userId, urls) {
 // viewerLoc — { lat, lng } смотрящего, если он поделился геопозицией; тогда
 // каждой анкете с известными координатами добавляем distanceKm (округлённо).
 // Сами координаты наружу не отдаём — только расстояние.
-function hydrateProfiles(rows, viewerLoc = null) {
+// now — необязательный override для симуляции (влияет только на isBoosted).
+function hydrateProfiles(rows, viewerLoc = null, now = Date.now()) {
   const photosStmt = db.prepare(
     `SELECT url FROM photos WHERE user_id = ? ORDER BY position`
   );
@@ -495,6 +556,7 @@ function hydrateProfiles(rows, viewerLoc = null) {
     prompts: JSON.parse(r.prompts || '[]'),
     verified: r.verified_at != null,
     isSuper: !!r.is_super,
+    isBoosted: r.boosted_until != null && r.boosted_until > now,
     distanceKm:
       viewerLoc && r.lat != null && r.lng != null
         ? Math.round(haversineKm(viewerLoc.lat, viewerLoc.lng, r.lat, r.lng))
@@ -525,6 +587,7 @@ export function getFeed(userId, opts = {}) {
     verified,
     sort,
     radiusKm,
+    now = Date.now(), // необязательный override для симуляции, см. simulate-boosts.js
   } = opts;
 
   // Собираем WHERE по кусочкам — только те условия, что реально заданы.
@@ -541,7 +604,7 @@ export function getFeed(userId, opts = {}) {
      )`,
   ];
   const rawLimit = Math.min(Number(opts.limit) || 20, 50);
-  const params = { me: userId, limit: rawLimit };
+  const params = { me: userId, limit: rawLimit, now };
 
   // "Рядом со мной" работает только если сам поделился геопозицией.
   const viewerLoc = db
@@ -631,27 +694,46 @@ export function getFeed(userId, opts = {}) {
       ? 'u.created_at DESC, p.updated_at DESC'
       : 'p.updated_at DESC';
 
+  // Поднятые (boosted_until > now) анкеты идут первой группой. Внутри неё —
+  // RANDOM(), а не жёсткий порядок: если бустится много людей одновременно,
+  // каждый следующий запрос ленты перемешивает их заново, и никто не
+  // "застревает" навечно ни в начале, ни в конце своей группы (см. отчёт
+  // симуляции в simulate-boosts.js — так распределение позиции #1 среди
+  // одновременно поднятых остаётся близким к равномерному). Внутри
+  // обычной группы (rnd = 0 у всех, поэтому RANDOM() её не трогает)
+  // сохраняется прежний порядок.
+  const isBoostedSql = `(u.boosted_until IS NOT NULL AND u.boosted_until > :now)`;
+  const orderByWithBoost =
+    `${isBoostedSql} DESC, ` +
+    `(CASE WHEN ${isBoostedSql} THEN RANDOM() ELSE 0 END) DESC, ` +
+    orderBy;
+
   const rows = db
     .prepare(
       `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
               p.housing, p.car, p.employment, p.goal, p.kids,
-              p.height, p.weight, p.smoking, p.drinking, p.prompts, p.lat, p.lng, u.verified_at
+              p.height, p.weight, p.smoking, p.drinking, p.prompts, p.lat, p.lng,
+              u.verified_at, u.boosted_until
          FROM profiles p
          JOIN users u ON u.id = p.user_id
         WHERE ${where.join(' AND ')}
-        ORDER BY ${orderBy}
+        ORDER BY ${orderByWithBoost}
         LIMIT :limit`
     )
     .all(params);
 
-  let profiles = hydrateProfiles(rows, hasViewerLoc ? viewerLoc : null);
+  let profiles = hydrateProfiles(rows, hasViewerLoc ? viewerLoc : null, now);
 
   if (wantsNear) {
     profiles = profiles.filter((p) => p.distanceKm != null);
     if (Number.isFinite(radiusKm)) {
       profiles = profiles.filter((p) => p.distanceKm <= radiusKm);
     }
-    profiles.sort((a, b) => a.distanceKm - b.distanceKm);
+    // "Рядом" считается в JS, поэтому и буст-приоритет здесь применяем
+    // отдельно: поднятые (перемешанные) впереди, остальные — по расстоянию.
+    const boosted = shuffle(profiles.filter((p) => p.isBoosted));
+    const rest = profiles.filter((p) => !p.isBoosted).sort((a, b) => a.distanceKm - b.distanceKm);
+    profiles = [...boosted, ...rest];
   }
 
   return profiles.slice(0, rawLimit);
@@ -660,6 +742,10 @@ export function getFeed(userId, opts = {}) {
 // Кто лайкнул ВАС и ждёт ответа (вкладка "Симпатии").
 // Только те, кому вы ещё не ответили своим свайпом, и без заблокированных.
 // Ответный лайк сразу превращается в мэтч.
+// Без Premium личность лайкнувших скрыта: возвращаем те же карточки, но
+// без имени и почти всех деталей — только id, возраст и первое фото (для
+// размытого превью на фронте). Сам факт "кто-то лайкнул" и счётчик
+// (people.length) видны всем — это и есть крючок для Premium.
 export function getIncomingLikes(userId) {
   const rows = db
     .prepare(
@@ -687,7 +773,16 @@ export function getIncomingLikes(userId) {
     .prepare(`SELECT lat, lng FROM profiles WHERE user_id = ?`)
     .get(userId);
   const hasViewerLoc = !!(viewerLoc && viewerLoc.lat != null && viewerLoc.lng != null);
-  return hydrateProfiles(rows, hasViewerLoc ? viewerLoc : null);
+  const profiles = hydrateProfiles(rows, hasViewerLoc ? viewerLoc : null);
+
+  if (isPremium(userId)) return profiles;
+  return profiles.map((p) => ({
+    id: p.id,
+    masked: true,
+    age: p.age,
+    isSuper: p.isSuper,
+    photos: p.photos.slice(0, 1),
+  }));
 }
 
 // ---------- Свайпы и мэтчи ----------

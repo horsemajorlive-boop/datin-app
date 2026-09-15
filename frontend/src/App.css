@@ -548,6 +548,23 @@
   transform: rotate(8deg);
 }
 
+/* Бейдж "Поднято" на карточке — видно другим, пока анкета в буст-приоритете. */
+.card__boost {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  z-index: 3;
+  padding: 5px 11px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(160deg, #fff3da, #f6dfa8);
+  color: #8a5a00;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
 /* ================= Листалка фотографий ================= */
 
 .carousel {
@@ -1289,6 +1306,66 @@
   font-size: 13px;
   color: var(--muted);
   line-height: 1.45;
+}
+
+/* Заблокированный тизер без Premium — размытый стек фото + счётчик + CTA. */
+.likes-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 48px 24px 16px;
+}
+
+.likes-locked__stack {
+  position: relative;
+  width: 148px;
+  height: 108px;
+  margin-bottom: 12px;
+}
+
+.likes-locked__photo {
+  position: absolute;
+  top: 0;
+  left: calc(50% - 54px + var(--i) * 30px);
+  width: 108px;
+  height: 108px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid var(--bg);
+  box-shadow: var(--shadow-sm);
+  filter: blur(7px) saturate(0.9);
+  z-index: var(--i);
+}
+
+.likes-locked__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 21px;
+}
+
+.likes-locked__text {
+  margin: 0 0 6px;
+  max-width: 34ch;
+  font-size: 13.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.likes-locked .btn-wide {
+  max-width: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.likes-locked .btn-wide svg {
+  width: 17px;
+  height: 17px;
 }
 
 .likes {
@@ -2993,6 +3070,19 @@
   text-align: left;
 }
 
+.verify-row svg {
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.verify-row small {
+  display: block;
+  color: var(--muted);
+  font-weight: 400;
+}
+
 .verify-row--btn {
   cursor: pointer;
   justify-content: space-between;
@@ -3004,11 +3094,15 @@
   transform: scale(0.99);
 }
 
+.verify-row--btn:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
 .verify-row--btn svg {
   width: 19px;
   height: 19px;
   color: var(--accent);
-  flex-shrink: 0;
 }
 
 .verify-row__cta {
@@ -3028,7 +3122,6 @@
   width: 18px;
   height: 18px;
   color: var(--gold);
-  flex-shrink: 0;
 }
 
 /* Свой bio на экране профиля. */
@@ -3436,6 +3529,34 @@
 
 .premium-pitch .btn-wide {
   margin-top: 0;
+}
+
+.premium-pitch__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.premium-pitch__list li {
+  position: relative;
+  padding-left: 18px;
+  font-size: 13.5px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.premium-pitch__list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
 }
 
 .set-row {

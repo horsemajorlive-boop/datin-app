@@ -1,19 +1,38 @@
 import VerifiedBadge from '../components/VerifiedBadge';
 import EmptyState from '../components/EmptyState';
 import ScreenHeader from '../components/ScreenHeader';
-import { IconX, IconHeart } from '../components/icons';
+import { IconX, IconHeart, IconLock } from '../components/icons';
 import { cityWithDistance } from '../lib/location';
+
+// Склонение "человек" под число: 1 человек лайкнул, 2 человека лайкнули,
+// 5 человек лайкнули — обычные русские правила (искл. 11–14).
+function likersLine(n) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return `${n} человек лайкнул вас`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return `${n} человека лайкнули вас`;
+  }
+  return `${n} человек лайкнули вас`;
+}
 
 // Экран "Симпатии" — кто лайкнул ВАС и ждёт ответа.
 // Лайк в ответ = мгновенный мэтч; «пропустить» убирает человека из списка.
 //
+// Без Premium личность лайкнувших скрыта: сервер (см. getIncomingLikes)
+// отдаёт те же карточки, но без имени и деталей — только id/возраст/первое
+// фото. Тут это превращаем в размытый тизер с призывом оформить Premium;
+// count (people.length) при этом настоящий и виден всем — это и крючок.
+//
 // Props:
-//   people   — массив анкет (GET /api/likes/incoming)
-//   onLike   — ответить взаимностью: onLike(profile)
-//   onPass   — отклонить: onPass(profile)
-//   onBrowse — уйти на вкладку «Поиск»
+//   people    — массив анкет (GET /api/likes/incoming), возможно замаскированных
+//   isPremium — есть ли Premium (открывает личности лайкнувших)
+//   onLike    — ответить взаимностью: onLike(profile)
+//   onPass    — отклонить: onPass(profile)
+//   onBrowse  — уйти на вкладку «Поиск»
+//   onUpgrade — перейти к оформлению Premium (настройки)
 
-export default function LikesScreen({ people, onLike, onPass, onBrowse }) {
+export default function LikesScreen({ people, isPremium, onLike, onPass, onBrowse, onUpgrade }) {
   if (people.length === 0) {
     return (
       <div className="screen">
@@ -25,6 +44,35 @@ export default function LikesScreen({ people, onLike, onPass, onBrowse }) {
           actionLabel="Листать анкеты"
           onAction={onBrowse}
         />
+      </div>
+    );
+  }
+
+  if (!isPremium) {
+    return (
+      <div className="screen">
+        <ScreenHeader title="Симпатии" count={people.length} />
+        <div className="likes-locked">
+          <div className="likes-locked__stack">
+            {people.slice(0, 3).map((p, i) => (
+              <img
+                key={p.id}
+                className="likes-locked__photo"
+                src={p.photos[0]}
+                alt=""
+                style={{ '--i': i }}
+              />
+            ))}
+          </div>
+          <h2 className="likes-locked__title">{likersLine(people.length)}</h2>
+          <p className="likes-locked__text">
+            Кто именно — видно только с Premium. Оформите доступ и отвечайте
+            взаимностью сразу, без угадывания.
+          </p>
+          <button type="button" className="btn-wide" onClick={onUpgrade}>
+            <IconLock /> Смотреть, кто
+          </button>
+        </div>
       </div>
     );
   }

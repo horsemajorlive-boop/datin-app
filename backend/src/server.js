@@ -142,6 +142,21 @@ app.post('/api/me/location', (req, res) => {
   res.json({ hasLocation: true });
 });
 
+// Поднять анкету в поиске (буст, только Premium, раз в день) — см.
+// BOOST_DURATION_MIN/PREMIUM_DAILY_BOOST_LIMIT в models.js.
+const BOOST_ERROR_MESSAGES = {
+  not_premium: 'Поднятие анкеты доступно с Premium',
+  boost_limit: 'Поднятие на сегодня уже использовано — новое будет завтра',
+};
+
+app.post('/api/me/boost', (req, res) => {
+  const result = model.boostProfile(req.user.id);
+  if (result.error) {
+    return res.status(403).json({ error: BOOST_ERROR_MESSAGES[result.error] || 'Не получилось поднять анкету' });
+  }
+  res.json(result);
+});
+
 // Счёт на оплату Premium через Telegram Stars. Отдаём ссылку — открывать её
 // должен фронтенд через Telegram.WebApp.openInvoice(url). Сама выдача
 // Premium происходит не здесь, а в /telegram/webhook — только после того,
@@ -157,7 +172,8 @@ app.post('/api/premium/invoice', async (req, res) => {
       body: JSON.stringify({
         title: `Premium на ${model.PREMIUM_DAYS} дней`,
         description:
-          'Безлимитные лайки, больше суперлайков, возврат анкеты, сортировка «Новенькие» и поиск по быту',
+          'Безлимитные лайки, больше суперлайков, возврат анкеты, кто вас лайкнул, ' +
+          'поднятие анкеты в поиске, сортировка «Новенькие» и поиск по быту',
         payload: `premium:${req.user.id}:${Date.now()}`,
         currency: 'XTR',
         prices: [{ label: 'Premium', amount: model.PREMIUM_PRICE_STARS }],

@@ -120,6 +120,18 @@ CREATE TABLE IF NOT EXISTS reports (
   reviewed_by INTEGER
 );
 
+-- Поднятие анкеты в поиске (буст, Premium). Событие пишем в историю —
+-- нужно и для дневного лимита (см. countTodayBoosts), и для аналитики.
+-- Текущее "активен ли буст прямо сейчас" — в денормализованной
+-- users.boosted_until, чтобы не джойнить эту таблицу на каждый запрос ленты.
+CREATE TABLE IF NOT EXISTS boosts (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  started_at INTEGER NOT NULL,
+  ends_at    INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_boosts_user ON boosts(user_id, started_at);
 CREATE INDEX IF NOT EXISTS idx_messages_match ON messages(match_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_swipes_actor  ON swipes(actor_id);
 CREATE INDEX IF NOT EXISTS idx_swipes_target ON swipes(target_id);

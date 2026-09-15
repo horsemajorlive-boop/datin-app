@@ -129,4 +129,13 @@ try {
   /* колонка уже существует — ок */
 }
 
+// Поднятие анкеты (буст) — до какого момента (мс) анкета в приоритете
+// поиска, NULL/прошедшая дата = не поднята. См. boosts (история) в schema.sql.
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN boosted_until INTEGER`);
+  console.log('[db] миграция: добавлена колонка users.boosted_until');
+} catch {
+  /* колонка уже существует — ок */
+}
+
 console.log('[db] готова:', DB_PATH);

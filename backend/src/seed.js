@@ -94,6 +94,76 @@ const BOTS = [
   },
 ];
 
+// 50 дополнительных анкет из Москвы (женский пол) — генерируем, а не пишем
+// руками, чтобы получить разнообразие без 50 одинаковых карточек.
+const MOSCOW_NAMES = [
+  'Анна', 'Мария', 'Елена', 'Ольга', 'Татьяна', 'Наталья', 'Ирина', 'Светлана', 'Юлия', 'Екатерина',
+  'Анастасия', 'Виктория', 'Дарья', 'Полина', 'Алина', 'Кристина', 'Валерия', 'Ангелина', 'Софья', 'Вероника',
+  'Маргарита', 'Алиса', 'Диана', 'Милана', 'Ева', 'Арина', 'Есения', 'Ксения', 'Элина', 'Алёна',
+  'Инна', 'Лилия', 'Жанна', 'Регина', 'Оксана', 'Зоя', 'Нина', 'Тамара', 'Раиса', 'Людмила',
+  'Галина', 'Алла', 'Вера', 'Лариса', 'Надежда', 'Марта', 'Эмилия', 'Стефания', 'Злата', 'Агата',
+];
+
+const MOSCOW_INTEREST_POOL = [
+  'Бег', 'Йога', 'Плавание', 'Танцы', 'Горы', 'Путешествия', 'Кемпинг', 'Кино', 'Музыка', 'Концерты',
+  'Театр', 'Музеи', 'Фотография', 'Книги', 'Кофе', 'Вино', 'Готовка', 'Рестораны', 'Настолки', 'Видеоигры',
+  'Шахматы', 'Мода', 'Рукоделие', 'Вязание', 'Психология', 'Медитация', 'Велосипед', 'Ролики', 'Стендап', 'Йога',
+];
+
+const MOSCOW_PROFESSIONS = [
+  'маркетологом', 'дизайнером', 'юристом', 'врачом', 'учителем', 'бухгалтером', 'менеджером',
+  'фотографом', 'психологом', 'архитектором', 'визажистом', 'переводчиком', 'HR-менеджером',
+  'копирайтером', 'SMM-специалистом',
+];
+
+const MOSCOW_BIO_TEMPLATES = [
+  (p, h1, h2) => `Живу в Москве, работаю ${p}. Свободное время трачу на ${h1.toLowerCase()} и ${h2.toLowerCase()}.`,
+  (p, h1, h2) => `Москвичка, ${p} по профессии. Обожаю ${h1.toLowerCase()}, а по выходным — ${h2.toLowerCase()}.`,
+  (p, h1, h2) => `Работаю ${p}, живу в самом центре Москвы. Люблю ${h1.toLowerCase()}, увлекаюсь ${h2.toLowerCase()}.`,
+  (p, h1, h2) => `Немного ${p}, немного мечтатель. ${h1} и ${h2.toLowerCase()} — моя отдушина.`,
+  (p, h1, h2) => `${h1} и ${h2.toLowerCase()} — это про меня. А ещё работаю ${p} и обожаю свой город.`,
+];
+
+const HOUSING_OPTS = ['own', 'rent', 'parents'];
+const CAR_OPTS = ['yes', 'no'];
+const EMPLOYMENT_OPTS = ['working', 'not_working'];
+const GOAL_OPTS = ['relationship', 'friendship', 'flirt', 'date'];
+const KIDS_OPTS = ['want', 'have', 'dont', 'maybe'];
+const SMOKE_DRINK_OPTS = ['no', 'sometimes', 'yes'];
+
+const MOSCOW_BOTS = MOSCOW_NAMES.map((name, idx) => {
+  const age = 19 + (idx % 20); // 19..38
+  const prof = MOSCOW_PROFESSIONS[idx % MOSCOW_PROFESSIONS.length];
+  const h1 = MOSCOW_INTEREST_POOL[idx % MOSCOW_INTEREST_POOL.length];
+  const h2 = MOSCOW_INTEREST_POOL[(idx + 7) % MOSCOW_INTEREST_POOL.length];
+  const h3 = MOSCOW_INTEREST_POOL[(idx + 13) % MOSCOW_INTEREST_POOL.length];
+  const bio = MOSCOW_BIO_TEMPLATES[idx % MOSCOW_BIO_TEMPLATES.length](prof, h1, h2);
+
+  return {
+    id: 900100 + idx + 1,
+    first_name: name,
+    profile: {
+      name, age, city: 'Москва', gender: 'f',
+      bio,
+      interests: [...new Set([h1, h2, h3])],
+      housing: HOUSING_OPTS[idx % HOUSING_OPTS.length],
+      car: CAR_OPTS[idx % CAR_OPTS.length],
+      employment: EMPLOYMENT_OPTS[idx % EMPLOYMENT_OPTS.length],
+      goal: GOAL_OPTS[idx % GOAL_OPTS.length],
+      kids: KIDS_OPTS[idx % KIDS_OPTS.length],
+      height: 158 + (idx % 20),
+      weight: 48 + (idx % 25),
+      smoking: SMOKE_DRINK_OPTS[idx % SMOKE_DRINK_OPTS.length],
+      drinking: SMOKE_DRINK_OPTS[(idx + 1) % SMOKE_DRINK_OPTS.length],
+    },
+    photos: [`moscow-bot-${idx + 1}`],
+    likesYou: idx % 9 === 0,
+    verified: idx % 4 === 0,
+  };
+});
+
+const ALL_BOTS = [...BOTS, ...MOSCOW_BOTS];
+
 // Кому боты "уже поставили лайк" — чтобы получился мэтч, когда вы лайкнете в ответ.
 const DEV_USER_ID = Number(process.env.SEED_TARGET || 1);
 
@@ -104,7 +174,7 @@ upsertUser({ id: DEV_USER_ID, first_name: 'Dev', username: 'dev' });
 
 const DAY = 24 * 60 * MINUTE;
 
-BOTS.forEach((bot, i) => {
+ALL_BOTS.forEach((bot, i) => {
   upsertUser({ id: bot.id, first_name: bot.first_name, username: null });
   saveProfile(bot.id, bot.profile);
   setPhotos(bot.id, bot.photos.map(photoUrl));
@@ -135,7 +205,7 @@ BOTS.forEach((bot, i) => {
 });
 
 console.log(
-  `[seed] добавлено анкет: ${BOTS.length}. ` +
+  `[seed] добавлено анкет: ${ALL_BOTS.length} (в т.ч. ${MOSCOW_BOTS.length} из Москвы). ` +
     `Лайкнули dev-пользователя #${DEV_USER_ID}: ` +
-    BOTS.filter((b) => b.likesYou).map((b) => b.first_name).join(', ')
+    ALL_BOTS.filter((b) => b.likesYou).map((b) => b.first_name).join(', ')
 );
