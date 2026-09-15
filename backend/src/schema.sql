@@ -87,7 +87,9 @@ CREATE TABLE IF NOT EXISTS messages (
   text       TEXT,
   photo_url  TEXT,
   reaction   TEXT,                            -- эмодзи-реакция на сообщение
-  created_at INTEGER NOT NULL
+  created_at INTEGER NOT NULL,
+  edited_at  INTEGER,                         -- когда автор отредактировал текст (NULL = не редактировалось)
+  deleted_at INTEGER                          -- когда автор удалил (NULL = не удалено); text/photo_url обнуляются
 );
 
 -- Докуда пользователь дочитал переписку. Нет строки — не читал вовсе.

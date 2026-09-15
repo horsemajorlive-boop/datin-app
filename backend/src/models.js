@@ -1002,6 +1002,12 @@ export function getMatches(userId) {
           0
         )`
   );
+  // До какого момента собеседник прочитал ЧАТ (не конкретное сообщение) —
+  // используется на фронте, чтобы показать "Прочитано" под своим последним
+  // сообщением, если его created_at <= partnerReadAt.
+  const partnerReadStmt = db.prepare(
+    `SELECT last_read_at FROM match_reads WHERE match_id = :m AND user_id = :other`
+  );
 
   return rows.map((r) => {
     const otherId = r.user_a === userId ? r.user_b : r.user_a;
@@ -1011,6 +1017,7 @@ export function getMatches(userId) {
       createdAt: r.created_at,
       profile: getFullProfile(otherId, { forOther: true }),
       unread: unreadStmt.get({ m: r.id, me: userId }).n,
+      partnerReadAt: partnerReadStmt.get({ m: r.id, other: otherId })?.last_read_at ?? 0,
       lastMessage: last
         ? {
             type: last.type,
@@ -1047,7 +1054,8 @@ export function getMessages(matchId, userId) {
   if (partnerOf(matchId, userId) === null) return null; // не участник — нет доступа
   const rows = db
     .prepare(
-      `SELECT id, sender_id, type, text, photo_url, reaction, created_at
+      `SELECT id, sender_id, type, text, photo_url, reaction, created_at,
+              edited_at, deleted_at
          FROM messages WHERE match_id = ? ORDER BY created_at`
     )
     .all(matchId);
@@ -1060,6 +1068,8 @@ export function getMessages(matchId, userId) {
     photo: r.photo_url,
     reaction: r.reaction,
     ts: r.created_at,
+    editedAt: r.edited_at,
+    deleted: r.deleted_at != null,
   }));
 }
 
@@ -1092,6 +1102,8 @@ export function addMessage(matchId, senderId, { type = 'text', text, photo }) {
     photo: r.photo_url,
     reaction: r.reaction,
     ts: r.created_at,
+    editedAt: r.edited_at,
+    deleted: false,
   };
 }
 
@@ -1108,6 +1120,49 @@ export function setReaction(messageId, userId, emoji) {
     messageId
   );
   return { messageId, reaction: next, matchId: msg.match_id };
+}
+
+// Отредактировать своё текстовое сообщение (фото/эмодзи не редактируются —
+// смысла нет, а для эмодзи-сообщения "текст" и есть сам эмодзи).
+// Только автор, только пока не удалено. Возвращает null, если это не
+// сообщение вызывающего (чужое или не участник мэтча вовсе).
+export function editMessage(messageId, userId, text) {
+  const msg = db
+    .prepare(`SELECT match_id, sender_id, type, deleted_at FROM messages WHERE id = ?`)
+    .get(messageId);
+  if (!msg || msg.sender_id !== userId) return null;
+  if (msg.deleted_at != null) return { error: 'deleted' };
+  if (msg.type !== 'text') return { error: 'not_editable' };
+
+  const clean = String(text ?? '').trim().slice(0, 1000);
+  if (!clean) return { error: 'empty' };
+
+  const editedAt = now();
+  db.prepare(`UPDATE messages SET text = ?, edited_at = ? WHERE id = ?`).run(
+    clean,
+    editedAt,
+    messageId
+  );
+  return { id: messageId, matchId: msg.match_id, text: clean, editedAt };
+}
+
+// Удалить своё сообщение. Оставляем в истории заглушку (как в большинстве
+// мессенджеров), а не дырку: текст/фото/реакцию обнуляем, саму строку и
+// момент отправки — нет, чтобы у собеседника не потерялся контекст
+// переписки. Идемпотентно: повторное удаление уже удалённого — не ошибка.
+export function deleteMessage(messageId, userId) {
+  const msg = db
+    .prepare(`SELECT match_id, sender_id, deleted_at FROM messages WHERE id = ?`)
+    .get(messageId);
+  if (!msg || msg.sender_id !== userId) return null;
+  if (msg.deleted_at == null) {
+    db.prepare(
+      `UPDATE messages
+          SET text = NULL, photo_url = NULL, reaction = NULL, deleted_at = ?
+        WHERE id = ?`
+    ).run(now(), messageId);
+  }
+  return { id: messageId, matchId: msg.match_id };
 }
 
 // ---------- Верификация фото (ручная модерация) ----------

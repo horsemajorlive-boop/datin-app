@@ -13,6 +13,9 @@ frontend/dist/
 backend/uploads/
 backend/verification-uploads/
 
+# Периодические снимки базы (см. backend/src/backup.js)
+backend/backups/
+
 # Секреты и локальные настройки окружения
 .env
 .env.local

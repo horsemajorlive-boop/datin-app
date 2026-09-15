@@ -13,6 +13,9 @@
 //   { type: 'typing',   matchId, kind }        — собеседник печатает/выбирает
 //   { type: 'presence', userId, online }       — кто-то зашёл/вышел
 //   { type: 'match' }                          — появился новый мэтч (перезагрузить список)
+//   { type: 'read', matchId }                  — собеседник прочитал переписку
+//   { type: 'messageEdited', matchId, messageId, text, editedAt }
+//   { type: 'messageDeleted', matchId, messageId }
 //
 // Событие клиента → серверу:
 //   { type: 'typing', matchId, kind }          — я печатаю в этом чате
@@ -123,6 +126,20 @@ export function emitReaction(matchId, messageId, reaction, byUserId) {
 
 export function emitTyping(matchId, fromUserId, kind) {
   sendToMatch(matchId, { type: 'typing', matchId, kind }, fromUserId);
+}
+
+// Собеседник открыл чат и прочитал переписку — партнёру нужно перерисовать
+// "Прочитано" под своим последним сообщением, не дожидаясь ручного обновления.
+export function emitRead(matchId, byUserId) {
+  sendToMatch(matchId, { type: 'read', matchId }, byUserId);
+}
+
+export function emitMessageEdited(matchId, messageId, text, editedAt, byUserId) {
+  sendToMatch(matchId, { type: 'messageEdited', matchId, messageId, text, editedAt }, byUserId);
+}
+
+export function emitMessageDeleted(matchId, messageId, byUserId) {
+  sendToMatch(matchId, { type: 'messageDeleted', matchId, messageId }, byUserId);
 }
 
 export function emitMatch(userIds) {

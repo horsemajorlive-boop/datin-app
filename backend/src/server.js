@@ -16,7 +16,15 @@ import { requireAuth } from './auth.js';
 import { requireAdmin, isAdmin, bootstrapEnvAdmins } from './admin.js';
 import * as model from './models.js';
 import { scheduleBotReply } from './bot.js';
-import { attachRealtime, emitMessage, emitReaction, emitMatch } from './realtime.js';
+import {
+  attachRealtime,
+  emitMessage,
+  emitReaction,
+  emitMatch,
+  emitRead,
+  emitMessageEdited,
+  emitMessageDeleted,
+} from './realtime.js';
 import { DATA_DIR } from './paths.js';
 import {
   notifyNewMatch,
@@ -24,6 +32,7 @@ import {
   notifyNewMessage,
 } from './notifications.js';
 import { startExpiryNotifier } from './expiryNotifier.js';
+import { startBackupSchedule } from './backup.js';
 import {
   apiLimiter,
   uploadLimiter,
@@ -455,9 +464,12 @@ app.get('/api/matches/:id/messages', (req, res) => {
 
 // Отметить переписку прочитанной (открыл чат / увидел новое сообщение).
 app.post('/api/matches/:id/read', (req, res) => {
-  const out = model.markMatchRead(Number(req.params.id), req.user.id);
+  const matchId = Number(req.params.id);
+  const out = model.markMatchRead(matchId, req.user.id);
   if (out === null) return res.status(403).json({ error: 'not your match' });
   res.json(out);
+
+  emitRead(matchId, req.user.id);
 });
 
 // Разматчиться — без жалобы и без блокировки (для этого есть /api/report).
@@ -494,6 +506,33 @@ app.post('/api/messages/:id/reaction', (req, res) => {
   res.json(out);
 
   emitReaction(out.matchId, out.messageId, out.reaction, req.user.id);
+});
+
+const MESSAGE_EDIT_ERRORS = {
+  deleted: 'Сообщение уже удалено',
+  not_editable: 'Это сообщение нельзя редактировать',
+  empty: 'Сообщение не может быть пустым',
+};
+
+// Отредактировать своё сообщение: { text }
+app.patch('/api/messages/:id', (req, res) => {
+  const out = model.editMessage(Number(req.params.id), req.user.id, req.body?.text);
+  if (out === null) return res.status(403).json({ error: 'not your message' });
+  if (out.error) {
+    return res.status(400).json({ error: MESSAGE_EDIT_ERRORS[out.error] || 'Не удалось изменить' });
+  }
+  res.json(out);
+
+  emitMessageEdited(out.matchId, out.id, out.text, out.editedAt, req.user.id);
+});
+
+// Удалить своё сообщение (остаётся заглушка "сообщение удалено" — см. deleteMessage).
+app.delete('/api/messages/:id', (req, res) => {
+  const out = model.deleteMessage(Number(req.params.id), req.user.id);
+  if (out === null) return res.status(403).json({ error: 'not your message' });
+  res.json(out);
+
+  emitMessageDeleted(out.matchId, out.id, req.user.id);
 });
 
 // Загрузка фото: { dataUrl: "data:image/jpeg;base64,..." } -> { url }
@@ -544,6 +583,7 @@ app.use((err, req, res, next) => {
 
 bootstrapEnvAdmins(); // проставить is_admin тем, кто в ADMIN_IDS
 startExpiryNotifier(); // напоминание "Premium скоро закончится"
+startBackupSchedule(); // периодический снимок базы
 
 const PORT = Number(process.env.PORT) || 3001;
 const server = app.listen(PORT, () => {

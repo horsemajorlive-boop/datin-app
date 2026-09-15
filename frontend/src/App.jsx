@@ -223,6 +223,39 @@ export default function App() {
         loadMatches();
         loadIncoming(); // этот человек больше не «ждёт ответа»
       }),
+
+      // собеседник прочитал переписку — подтянуть partnerReadAt для "Прочитано"
+      onSocket('read', () => loadMatches()),
+
+      // собеседник отредактировал своё сообщение
+      onSocket('messageEdited', ({ matchId, messageId, text, editedAt }) => {
+        setMessages((prev) =>
+          prev[matchId]
+            ? {
+                ...prev,
+                [matchId]: prev[matchId].map((m) =>
+                  m.id === messageId ? { ...m, text, editedAt } : m
+                ),
+              }
+            : prev
+        );
+      }),
+
+      // собеседник удалил своё сообщение
+      onSocket('messageDeleted', ({ matchId, messageId }) => {
+        setMessages((prev) =>
+          prev[matchId]
+            ? {
+                ...prev,
+                [matchId]: prev[matchId].map((m) =>
+                  m.id === messageId
+                    ? { ...m, deleted: true, text: null, photo: null, reaction: null }
+                    : m
+                ),
+              }
+            : prev
+        );
+      }),
     ];
 
     return () => offs.forEach((off) => off());
@@ -348,6 +381,32 @@ export default function App() {
     }));
   }
 
+  async function handleEditMessage(messageId, text) {
+    const matchId = activeChatId;
+    const res = await api.patch(`/messages/${messageId}`, { text });
+    setMessages((prev) => ({
+      ...prev,
+      [matchId]: (prev[matchId] || []).map((m) =>
+        m.id === messageId ? { ...m, text: res.text, editedAt: res.editedAt } : m
+      ),
+    }));
+    loadMatches(); // сообщение могло быть последним в превью списка
+  }
+
+  async function handleDeleteMessage(messageId) {
+    const matchId = activeChatId;
+    await api.del(`/messages/${messageId}`);
+    setMessages((prev) => ({
+      ...prev,
+      [matchId]: (prev[matchId] || []).map((m) =>
+        m.id === messageId
+          ? { ...m, deleted: true, text: null, photo: null, reaction: null }
+          : m
+      ),
+    }));
+    loadMatches(); // если удалённое было последним в превью — обновить его
+  }
+
   // Пользователь печатает — сообщаем собеседнику (не чаще раза в 2 сек).
   const lastTypingSent = useRef(0);
   function handleTyping(kind = 'typing') {
@@ -359,11 +418,13 @@ export default function App() {
     }
   }
 
-  // Свежая анкета собеседника открытого чата (из matches — там обновляется presence).
-  const activeChat = useMemo(
-    () => matches.find((m) => m.matchId === activeChatId)?.profile || null,
+  // Открытый мэтч целиком (из matches — там обновляется presence и partnerReadAt).
+  const activeMatch = useMemo(
+    () => matches.find((m) => m.matchId === activeChatId) || null,
     [matches, activeChatId]
   );
+  // Свежая анкета собеседника открытого чата.
+  const activeChat = activeMatch?.profile || null;
 
   // Всего непрочитанных сообщений — для бейджа на вкладке «Чат».
   const totalUnread = useMemo(
@@ -494,10 +555,13 @@ export default function App() {
             myProfile={me}
             activeChat={activeChat}
             activeChatId={activeChatId}
+            partnerReadAt={activeMatch?.partnerReadAt}
             onSelectChat={setActiveChatId}
             onBrowse={() => setTab('deck')}
             onSend={handleSend}
             onReact={handleReact}
+            onEditMessage={handleEditMessage}
+            onDeleteMessage={handleDeleteMessage}
             onTyping={handleTyping}
             onLeftChat={handleLeftChat}
           />

@@ -148,4 +148,14 @@ try {
   /* колонка уже существует — ок */
 }
 
+// Редактирование и удаление своих сообщений в чате.
+for (const col of ['edited_at', 'deleted_at']) {
+  try {
+    db.exec(`ALTER TABLE messages ADD COLUMN ${col} INTEGER`);
+    console.log(`[db] миграция: добавлена колонка messages.${col}`);
+  } catch {
+    /* колонка уже существует — ок */
+  }
+}
+
 console.log('[db] готова:', DB_PATH);

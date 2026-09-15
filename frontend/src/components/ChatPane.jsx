@@ -16,6 +16,10 @@ import {
   IconSend,
   IconMore,
   IconChevronLeft,
+  IconEdit,
+  IconTrash,
+  IconX,
+  IconCheck,
 } from './icons';
 
 // Правая часть вкладки "Чат" — сама переписка.
@@ -23,11 +27,15 @@ import {
 // Props:
 //   match     — анкета собеседника (+ online, lastSeen, gender)
 //   matchId   — id мэтча (для жалобы/разматчивания)
-//   messages  — массив сообщений: [{ id, from, ts, type, text?, photo?, reaction? }]
+//   messages  — массив сообщений: [{ id, from, ts, type, text?, photo?, reaction?, editedAt?, deleted? }]
 //   myProfile — своя анкета (нужна помощнику для общих интересов)
 //   activity  — что делает собеседник сейчас: 'typing' | 'emoji' | 'photo' | undefined
+//   partnerReadAt — до какого момента собеседник прочитал чат (для "Прочитано"
+//                   под своим последним сообщением)
 //   onSend    — отправить сообщение: onSend({ type, text?, photo? })
 //   onReact   — поставить/снять реакцию: onReact(messageId, emoji)
+//   onEditMessage   — отредактировать своё сообщение: onEditMessage(messageId, text)
+//   onDeleteMessage — удалить своё сообщение: onDeleteMessage(messageId)
 //   onTyping  — сообщить собеседнику "я печатаю": onTyping(kind)
 //   onLeftChat — вызывается и после жалобы/блокировки, и после разматчивания —
 //                родителю в обоих случаях нужно закрыть чат и обновить списки
@@ -58,9 +66,12 @@ export default function ChatPane({
   messages,
   myProfile,
   activity,
+  partnerReadAt,
   onBack,
   onSend,
   onReact,
+  onEditMessage,
+  onDeleteMessage,
   onTyping,
   onLeftChat,
 }) {
@@ -72,7 +83,8 @@ export default function ChatPane({
   const [showReport, setShowReport] = useState(false);
   const [showUnmatch, setShowUnmatch] = useState(false);
   const [unmatching, setUnmatching] = useState(false);
-  const [pickerFor, setPickerFor] = useState(null); // id сообщения с открытым выбором реакции
+  const [pickerFor, setPickerFor] = useState(null); // id сообщения с открытым меню (реакции/правка)
+  const [editingId, setEditingId] = useState(null); // id сообщения, которое сейчас редактируем
   const [, forceTick] = useState(0); // чтобы "был в сети N назад" обновлялся сам
   const bodyRef = useRef(null);
   const fileRef = useRef(null);
@@ -98,10 +110,35 @@ export default function ChatPane({
     e.preventDefault();
     const value = text.trim();
     if (!value) return;
+    if (editingId != null) {
+      onEditMessage(editingId, value);
+      setEditingId(null);
+      setText('');
+      return;
+    }
     // если в сообщении нет букв/цифр — считаем его «эмодзи-сообщением» (крупнее)
     onSend({ type: hasWords(value) ? 'text' : 'emoji', text: value });
     setText('');
     setShowEmoji(false);
+  }
+
+  function startEdit(m) {
+    setEditingId(m.id);
+    setText(m.text || '');
+    setPickerFor(null);
+    setShowPlanner(false);
+    setShowEmoji(false);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setText('');
+  }
+
+  function handleDelete(m) {
+    setPickerFor(null);
+    if (editingId === m.id) cancelEdit();
+    onDeleteMessage(m.id);
   }
 
   async function confirmUnmatch() {
@@ -278,34 +315,48 @@ export default function ChatPane({
             </p>
           </div>
         ) : (
-          messages.map((m) => (
-            <div
-              key={m.id}
-              className={
-                'chat__msg ' +
-                (m.from === 'me' ? 'chat__msg--me' : 'chat__msg--them') +
-                (m.type && m.type !== 'text' ? ' chat__msg--bare' : '') +
-                (pickerFor === m.id ? ' is-picking' : '')
-              }
-              onClick={() =>
-                setPickerFor((cur) => (cur === m.id ? null : m.id))
-              }
-            >
-              {m.type === 'photo' ? (
-                <img className="chat__photo" src={m.photo} alt="фото" />
-              ) : (
-                <span
-                  className={m.type === 'emoji' ? 'chat__bigemoji' : 'chat__text'}
-                >
-                  {m.text}
+          messages.map((m, i) => {
+            const isLastMine = m.from === 'me' && i === messages.length - 1;
+            const isRead = isLastMine && !!partnerReadAt && m.ts <= partnerReadAt;
+            return (
+              <div
+                key={m.id}
+                className={
+                  'chat__msg ' +
+                  (m.from === 'me' ? 'chat__msg--me' : 'chat__msg--them') +
+                  (m.type && m.type !== 'text' && !m.deleted ? ' chat__msg--bare' : '') +
+                  (pickerFor === m.id ? ' is-picking' : '') +
+                  (m.deleted ? ' chat__msg--deleted' : '')
+                }
+                onClick={() =>
+                  !m.deleted &&
+                  setPickerFor((cur) => (cur === m.id ? null : m.id))
+                }
+              >
+                {m.deleted ? (
+                  <span className="chat__text chat__text--deleted">
+                    Сообщение удалено
+                  </span>
+                ) : m.type === 'photo' ? (
+                  <img className="chat__photo" src={m.photo} alt="фото" />
+                ) : (
+                  <span
+                    className={m.type === 'emoji' ? 'chat__bigemoji' : 'chat__text'}
+                  >
+                    {m.text}
+                  </span>
+                )}
+                <span className="chat__time">
+                  {formatTime(m.ts)}
+                  {m.editedAt && !m.deleted && ' · изменено'}
+                  {isRead && ' · Прочитано'}
                 </span>
-              )}
-              <span className="chat__time">{formatTime(m.ts)}</span>
-              {m.reaction && (
-                <span className="chat__reaction">{m.reaction}</span>
-              )}
-            </div>
-          ))
+                {m.reaction && !m.deleted && (
+                  <span className="chat__reaction">{m.reaction}</span>
+                )}
+              </div>
+            );
+          })
         )}
 
         {/* Индикатор "печатает" в ленте */}
@@ -318,6 +369,21 @@ export default function ChatPane({
         )}
       </div>
 
+      {editingId != null && (
+        <div className="chat__editbar">
+          <IconEdit />
+          <span>Редактирование сообщения</span>
+          <button
+            type="button"
+            className="chat__editbar-cancel"
+            onClick={cancelEdit}
+            aria-label="Отменить редактирование"
+          >
+            <IconX />
+          </button>
+        </div>
+      )}
+
       {showPlanner ? (
         <DatePlanner
           onCancel={() => setShowPlanner(false)}
@@ -329,6 +395,7 @@ export default function ChatPane({
       ) : showEmoji ? (
         <EmojiPicker onPick={(emoji) => setText((t) => t + emoji)} />
       ) : (
+        !editingId &&
         showWingman && <WingmanBar suggestions={suggestions} onPick={setText} />
       )}
 
@@ -368,9 +435,9 @@ export default function ChatPane({
           className="chat__send"
           type="submit"
           disabled={!text.trim()}
-          aria-label="Отправить"
+          aria-label={editingId != null ? 'Сохранить' : 'Отправить'}
         >
-          <IconSend />
+          {editingId != null ? <IconCheck /> : <IconSend />}
         </button>
         <input
           ref={fileRef}
@@ -381,26 +448,52 @@ export default function ChatPane({
         />
       </form>
 
-      {pickerFor && (
-        <>
-          <div className="chat__pickerbg" onClick={() => setPickerFor(null)} />
-          <div className="chat__picker">
-            {REACTIONS.map((emoji) => (
-              <button
-                key={emoji}
-                type="button"
-                className="chat__pickbtn"
-                onClick={() => {
-                  onReact(pickerFor, emoji);
-                  setPickerFor(null);
-                }}
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+      {pickerFor &&
+        (() => {
+          const pickedMsg = messages.find((m) => m.id === pickerFor);
+          if (!pickedMsg) return null;
+          const isMine = pickedMsg.from === 'me';
+          return (
+            <>
+              <div className="chat__pickerbg" onClick={() => setPickerFor(null)} />
+              <div className="chat__picker">
+                {REACTIONS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    className="chat__pickbtn"
+                    onClick={() => {
+                      onReact(pickerFor, emoji);
+                      setPickerFor(null);
+                    }}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+              {isMine && (
+                <div className="chat__picker chat__picker--actions">
+                  {pickedMsg.type === 'text' && (
+                    <button
+                      type="button"
+                      className="chat__pickbtn chat__pickbtn--action"
+                      onClick={() => startEdit(pickedMsg)}
+                    >
+                      <IconEdit /> Изменить
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="chat__pickbtn chat__pickbtn--action chat__pickbtn--danger"
+                    onClick={() => handleDelete(pickedMsg)}
+                  >
+                    <IconTrash /> Удалить
+                  </button>
+                </div>
+              )}
+            </>
+          );
+        })()}
     </div>
   );
 }

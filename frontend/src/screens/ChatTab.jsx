@@ -12,9 +12,10 @@ import ChatPane from '../components/ChatPane';
 //   myProfile    — своя анкета (для ИИ-помощника)
 //   activeChat   — анкета выбранного собеседника (или null)
 //   activeChatId — matchId выбранного чата (или null) — прокидывается в ChatPane как matchId
+//   partnerReadAt — до какого момента собеседник прочитал чат (для "Прочитано")
 //   onSelectChat — выбрать чат / вернуться к списку: onSelectChat(matchId | null)
 //   onBrowse     — уйти на вкладку «Поиск» (кнопка в пустом состоянии)
-//   onSend, onReact, onTyping, onLeftChat — проброс в ChatPane
+//   onSend, onReact, onEditMessage, onDeleteMessage, onTyping, onLeftChat — проброс в ChatPane
 
 export default function ChatTab({
   matches,
@@ -23,10 +24,13 @@ export default function ChatTab({
   myProfile,
   activeChat,
   activeChatId,
+  partnerReadAt,
   onSelectChat,
   onBrowse,
   onSend,
   onReact,
+  onEditMessage,
+  onDeleteMessage,
   onTyping,
   onLeftChat,
 }) {
@@ -40,9 +44,12 @@ export default function ChatTab({
           messages={messages[activeChatId] || []}
           activity={activities[activeChatId]}
           myProfile={myProfile}
+          partnerReadAt={partnerReadAt}
           onBack={() => onSelectChat(null)}
           onSend={onSend}
           onReact={onReact}
+          onEditMessage={onEditMessage}
+          onDeleteMessage={onDeleteMessage}
           onTyping={onTyping}
           onLeftChat={onLeftChat}
         />
