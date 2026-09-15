@@ -1,8 +1,11 @@
 import { useRef, useState } from 'react';
-import { uploadPhotos } from '../lib/photos';
+import { uploadDataUrls } from '../lib/photos';
+import PhotoEditor from './PhotoEditor';
 
 // Сетка фото с добавлением из галереи и удалением.
 // Управляемый компонент: список фото и его изменения живут у родителя.
+// Перед загрузкой каждое новое фото проходит через редактор (кадр 4:5,
+// перемещение, зум, поворот) — так фото не обрезается "случайно".
 //
 // Props:
 //   photos   — массив url-ов
@@ -10,20 +13,33 @@ import { uploadPhotos } from '../lib/photos';
 //   max      — сколько фото максимум (по умолчанию 4)
 
 export default function PhotoGrid({ photos, onChange, max = 4 }) {
+  const [queue, setQueue] = useState([]); // File[] — ждут редактирования
+  const [editing, setEditing] = useState(null); // текущий File в редакторе
+  const [edited, setEdited] = useState([]); // dataUrl[] — уже отредактированы
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const inputRef = useRef(null);
 
-  async function handleSelected(event) {
+  function handleSelected(event) {
     const files = Array.from(event.target.files || []);
     event.target.value = ''; // сброс: иначе повторный выбор того же файла молчит
     if (files.length === 0) return;
 
     setError('');
+    const room = max - photos.length; // сколько ещё влезет
+    const picked = files.slice(0, room);
+    setEdited([]);
+    setQueue(picked.slice(1));
+    setEditing(picked[0] || null);
+  }
+
+  async function finishQueue(allDataUrls) {
+    setEditing(null);
+    setQueue([]);
+    if (allDataUrls.length === 0) return;
     setUploading(true);
     try {
-      const room = max - photos.length; // сколько ещё влезет
-      const urls = await uploadPhotos(files.slice(0, room));
+      const urls = await uploadDataUrls(allDataUrls);
       onChange([...photos, ...urls]);
     } catch (err) {
       setError(err.message || 'Не удалось загрузить фото');
@@ -32,8 +48,38 @@ export default function PhotoGrid({ photos, onChange, max = 4 }) {
     }
   }
 
+  function handleEditConfirm(dataUrl) {
+    const next = [...edited, dataUrl];
+    if (queue.length > 0) {
+      setEdited(next);
+      setEditing(queue[0]);
+      setQueue(queue.slice(1));
+    } else {
+      setEdited([]);
+      finishQueue(next);
+    }
+  }
+
+  function handleEditCancel() {
+    // Пропускаем текущее фото, переходим к следующему в очереди (если есть).
+    if (queue.length > 0) {
+      setEditing(queue[0]);
+      setQueue(queue.slice(1));
+    } else {
+      setEditing(null);
+      finishQueue(edited);
+      setEdited([]);
+    }
+  }
+
   function removeAt(index) {
     onChange(photos.filter((_, i) => i !== index));
+  }
+
+  if (editing) {
+    return (
+      <PhotoEditor file={editing} onConfirm={handleEditConfirm} onCancel={handleEditCancel} />
+    );
   }
 
   return (

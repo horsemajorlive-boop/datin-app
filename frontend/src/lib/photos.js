@@ -1,14 +1,14 @@
-// Загрузка фото анкеты: сжать на клиенте -> отправить на сервер -> получить ссылку.
-// Используется и в редакторе анкеты, и на экране обязательного входа.
+// Загрузка фото анкеты: PhotoGrid прогоняет каждое фото через PhotoEditor
+// (кадрирование до нужного размера), а этот модуль просто отправляет
+// готовые dataURL на сервер и возвращает ссылки.
 
-import { fileToCompressedDataUrl } from './image';
 import { api } from '../api';
 
-// files — массив File из <input type="file">. Возвращает массив url-ов ('/uploads/..').
-export async function uploadPhotos(files) {
+// dataUrls — уже готовые строки "data:image/jpeg;base64,..." (из PhotoEditor).
+// Возвращает массив url-ов ('/uploads/..').
+export async function uploadDataUrls(dataUrls) {
   return Promise.all(
-    files.map(async (file) => {
-      const dataUrl = await fileToCompressedDataUrl(file);
+    dataUrls.map(async (dataUrl) => {
       const res = await api.post('/upload', { dataUrl });
       return res.url;
     })
