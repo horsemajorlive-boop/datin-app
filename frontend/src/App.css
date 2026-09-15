@@ -19,6 +19,65 @@
   position: relative;
 }
 
+/* ================= Заставка при запуске ================= */
+
+.splash {
+  max-width: 480px;
+  margin: 0 auto;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: var(--bg);
+  animation: splash-in 700ms ease-out;
+}
+
+.splash--out {
+  animation: splash-out 420ms ease-in forwards;
+}
+
+.splash__mark {
+  display: block;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.35));
+}
+
+.splash__word {
+  font-family: 'Italiana', var(--font-display), Georgia, serif;
+  font-size: 34px;
+  letter-spacing: 0.12em;
+  color: var(--text);
+  padding-left: 0.12em; /* компенсируем letter-spacing справа */
+}
+
+@keyframes splash-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes splash-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash,
+  .splash--out {
+    animation: none;
+  }
+}
+
 /* ================= Экраны ================= */
 
 .screen {
@@ -50,9 +109,9 @@
 /* ================= Единая шапка экрана-вкладки ================= */
 
 .scrhead {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   min-height: 40px;
   padding: 2px 0 16px;
@@ -68,6 +127,7 @@
 }
 
 .scrhead__title {
+  justify-self: start;
   margin: 0;
   font-family: var(--font-body);
   font-size: 24px;
@@ -77,6 +137,9 @@
   align-items: baseline;
   gap: 8px;
   min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .scrhead__count {
@@ -85,7 +148,31 @@
   color: var(--faint);
 }
 
+.scrhead__mark {
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.scrhead__mark svg {
+  display: block;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+  flex-shrink: 0;
+}
+
+.scrhead__markword {
+  font-family: 'Italiana', var(--font-display), Georgia, serif;
+  font-size: 17px;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  padding-left: 0.08em; /* компенсируем letter-spacing справа */
+  white-space: nowrap;
+}
+
 .scrhead__actions {
+  justify-self: end;
   display: flex;
   align-items: center;
   gap: 8px;

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import BottomNav from './components/BottomNav';
+import Splash from './components/Splash';
 import DeckScreen from './screens/DeckScreen';
 import LikesScreen from './screens/LikesScreen';
 import MyProfileScreen from './screens/MyProfileScreen';
@@ -27,6 +28,21 @@ import './App.css';
 export default function App() {
   const [tab, setTab] = useState('deck');
   const [adminMode, setAdminMode] = useState(false); // секретный вход с AdminGate
+
+  // Заставка при запуске: логотип держим на экране минимум SPLASH_MS,
+  // затем полсекунды угасает, и только после этого показываем приветствие/приложение.
+  const [splashDone, setSplashDone] = useState(false);
+  const [splashHidden, setSplashHidden] = useState(false);
+  useEffect(() => {
+    const SPLASH_MS = 1300;
+    const FADE_MS = 420;
+    const doneTimer = setTimeout(() => setSplashDone(true), SPLASH_MS);
+    const hideTimer = setTimeout(() => setSplashHidden(true), SPLASH_MS + FADE_MS);
+    return () => {
+      clearTimeout(doneTimer);
+      clearTimeout(hideTimer);
+    };
+  }, []);
 
   const [me, setMe] = useState(null); // null = ещё грузится
   const [feed, setFeed] = useState([]);
@@ -399,6 +415,10 @@ export default function App() {
         onOpenSettings={() => setProfileView('settings')}
       />
     );
+  }
+
+  if (!splashHidden) {
+    return <Splash fading={splashDone} />;
   }
 
   // Секретный жест на приветственном экране — отдельный режим без знакомств.
