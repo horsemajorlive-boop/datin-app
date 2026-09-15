@@ -24,6 +24,13 @@ import {
 
 // Правая часть вкладки "Чат" — сама переписка.
 //
+// Меню действий у сообщения (реакции + для своих — изменить/удалить)
+// открывается НЕ обычным тапом — так его слишком легко случайно задеть
+// и слишком легко не заметить: наведением мыши на кнопку "⋯" (десктоп),
+// долгим нажатием прямо по сообщению (мобильные) или правым кликом.
+// Само меню подвешивается рядом с конкретным сообщением (getBoundingClientRect
+// в openMenu), а не в фиксированном месте экрана.
+//
 // Props:
 //   match     — анкета собеседника (+ online, lastSeen, gender)
 //   matchId   — id мэтча (для жалобы/разматчивания)
@@ -84,10 +91,13 @@ export default function ChatPane({
   const [showUnmatch, setShowUnmatch] = useState(false);
   const [unmatching, setUnmatching] = useState(false);
   const [pickerFor, setPickerFor] = useState(null); // id сообщения с открытым меню (реакции/правка)
+  const [pickerPos, setPickerPos] = useState(null); // { top, left, openUp } — куда его подвесить
   const [editingId, setEditingId] = useState(null); // id сообщения, которое сейчас редактируем
   const [, forceTick] = useState(0); // чтобы "был в сети N назад" обновлялся сам
   const bodyRef = useRef(null);
   const fileRef = useRef(null);
+  const msgRefs = useRef({}); // id сообщения -> DOM-узел, чтобы подвесить меню рядом
+  const pressTimer = useRef(null); // таймер долгого нажатия (мобильные)
 
   // Прокрутка ленты вниз при новом сообщении или смене статуса.
   useEffect(() => {
@@ -122,10 +132,47 @@ export default function ChatPane({
     setShowEmoji(false);
   }
 
+  // Меню действий (реакции + изменить/удалить) — раньше висело в фиксированном
+  // месте вверху экрана независимо от того, какое сообщение тронули, из-за
+  // чего в длинной переписке казалось, что тап вообще ничего не делает.
+  // Теперь подвешиваем его прямо у нужного сообщения (через getBoundingClientRect).
+  function openMenu(m) {
+    if (m.deleted) return;
+    clearTimeout(pressTimer.current);
+    const el = msgRefs.current[m.id];
+    if (el) {
+      const r = el.getBoundingClientRect();
+      const openUp = r.top > 180; // сверху достаточно места — открываем вверх
+      setPickerPos({
+        left: Math.min(Math.max(r.left, 8), window.innerWidth - 8),
+        top: openUp ? r.top : r.bottom,
+        openUp,
+      });
+    } else {
+      setPickerPos(null);
+    }
+    setPickerFor(m.id);
+  }
+
+  function closeMenu() {
+    setPickerFor(null);
+    setPickerPos(null);
+  }
+
+  // Долгое нажатие (мобильные) — держим 480мс, отменяем при уходе/движении пальца.
+  function handlePressStart(m) {
+    if (m.deleted) return;
+    clearTimeout(pressTimer.current);
+    pressTimer.current = setTimeout(() => openMenu(m), 480);
+  }
+  function handlePressEnd() {
+    clearTimeout(pressTimer.current);
+  }
+
   function startEdit(m) {
     setEditingId(m.id);
     setText(m.text || '');
-    setPickerFor(null);
+    closeMenu();
     setShowPlanner(false);
     setShowEmoji(false);
   }
@@ -136,7 +183,7 @@ export default function ChatPane({
   }
 
   function handleDelete(m) {
-    setPickerFor(null);
+    closeMenu();
     if (editingId === m.id) cancelEdit();
     onDeleteMessage(m.id);
   }
@@ -306,7 +353,11 @@ export default function ChatPane({
         </div>
       )}
 
-      <div className="chat__body" ref={bodyRef}>
+      <div
+        className="chat__body"
+        ref={bodyRef}
+        onScroll={() => pickerFor && closeMenu()}
+      >
         {messages.length === 0 && !activity ? (
           <div className="chat__empty">
             <p className="chat__empty-title">Вы понравились друг другу</p>
@@ -321,6 +372,10 @@ export default function ChatPane({
             return (
               <div
                 key={m.id}
+                ref={(el) => {
+                  if (el) msgRefs.current[m.id] = el;
+                  else delete msgRefs.current[m.id];
+                }}
                 className={
                   'chat__msg ' +
                   (m.from === 'me' ? 'chat__msg--me' : 'chat__msg--them') +
@@ -328,10 +383,15 @@ export default function ChatPane({
                   (pickerFor === m.id ? ' is-picking' : '') +
                   (m.deleted ? ' chat__msg--deleted' : '')
                 }
-                onClick={() =>
-                  !m.deleted &&
-                  setPickerFor((cur) => (cur === m.id ? null : m.id))
-                }
+                onContextMenu={(e) => {
+                  if (m.deleted) return;
+                  e.preventDefault();
+                  openMenu(m);
+                }}
+                onTouchStart={() => handlePressStart(m)}
+                onTouchEnd={handlePressEnd}
+                onTouchMove={handlePressEnd}
+                onTouchCancel={handlePressEnd}
               >
                 {m.deleted ? (
                   <span className="chat__text chat__text--deleted">
@@ -353,6 +413,21 @@ export default function ChatPane({
                 </span>
                 {m.reaction && !m.deleted && (
                   <span className="chat__reaction">{m.reaction}</span>
+                )}
+                {/* Наведение (десктоп) или долгое нажатие/тап по этой кнопке
+                    (мобильные) открывают меню реакций и правки прямо здесь. */}
+                {!m.deleted && (
+                  <button
+                    type="button"
+                    className="chat__msgmenu-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openMenu(m);
+                    }}
+                    aria-label="Действия с сообщением"
+                  >
+                    <IconMore />
+                  </button>
                 )}
               </div>
             );
@@ -449,48 +524,59 @@ export default function ChatPane({
       </form>
 
       {pickerFor &&
+        pickerPos &&
         (() => {
           const pickedMsg = messages.find((m) => m.id === pickerFor);
           if (!pickedMsg) return null;
           const isMine = pickedMsg.from === 'me';
+          const style = {
+            left: pickerPos.left,
+            ...(pickerPos.openUp
+              ? { bottom: window.innerHeight - pickerPos.top + 8 }
+              : { top: pickerPos.top + 8 }),
+          };
           return (
             <>
-              <div className="chat__pickerbg" onClick={() => setPickerFor(null)} />
-              <div className="chat__picker">
-                {REACTIONS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    className="chat__pickbtn"
-                    onClick={() => {
-                      onReact(pickerFor, emoji);
-                      setPickerFor(null);
-                    }}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-              {isMine && (
-                <div className="chat__picker chat__picker--actions">
-                  {pickedMsg.type === 'text' && (
+              <div className="chat__pickerbg" onClick={closeMenu} />
+              <div className="chat__ctxmenu" style={style}>
+                <div
+                  className={`chat__ctxmenu-reactions ${isMine ? 'has-actions' : ''}`}
+                >
+                  {REACTIONS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      className="chat__pickbtn"
+                      onClick={() => {
+                        onReact(pickerFor, emoji);
+                        closeMenu();
+                      }}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+                {isMine && (
+                  <div className="chat__ctxmenu-actions">
+                    {pickedMsg.type === 'text' && (
+                      <button
+                        type="button"
+                        className="chat__ctxmenu-item"
+                        onClick={() => startEdit(pickedMsg)}
+                      >
+                        <IconEdit /> Изменить
+                      </button>
+                    )}
                     <button
                       type="button"
-                      className="chat__pickbtn chat__pickbtn--action"
-                      onClick={() => startEdit(pickedMsg)}
+                      className="chat__ctxmenu-item chat__ctxmenu-item--danger"
+                      onClick={() => handleDelete(pickedMsg)}
                     >
-                      <IconEdit /> Изменить
+                      <IconTrash /> Удалить
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    className="chat__pickbtn chat__pickbtn--action chat__pickbtn--danger"
-                    onClick={() => handleDelete(pickedMsg)}
-                  >
-                    <IconTrash /> Удалить
-                  </button>
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </>
           );
         })()}
