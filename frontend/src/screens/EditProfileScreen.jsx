@@ -244,6 +244,11 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
             onChangeValue={(v) => updateField('vk', v)}
             onChangeShown={(v) => updateField('showVk', v)}
           />
+          <p className="social-note">
+            Переключатель влияет только на карточку в поиске. Отправить
+            соцсети конкретному собеседнику можно и отдельно — прямо в
+            чате, кнопкой «@» рядом с сообщениями.
+          </p>
         </Section>
 
         <Section title="Цели знакомства">

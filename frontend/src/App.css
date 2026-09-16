@@ -2602,6 +2602,15 @@
   align-self: flex-start;
 }
 
+.social-note {
+  margin: 4px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
 /* Верхняя панель редактирования анкеты — заголовок + "Сохранить" рядом,
    чтобы не листать форму до конца ради той же кнопки внизу. */
 .edit-top-bar {
@@ -4076,6 +4085,62 @@
 
 .chat__menu button:active {
   background: var(--fill);
+}
+
+.chat__menu-empty {
+  margin: 0;
+  padding: 11px 14px;
+  max-width: 220px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+/* Кнопка "@" — поделиться соцсетями в чате. */
+.chat__at {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Разовая подсказка про кнопку "@" (см. showSocialHint в ChatPane) —
+   висит под кнопкой со стрелочкой вверх и сама пропадает через несколько секунд. */
+.chat__social-hint {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 32;
+  width: 200px;
+  padding: 10px 12px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12.5px;
+  line-height: 1.4;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  animation: react-pop-fade 0.2s ease;
+}
+
+.chat__social-hint-arrow {
+  position: absolute;
+  top: -5px;
+  right: 10px;
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  transform: rotate(45deg);
+}
+
+@keyframes react-pop-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Список заблокированных в настройках */

@@ -87,6 +87,8 @@ export default function ChatPane({
   const [showPlanner, setShowPlanner] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showSocialMenu, setShowSocialMenu] = useState(false);
+  const [showSocialHint, setShowSocialHint] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [showUnmatch, setShowUnmatch] = useState(false);
   const [unmatching, setUnmatching] = useState(false);
@@ -109,6 +111,26 @@ export default function ChatPane({
   useEffect(() => {
     const iv = setInterval(() => forceTick((n) => n + 1), 30000);
     return () => clearInterval(iv);
+  }, []);
+
+  // Подсказка про кнопку "@" — один раз в жизни приложения (не при каждом
+  // входе в чат, иначе быстро надоест), исчезает сама через несколько секунд.
+  useEffect(() => {
+    let seen = false;
+    try {
+      seen = localStorage.getItem('chat-social-hint-seen') === '1';
+    } catch {
+      /* приватный режим и т.п. — просто не покажем подсказку */
+    }
+    if (seen) return;
+    setShowSocialHint(true);
+    const timer = setTimeout(() => setShowSocialHint(false), 5000);
+    try {
+      localStorage.setItem('chat-social-hint-seen', '1');
+    } catch {
+      /* не критично */
+    }
+    return () => clearTimeout(timer);
   }, []);
 
   const suggestions = useMemo(
@@ -192,9 +214,11 @@ export default function ChatPane({
   // карточке анкеты (там это по желанию скрыто/показано всем в поиске,
   // здесь — осознанная отправка конкретному собеседнику).
   function sendSocial(text) {
-    setShowMenu(false);
+    setShowSocialMenu(false);
     onSend({ type: 'text', text });
   }
+
+  const hasAnySocial = !!(myProfile?.telegram || myProfile?.instagram || myProfile?.vk);
 
   async function confirmUnmatch() {
     setUnmatching(true);
@@ -261,6 +285,70 @@ export default function ChatPane({
         </div>
 
         <div className="chat__tools">
+          <div className="chat__menu-wrap">
+            <button
+              type="button"
+              className={`chat__tool ${showSocialMenu ? 'is-on' : ''}`}
+              onClick={() => {
+                setShowSocialMenu((v) => !v);
+                setShowSocialHint(false); // не загораживает только что открытое меню
+              }}
+              aria-label="Поделиться соцсетями"
+            >
+              <span className="chat__at">@</span>
+            </button>
+
+            {showSocialHint && (
+              <div className="chat__social-hint">
+                <span className="chat__social-hint-arrow" />
+                Здесь можно поделиться своим Telegram, Instagram или VK
+              </div>
+            )}
+
+            {showSocialMenu && (
+              <>
+                <div
+                  className="chat__menu-bg"
+                  onClick={() => setShowSocialMenu(false)}
+                />
+                <div className="chat__menu">
+                  {hasAnySocial ? (
+                    <>
+                      {myProfile?.telegram && (
+                        <button
+                          type="button"
+                          onClick={() => sendSocial(`Мой Telegram: @${myProfile.telegram}`)}
+                        >
+                          Отправить ник в Telegram
+                        </button>
+                      )}
+                      {myProfile?.instagram && (
+                        <button
+                          type="button"
+                          onClick={() => sendSocial(`Мой Instagram: @${myProfile.instagram}`)}
+                        >
+                          Отправить свою Инсту
+                        </button>
+                      )}
+                      {myProfile?.vk && (
+                        <button
+                          type="button"
+                          onClick={() => sendSocial(`Мой профиль VK: ${myProfile.vk}`)}
+                        >
+                          Отправить свой профиль в ВК
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <p className="chat__menu-empty">
+                      Добавьте соцсети в редактировании анкеты
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
           <button
             type="button"
             className={`chat__tool ${showPlanner ? 'is-on' : ''}`}
@@ -296,30 +384,6 @@ export default function ChatPane({
                   onClick={() => setShowMenu(false)}
                 />
                 <div className="chat__menu">
-                  {myProfile?.telegram && (
-                    <button
-                      type="button"
-                      onClick={() => sendSocial(`Мой Telegram: @${myProfile.telegram}`)}
-                    >
-                      Отправить ник в Telegram
-                    </button>
-                  )}
-                  {myProfile?.instagram && (
-                    <button
-                      type="button"
-                      onClick={() => sendSocial(`Мой Instagram: @${myProfile.instagram}`)}
-                    >
-                      Отправить свою Инсту
-                    </button>
-                  )}
-                  {myProfile?.vk && (
-                    <button
-                      type="button"
-                      onClick={() => sendSocial(`Мой профиль VK: ${myProfile.vk}`)}
-                    >
-                      Отправить свой профиль в ВК
-                    </button>
-                  )}
                   <button
                     type="button"
                     onClick={() => {
