@@ -188,6 +188,14 @@ export default function ChatPane({
     onDeleteMessage(m.id);
   }
 
+  // Поделиться своей соцсетью прямо в чат — отдельно от видимости ника в
+  // карточке анкеты (там это по желанию скрыто/показано всем в поиске,
+  // здесь — осознанная отправка конкретному собеседнику).
+  function sendSocial(text) {
+    setShowMenu(false);
+    onSend({ type: 'text', text });
+  }
+
   async function confirmUnmatch() {
     setUnmatching(true);
     try {
@@ -288,6 +296,30 @@ export default function ChatPane({
                   onClick={() => setShowMenu(false)}
                 />
                 <div className="chat__menu">
+                  {myProfile?.telegram && (
+                    <button
+                      type="button"
+                      onClick={() => sendSocial(`Мой Telegram: @${myProfile.telegram}`)}
+                    >
+                      Отправить ник в Telegram
+                    </button>
+                  )}
+                  {myProfile?.instagram && (
+                    <button
+                      type="button"
+                      onClick={() => sendSocial(`Мой Instagram: @${myProfile.instagram}`)}
+                    >
+                      Отправить свою Инсту
+                    </button>
+                  )}
+                  {myProfile?.vk && (
+                    <button
+                      type="button"
+                      onClick={() => sendSocial(`Мой профиль VK: ${myProfile.vk}`)}
+                    >
+                      Отправить свой профиль в ВК
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => {

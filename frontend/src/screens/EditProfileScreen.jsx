@@ -5,10 +5,33 @@ import CityInput from '../components/CityInput';
 import RangeRow from '../components/RangeRow';
 import PhotoGrid from '../components/PhotoGrid';
 import PromptEditor from '../components/PromptEditor';
+import Switch from '../components/Switch';
 import { IconChevronLeft } from '../components/icons';
 import { HOUSING, CAR, EMPLOYMENT } from '../data/lifestyle';
 import { SMOKING, DRINKING, HEIGHT_RANGE, WEIGHT_RANGE } from '../data/health';
 import { GOAL, KIDS } from '../data/goals';
+
+// Ряд "ник + переключатель показа в анкете" для одной соцсети.
+function SocialRow({ label, placeholder, prefix, value, shown, onChangeValue, onChangeShown }) {
+  return (
+    <div className="field social-row">
+      <span>{label}</span>
+      <div className="social-row__input">
+        {prefix && <span className="social-row__prefix">{prefix}</span>}
+        <input
+          value={value ?? ''}
+          onChange={(e) => onChangeValue(e.target.value)}
+          maxLength={200}
+          placeholder={placeholder}
+        />
+        <Switch checked={!!shown} onChange={onChangeShown} />
+      </div>
+      <span className="field__hint">
+        {shown ? 'Видно другим в анкете' : 'Скрыто от других'}
+      </span>
+    </div>
+  );
+}
 
 // Экран редактирования анкеты — форма из сгруппированных секций.
 //
@@ -84,6 +107,12 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
       weight: form.weight ?? null,
       smoking: form.smoking || '',
       drinking: form.drinking || '',
+      telegram: (form.telegram || '').trim(),
+      instagram: (form.instagram || '').trim(),
+      vk: (form.vk || '').trim(),
+      showTelegram: !!form.showTelegram,
+      showInstagram: !!form.showInstagram,
+      showVk: !!form.showVk,
       photos: form.photos,
     });
   }
@@ -93,9 +122,18 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
       <button className="onb__back verify-back" onClick={onCancel} aria-label="Назад">
         <IconChevronLeft />
       </button>
-      <h1 className="screen__title">Редактирование анкеты</h1>
+      <div className="edit-top-bar">
+        <h1 className="screen__title">Редактирование анкеты</h1>
+        <button type="submit" form="edit-profile-form" className="btn-wide edit-top-bar__save">
+          Сохранить
+        </button>
+      </div>
 
-      <form className="form form--sections" onSubmit={handleSubmit}>
+      <form
+        id="edit-profile-form"
+        className="form form--sections"
+        onSubmit={handleSubmit}
+      >
         <Section title={`Фото · до ${MAX_PHOTOS}, первое главное`}>
           <PhotoGrid
             photos={form.photos}
@@ -177,6 +215,35 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
               onChange={(prompts) => updateField('prompts', prompts)}
             />
           </div>
+        </Section>
+
+        <Section title="Соцсети · по желанию">
+          <SocialRow
+            label="Telegram"
+            prefix="@"
+            placeholder="ваш_ник"
+            value={form.telegram}
+            shown={form.showTelegram}
+            onChangeValue={(v) => updateField('telegram', v)}
+            onChangeShown={(v) => updateField('showTelegram', v)}
+          />
+          <SocialRow
+            label="Instagram"
+            prefix="@"
+            placeholder="ваш_ник"
+            value={form.instagram}
+            shown={form.showInstagram}
+            onChangeValue={(v) => updateField('instagram', v)}
+            onChangeShown={(v) => updateField('showInstagram', v)}
+          />
+          <SocialRow
+            label="VK"
+            placeholder="vk.com/ваш_профиль"
+            value={form.vk}
+            shown={form.showVk}
+            onChangeValue={(v) => updateField('vk', v)}
+            onChangeShown={(v) => updateField('showVk', v)}
+          />
         </Section>
 
         <Section title="Цели знакомства">

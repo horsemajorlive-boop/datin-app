@@ -268,3 +268,21 @@ export function IconVerified() {
     </svg>
   );
 }
+
+export function IconTelegram() {
+  return (
+    <svg {...base}>
+      <path d="M22 3L2 11l6 2M22 3l-4 18-8-6M22 3L8 13v6l3-3" />
+    </svg>
+  );
+}
+
+export function IconInstagram() {
+  return (
+    <svg {...base}>
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <path d="M17.5 6.5h.01" />
+    </svg>
+  );
+}

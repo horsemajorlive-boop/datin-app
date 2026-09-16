@@ -158,4 +158,23 @@ for (const col of ['edited_at', 'deleted_at']) {
   }
 }
 
+// Соцсети в анкете (ники Telegram/Instagram, ссылка VK) + отдельный
+// переключатель показа на каждую — по умолчанию выключено (opt-in).
+for (const col of ['telegram', 'instagram', 'vk']) {
+  try {
+    db.exec(`ALTER TABLE profiles ADD COLUMN ${col} TEXT NOT NULL DEFAULT ''`);
+    console.log(`[db] миграция: добавлена колонка profiles.${col}`);
+  } catch {
+    /* колонка уже существует — ок */
+  }
+}
+for (const col of ['show_telegram', 'show_instagram', 'show_vk']) {
+  try {
+    db.exec(`ALTER TABLE profiles ADD COLUMN ${col} INTEGER NOT NULL DEFAULT 0`);
+    console.log(`[db] миграция: добавлена колонка profiles.${col}`);
+  } catch {
+    /* колонка уже существует — ок */
+  }
+}
+
 console.log('[db] готова:', DB_PATH);

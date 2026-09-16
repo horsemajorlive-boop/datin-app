@@ -1132,6 +1132,48 @@
   margin-top: 0;
 }
 
+/* Ссылки на соцсети в развёрнутой анкете ("Подробнее"). */
+.social-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.social-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.social-link svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.social-link__vk {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 800;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+}
+
 /* Блок совместимости по интересам. */
 .sheet__match {
   margin-top: 22px;
@@ -2536,6 +2578,50 @@
   align-self: flex-end;
   font-size: 11px;
   color: var(--muted);
+}
+
+/* Ряд соцсети: префикс (@) + поле + переключатель показа в анкете. */
+.social-row__input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.social-row__input input {
+  flex: 1;
+  min-width: 0;
+}
+
+.social-row__prefix {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.social-row .field__hint {
+  align-self: flex-start;
+}
+
+/* Верхняя панель редактирования анкеты — заголовок + "Сохранить" рядом,
+   чтобы не листать форму до конца ради той же кнопки внизу. */
+.edit-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.edit-top-bar .screen__title {
+  margin-bottom: 0;
+}
+
+.edit-top-bar__save {
+  flex-shrink: 0;
+  width: auto;
+  margin-top: 0;
+  padding: 10px 18px;
+  font-size: 13px;
 }
 
 /* ================= Подсказки анкеты (вместо голого "о себе") ================= */

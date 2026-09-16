@@ -296,6 +296,50 @@ test('blockUser рвёт существующие свайпы и мэтч в о
   assert.equal(model.partnerOf(matchId, a), null);
 });
 
+// ---------- соцсети в анкете ----------
+
+test('себе видно ник и переключатель соцсети независимо от show_*', () => {
+  const me = makeUser({ telegram: '@my_nick', showTelegram: false });
+  const full = model.getFullProfile(me);
+  assert.equal(full.telegram, 'my_nick'); // "@" на сохранении обрезается
+  assert.equal(full.showTelegram, false);
+});
+
+test('другому видно ник соцсети только если владелец включил показ', () => {
+  const hidden = makeUser({ telegram: 'secret', showTelegram: false });
+  const shown = makeUser({ telegram: 'open', showTelegram: true });
+
+  assert.equal(model.getFullProfile(hidden, { forOther: true }).telegram, '');
+  assert.equal(model.getFullProfile(shown, { forOther: true }).telegram, 'open');
+});
+
+test('в ленте (getFeed) соцсети замаскированы так же, как в getFullProfile', () => {
+  const viewer = makeUser();
+  const withHidden = makeUser({ instagram: 'secret', showInstagram: false });
+  const withShown = makeUser({ vk: 'https://vk.com/open', showVk: true });
+
+  const feed = model.getFeed(viewer, { limit: 50 });
+  assert.equal(feed.find((p) => p.id === withHidden)?.instagram, '');
+  assert.equal(feed.find((p) => p.id === withShown)?.vk, 'https://vk.com/open');
+});
+
+test('ник Telegram/Instagram чистится: без "@" и посторонних символов', () => {
+  const me = makeUser({ telegram: '  @Мой Ник!! 123 ', showTelegram: true });
+  // кириллица, пробелы и "!" не входят в разрешённый набор — вырезаются
+  assert.equal(model.getFullProfile(me).telegram, '123');
+});
+
+test('ссылка VK без протокола получает https://, опасная схема обезврежена', () => {
+  const withoutProtocol = makeUser({ vk: 'vk.com/id1' });
+  assert.equal(model.getFullProfile(withoutProtocol).vk, 'https://vk.com/id1');
+
+  const malicious = makeUser({ vk: 'javascript:alert(1)' });
+  assert.equal(
+    model.getFullProfile(malicious).vk,
+    'https://javascript:alert(1)' // не исполняемая схема — просто мусорный адрес
+  );
+});
+
 // ---------- напоминание об истечении Premium ----------
 
 test('getPremiumExpiringSoon находит только тех, кто в окне предупреждения, и не дублирует после отметки', () => {

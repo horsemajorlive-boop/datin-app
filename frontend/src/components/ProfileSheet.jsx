@@ -8,7 +8,7 @@ import VerifiedBadge from './VerifiedBadge';
 import ReportSheet from './ReportSheet';
 import PromptCards from './PromptCards';
 import BioCard from './BioCard';
-import { IconX } from './icons';
+import { IconX, IconTelegram, IconInstagram } from './icons';
 import { useCarousel } from '../lib/useCarousel';
 import { cityWithDistance } from '../lib/location';
 
@@ -36,6 +36,7 @@ export default function ProfileSheet({
   const hasLifestyle =
     profile.housing || profile.car || profile.employment ||
     profile.height || profile.weight || profile.smoking || profile.drinking;
+  const hasSocial = profile.telegram || profile.instagram || profile.vk;
 
   // Совместимость по интересам.
   const theirs = profile.interests || [];
@@ -94,6 +95,50 @@ export default function ProfileSheet({
             <section className="sheet__section">
               <h3>Интересы</h3>
               <InterestChips interests={profile.interests} />
+            </section>
+          )}
+
+          {hasSocial && (
+            <section className="sheet__section">
+              <h3>Соцсети</h3>
+              <div className="social-links">
+                {profile.telegram && (
+                  <a
+                    className="social-link"
+                    href={`https://t.me/${profile.telegram}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <IconTelegram />
+                    Telegram: @{profile.telegram}
+                  </a>
+                )}
+                {profile.instagram && (
+                  <a
+                    className="social-link"
+                    href={`https://instagram.com/${profile.instagram}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <IconInstagram />
+                    Instagram: @{profile.instagram}
+                  </a>
+                )}
+                {profile.vk && /^https?:\/\//i.test(profile.vk) && (
+                  <a
+                    className="social-link"
+                    href={profile.vk}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span className="social-link__vk">VK</span>
+                    Профиль VK
+                  </a>
+                )}
+              </div>
             </section>
           )}
 

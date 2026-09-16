@@ -12,6 +12,7 @@ import { IconChevronLeft } from '../components/icons';
 import { assetUrl } from '../api';
 import { getTelegram } from '../telegram';
 import { PREMIUM_PRICE_STARS } from '../premium';
+import Switch from '../components/Switch';
 import pkg from '../../package.json';
 
 // Экран настроек в профиле.
@@ -22,21 +23,6 @@ import pkg from '../../package.json';
 //   onChangedProfile(me) — после смены настроек анкеты
 //   onBlockedChanged — после разблокировки (родитель обновит ленту)
 //   onDeleted       — после удаления аккаунта
-
-function Switch({ checked, onChange, disabled }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      className={`switch ${checked ? 'is-on' : ''}`}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-    >
-      <span className="switch__knob" />
-    </button>
-  );
-}
 
 export default function SettingsScreen({
   profile,

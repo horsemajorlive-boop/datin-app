@@ -48,6 +48,15 @@ CREATE TABLE IF NOT EXISTS profiles (
   smoking     TEXT    NOT NULL DEFAULT '',   -- 'no' | 'sometimes' | 'yes' | ''
   drinking    TEXT    NOT NULL DEFAULT '',   -- 'no' | 'sometimes' | 'yes' | ''
   is_visible  INTEGER NOT NULL DEFAULT 1,    -- 1 = показывать в поиске
+  -- Соцсети — необязательные, каждая показывается другим только если явно
+  -- включён её собственный show_* (по умолчанию выключено — opt-in, а не
+  -- opt-out). telegram/instagram — ники без "@", vk — ссылка на профиль.
+  telegram        TEXT    NOT NULL DEFAULT '',
+  instagram       TEXT    NOT NULL DEFAULT '',
+  vk              TEXT    NOT NULL DEFAULT '',
+  show_telegram   INTEGER NOT NULL DEFAULT 0,
+  show_instagram  INTEGER NOT NULL DEFAULT 0,
+  show_vk         INTEGER NOT NULL DEFAULT 0,
   updated_at  INTEGER NOT NULL
 );
 

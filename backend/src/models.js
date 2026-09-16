@@ -87,6 +87,25 @@ function sanitizePrompts(list) {
 }
 const oneOf = (value, codes) => (codes.includes(value) ? value : '');
 
+// Ник в Telegram/Instagram — без ведущей "@", буквы/цифры/подчёркивание/точка.
+function sanitizeHandle(value, maxLen) {
+  return String(value ?? '')
+    .trim()
+    .replace(/^@+/, '')
+    .replace(/[^a-zA-Z0-9._]/g, '')
+    .slice(0, maxLen);
+}
+
+// Ссылка на VK. Если протокол не указан — считаем, что имели в виду https,
+// а не оставляем как есть: так "javascript:alert(1)" тоже безопасно
+// превращается в бессмысленный (и безвредный) адрес "https://javascript:...",
+// а не в исполняемую ссылку, если её когда-нибудь вывести как href.
+function sanitizeUrl(value, maxLen) {
+  const v = String(value ?? '').trim().slice(0, maxLen);
+  if (!v) return '';
+  return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+}
+
 // Число в диапазоне или null.
 function intInRange(value, min, max) {
   const n = Number(value);
@@ -114,6 +133,12 @@ function emptyProfile(userId) {
     smoking: '',
     drinking: '',
     prompts: [],
+    telegram: '',
+    instagram: '',
+    vk: '',
+    showTelegram: false,
+    showInstagram: false,
+    showVk: false,
     photos: [],
     hasLocation: false,
     isVisible: true,
@@ -404,6 +429,14 @@ export function getFullProfile(userId, { forOther = false } = {}) {
     smoking: row.smoking || '',
     drinking: row.drinking || '',
     prompts: JSON.parse(row.prompts || '[]'),
+    // Себе — всегда видно и ник, и переключатель (иначе нечем было бы
+    // редактировать). Другому — только то, что явно включено show_*.
+    telegram: forOther ? (row.show_telegram ? row.telegram || '' : '') : row.telegram || '',
+    instagram: forOther ? (row.show_instagram ? row.instagram || '' : '') : row.instagram || '',
+    vk: forOther ? (row.show_vk ? row.vk || '' : '') : row.vk || '',
+    showTelegram: !!row.show_telegram,
+    showInstagram: !!row.show_instagram,
+    showVk: !!row.show_vk,
     hasLocation: row.lat != null && row.lng != null,
     isVisible: !!row.is_visible,
     photos,
@@ -429,11 +462,15 @@ export function saveProfile(userId, data) {
     `INSERT INTO profiles
        (user_id, name, age, city, bio, gender, interests,
         housing, car, employment, goal, kids,
-        height, weight, smoking, drinking, prompts, updated_at)
+        height, weight, smoking, drinking, prompts,
+        telegram, instagram, vk, show_telegram, show_instagram, show_vk,
+        updated_at)
      VALUES
        (:user_id, :name, :age, :city, :bio, :gender, :interests,
         :housing, :car, :employment, :goal, :kids,
-        :height, :weight, :smoking, :drinking, :prompts, :ts)
+        :height, :weight, :smoking, :drinking, :prompts,
+        :telegram, :instagram, :vk, :show_telegram, :show_instagram, :show_vk,
+        :ts)
      ON CONFLICT(user_id) DO UPDATE SET
        name = :name, age = :age, city = :city, bio = :bio,
        gender = :gender, interests = :interests,
@@ -441,6 +478,8 @@ export function saveProfile(userId, data) {
        goal = :goal, kids = :kids,
        height = :height, weight = :weight, smoking = :smoking, drinking = :drinking,
        prompts = :prompts,
+       telegram = :telegram, instagram = :instagram, vk = :vk,
+       show_telegram = :show_telegram, show_instagram = :show_instagram, show_vk = :show_vk,
        updated_at = :ts`
   ).run({
     user_id: userId,
@@ -462,6 +501,12 @@ export function saveProfile(userId, data) {
     goal: oneOf(data.goal, GOAL_CODES),
     kids: oneOf(data.kids, KIDS_CODES),
     prompts: JSON.stringify(sanitizePrompts(data.prompts)),
+    telegram: sanitizeHandle(data.telegram, 32),
+    instagram: sanitizeHandle(data.instagram, 30),
+    vk: sanitizeUrl(data.vk, 200),
+    show_telegram: data.showTelegram ? 1 : 0,
+    show_instagram: data.showInstagram ? 1 : 0,
+    show_vk: data.showVk ? 1 : 0,
     ts: now(),
   });
 }
@@ -592,6 +637,10 @@ function hydrateProfiles(rows, viewerLoc = null, now = Date.now()) {
     smoking: r.smoking || '',
     drinking: r.drinking || '',
     prompts: JSON.parse(r.prompts || '[]'),
+    // Соцсети чужой анкеты — только то, что владелец сам включил (см. saveProfile).
+    telegram: r.show_telegram ? r.telegram || '' : '',
+    instagram: r.show_instagram ? r.instagram || '' : '',
+    vk: r.show_vk ? r.vk || '' : '',
     verified: r.verified_at != null,
     isSuper: !!r.is_super,
     isBoosted: r.boosted_until != null && r.boosted_until > now,
@@ -762,6 +811,7 @@ export function getFeed(userId, opts = {}) {
       `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
               p.housing, p.car, p.employment, p.goal, p.kids,
               p.height, p.weight, p.smoking, p.drinking, p.prompts, p.lat, p.lng,
+              p.telegram, p.instagram, p.vk, p.show_telegram, p.show_instagram, p.show_vk,
               u.verified_at, u.boosted_until
          FROM profiles p
          JOIN users u ON u.id = p.user_id
@@ -801,6 +851,7 @@ export function getIncomingLikes(userId) {
       `SELECT p.user_id, p.name, p.age, p.city, p.bio, p.gender, p.interests,
               p.housing, p.car, p.employment, p.goal, p.kids,
               p.height, p.weight, p.smoking, p.drinking, p.prompts, p.lat, p.lng,
+              p.telegram, p.instagram, p.vk, p.show_telegram, p.show_instagram, p.show_vk,
               s.is_super, u.verified_at
          FROM swipes s
          JOIN profiles p ON p.user_id = s.actor_id
