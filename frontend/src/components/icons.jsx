@@ -153,6 +153,14 @@ export function IconChevronLeft() {
   );
 }
 
+export function IconChevronDown() {
+  return (
+    <svg {...base}>
+      <path d="M5 9l7 7 7-7" />
+    </svg>
+  );
+}
+
 export function IconCheck() {
   return (
     <svg {...base}>

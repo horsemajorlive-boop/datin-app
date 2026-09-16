@@ -10,6 +10,7 @@ import AdminPanel from './screens/AdminPanel';
 import SettingsScreen from './screens/SettingsScreen';
 import Onboarding from './screens/Onboarding';
 import MatchScreen from './components/MatchScreen';
+import MissedLikeNudge from './components/MissedLikeNudge';
 import ChatTab from './screens/ChatTab';
 import { initTelegram } from './telegram';
 import { api, normalizeProfile, normalizeMessage } from './api';
@@ -53,8 +54,12 @@ export default function App() {
 
   const [activeChatId, setActiveChatId] = useState(null);
   const [matchPopup, setMatchPopup] = useState(null);
-  // последний свайп в колоде — пропуск того, кто уже нас лайкнул (см. DeckScreen)
-  const [missedLike, setMissedLike] = useState(false);
+  // Пропустили (без Premium) того, кто уже нас лайкнул — не подсказываем это
+  // сразу (слишком очевидно, кого именно пропустили), а ждём случайное число
+  // свайпов подряд (3–6) и потом ненавязчиво напоминаем про Premium — см.
+  // handleSwipe и <MissedLikeNudge> ниже.
+  const [, setMissedLikeCountdown] = useState(null); // { remaining } | null — читаем только через функциональный setState
+  const [showMissedLikeNudge, setShowMissedLikeNudge] = useState(false);
   // какой экран показываем во вкладке "Профиль": view | edit | verify | admin
   const [profileView, setProfileView] = useState('view');
   const [filters, setFilters] = useState(loadFilters); // фильтры ленты (из localStorage)
@@ -126,6 +131,15 @@ export default function App() {
   useEffect(() => {
     loadFeed();
   }, [loadFeed]);
+
+  // Оформили Premium прямо во время отсчёта до напоминания — оно больше
+  // не нужно (всех, кто лайкнул, теперь и так видно во «Симпатиях»).
+  useEffect(() => {
+    if (me?.isPremium) {
+      setMissedLikeCountdown(null);
+      setShowMissedLikeNudge(false);
+    }
+  }, [me?.isPremium]);
 
   // Изменились фильтры — сохраняем в localStorage.
   useEffect(() => {
@@ -275,6 +289,15 @@ export default function App() {
     setProfileView('settings');
   }
 
+  function dismissMissedLikeNudge() {
+    setShowMissedLikeNudge(false);
+  }
+
+  function upgradeFromMissedLikeNudge() {
+    setShowMissedLikeNudge(false);
+    goToPremium();
+  }
+
   async function handleSwipe(profile, direction, { isSuper = false } = {}) {
     try {
       const res = await api.post('/swipes', {
@@ -288,12 +311,23 @@ export default function App() {
           ...normalizeProfile(res.withUser),
           matchId: res.matchId,
         });
-        setMissedLike(false);
-      } else if (direction === 'pass' && res.missedLike) {
-        // пропустили того, кто уже нас лайкнул — предложим вернуться (см. SwipeDeck)
-        setMissedLike(true);
-      } else {
-        setMissedLike(false);
+      }
+      // Без Premium — считаем свайпы к ненавязчивому напоминанию про
+      // пропущенную симпатию (см. состояние выше). С Premium это не нужно:
+      // все, кто лайкнул, и так видны во «Симпатиях».
+      if (!me?.isPremium) {
+        setMissedLikeCountdown((cd) => {
+          if (direction === 'pass' && res.missedLike && !cd) {
+            return { remaining: 3 + Math.floor(Math.random() * 4) }; // 3..6
+          }
+          if (!cd) return cd;
+          const remaining = cd.remaining - 1;
+          if (remaining <= 0) {
+            setShowMissedLikeNudge(true);
+            return null;
+          }
+          return { remaining };
+        });
       }
       // мог свайпнуть того, кто уже лайкал меня — обновим «Симпатии»
       loadIncoming();
@@ -308,19 +342,6 @@ export default function App() {
   async function handleIncomingDecision(profile, direction) {
     setIncoming((prev) => prev.filter((p) => p.id !== profile.id)); // сразу убираем
     await handleSwipe(profile, direction);
-  }
-
-  async function handleUndoSwipe(profile) {
-    const affected = matches.find((m) => m.profile.id === profile.id);
-    try {
-      await api.post('/swipes/undo', { targetId: profile.id });
-      setMissedLike(false);
-      if (affected && activeChatId === affected.matchId) setActiveChatId(null);
-      await loadMatches();
-      loadIncoming(); // отменённый свайп мог вернуть человека в «Симпатии»
-    } catch (err) {
-      console.error('undo failed', err);
-    }
   }
 
   // После жалобы/блокировки (сам запрос уже сделал компонент) — обновляем всё,
@@ -523,7 +544,6 @@ export default function App() {
             filters={filters}
             onChangeFilters={setFilters}
             onSwipe={handleSwipe}
-            onUndoSwipe={handleUndoSwipe}
             onBlockOrReport={refreshAfterBlock}
             myInterests={me?.interests || []}
             hasLocation={!!me?.hasLocation}
@@ -533,7 +553,6 @@ export default function App() {
             superlikesLeft={me?.superlikesLeft}
             isPremium={!!me?.isPremium}
             onOpenPremium={goToPremium}
-            hasMissedLike={missedLike}
           />
         )}
         {tab === 'likes' && (
@@ -588,6 +607,12 @@ export default function App() {
           setMatchPopup(null);
           if (id != null) openChat(id);
         }}
+      />
+
+      <MissedLikeNudge
+        show={showMissedLikeNudge}
+        onDismiss={dismissMissedLikeNudge}
+        onUpgrade={upgradeFromMissedLikeNudge}
       />
     </div>
   );

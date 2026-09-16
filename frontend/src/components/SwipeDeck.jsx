@@ -1,12 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import ProfileCard from './ProfileCard';
 import LikeFx from './LikeFx';
 import EmptyState from './EmptyState';
-import { IconX, IconHeart, IconHeartTriple, IconRotateCcw, IconSearch } from './icons';
+import { IconX, IconHeart, IconHeartTriple, IconSearch } from './icons';
 
-// "Колода" карточек. Помнит:
-//   - index   : на какой анкете мы сейчас
-//   - history : список уже сделанных свайпов [{ profile, direction }] — нужен для "Вернуть"
+// "Колода" карточек. Помнит только index — на какой анкете мы сейчас.
 //
 // Сам свайп (палец или кнопка) не решает судьбу карточки мгновенно: сперва
 // ProfileCard спрашивает через onSwipeAttempt, можно ли вообще свайпнуть
@@ -18,48 +16,26 @@ import { IconX, IconHeart, IconHeartTriple, IconRotateCcw, IconSearch } from './
 // Props:
 //   profiles       — массив анкет (лента с сервера)
 //   onSwipe        — onSwipe(profile, 'like' | 'pass', { isSuper })
-//   onUndo         — onUndo(profile) — откат последнего свайпа на сервере
 //   onOpen         — открыть полную анкету
 //   onHint         — показать всплывающую подсказку: строка либо { text, cta, action } —
 //                    с cta подсказка кликабельна, action — что сделать по клику
 //                    (по умолчанию, если action не передан, — открыть Premium)
 //   likesLeft      — сколько обычных лайков осталось сегодня (null = без лимита, Premium)
 //   superlikesLeft — сколько суперлайков осталось сегодня
-//   isPremium      — есть ли Premium (нужен для "Вернуть")
-//   hasMissedLike  — последний свайп был пропуском того, кто уже лайкнул вас —
-//                    тогда и только тогда показываем золотую кнопку "Вернуть"
+//   isPremium      — есть ли Premium
 
 export default function SwipeDeck({
   profiles,
   onSwipe,
-  onUndo,
   onOpen,
   onHint,
   likesLeft = null,
   superlikesLeft = null,
   isPremium = false,
-  hasMissedLike = false,
 }) {
   const [index, setIndex] = useState(0);
-  const [history, setHistory] = useState([]);
   const [likeFx, setLikeFx] = useState(0); // счётчик лайков — триггер для "салюта"
   const cardRef = useRef(null); // текущая верхняя карточка — для свайпа с кнопок
-
-  // Пропустили того, кто уже лайкнул, — сами предлагаем вернуться. Как только
-  // возможность пропадает (вернули анкету или сделали новый свайп) — если
-  // подсказка ещё висит, она уже неактуальна, гасим её же вызовом.
-  useEffect(() => {
-    if (hasMissedLike) {
-      onHint?.({
-        text: 'Вы пропустили того, кто уже вас лайкнул',
-        cta: 'Вернуться к анкете',
-        action: handleUndo,
-      });
-    } else {
-      onHint?.(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasMissedLike]);
 
   // Можно ли вообще совершить этот свайп — спрашивает активная карточка,
   // ДО того как полететь за край; если нет — просто пружинит обратно.
@@ -93,32 +69,12 @@ export default function SwipeDeck({
     onSwipe(current, kind, { isSuper });
     if (kind === 'like') setLikeFx((n) => n + 1); // запускаем сердечки
 
-    // запоминаем ход, чтобы его можно было отменить
-    setHistory((h) => [...h, { profile: current, direction }]);
     setIndex((i) => i + 1);
   }
 
   // Кнопки под колодой свайпают ту же карточку, что и палец, — тем же путём.
   function triggerSwipe(direction, meta) {
     cardRef.current?.swipe(direction, meta);
-  }
-
-  function handleUndo() {
-    if (!hasMissedLike || history.length === 0) return;
-
-    if (!isPremium) {
-      onHint?.({
-        text: 'Вы пропустили того, кто уже вас лайкнул',
-        cta: 'Оформить Premium — верните анкету',
-      });
-      return;
-    }
-
-    const last = history[history.length - 1];
-    onUndo?.(last.profile); // сообщаем серверу отменить свайп
-
-    setHistory((h) => h.slice(0, -1)); // выкидываем последний ход
-    setIndex((i) => Math.max(0, i - 1)); // возвращаемся на карточку назад
   }
 
   const visible = profiles.slice(index, index + 3);
@@ -161,15 +117,6 @@ export default function SwipeDeck({
       </div>
 
       <div className="deck__actions">
-        {hasMissedLike && (
-          <button
-            className="btn btn--sm btn--undo"
-            onClick={handleUndo}
-            aria-label="Вернуть анкету — вы пропустили того, кто вас лайкнул"
-          >
-            <IconRotateCcw />
-          </button>
-        )}
         <button
           className="btn btn--nope"
           onClick={() => triggerSwipe('left')}

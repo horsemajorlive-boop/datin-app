@@ -13,22 +13,19 @@ import { isFilterActive } from '../lib/filters';
 //   filters         — текущие фильтры
 //   onChangeFilters — применить новые фильтры
 //   onSwipe         — onSwipe(profile, 'like' | 'pass')
-//   onUndoSwipe     — onUndoSwipe(profile)
 //   hasLocation     — поделился ли пользователь геопозицией (для фильтра "рядом")
 //   onShareLocation — onShareLocation(lat, lng)
 //   onClearLocation — забыть геопозицию
 //   likesLeft       — сколько обычных лайков осталось сегодня
 //   superlikesLeft  — сколько суперлайков осталось сегодня
-//   isPremium       — есть ли Premium (снимает лимиты, открывает "Вернуть" и фильтр по быту)
+//   isPremium       — есть ли Premium (снимает лимиты и фильтр по быту)
 //   onOpenPremium   — перейти к оформлению Premium (настройки)
-//   hasMissedLike   — последний свайп пропустил того, кто уже лайкнул (см. SwipeDeck)
 
 export default function DeckScreen({
   feed,
   filters,
   onChangeFilters,
   onSwipe,
-  onUndoSwipe,
   onBlockOrReport,
   myInterests,
   hasLocation,
@@ -38,7 +35,6 @@ export default function DeckScreen({
   superlikesLeft,
   isPremium,
   onOpenPremium,
-  hasMissedLike,
 }) {
   const [opened, setOpened] = useState(null);
   const [hint, setHint] = useState(null); // строка либо { text, cta }
@@ -66,13 +62,11 @@ export default function DeckScreen({
       <SwipeDeck
         profiles={feed}
         onSwipe={onSwipe}
-        onUndo={onUndoSwipe}
         onOpen={setOpened}
         onHint={setHint}
         likesLeft={likesLeft}
         superlikesLeft={superlikesLeft}
         isPremium={isPremium}
-        hasMissedLike={hasMissedLike}
       />
 
       {hint && (
