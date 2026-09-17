@@ -363,7 +363,7 @@ export function getFullProfile(userId, { forOther = false } = {}) {
   const userRow = db
     .prepare(
       `SELECT terms_accepted_at, verified_at, show_online,
-              notify_matches, notify_messages, notify_likes
+              notify_matches, notify_messages, notify_likes, notify_superlikes
          FROM users WHERE id = ?`
     )
     .get(userId);
@@ -374,6 +374,7 @@ export function getFullProfile(userId, { forOther = false } = {}) {
     notifyMatches: (userRow?.notify_matches ?? 1) === 1,
     notifyMessages: (userRow?.notify_messages ?? 1) === 1,
     notifyLikes: (userRow?.notify_likes ?? 1) === 1,
+    notifySuperlikes: (userRow?.notify_superlikes ?? 1) === 1,
   };
 
   let { online, lastSeen } = presence(userId);
@@ -1381,6 +1382,7 @@ export function updateSettings(userId, patch = {}) {
     notifyMatches: 'notify_matches',
     notifyMessages: 'notify_messages',
     notifyLikes: 'notify_likes',
+    notifySuperlikes: 'notify_superlikes',
   };
   for (const [key, col] of Object.entries(userCols)) {
     if (typeof patch[key] === 'boolean') {
@@ -1397,13 +1399,14 @@ export function updateSettings(userId, patch = {}) {
 export function getNotifyPrefs(userId) {
   const r = db
     .prepare(
-      `SELECT notify_matches, notify_messages, notify_likes FROM users WHERE id = ?`
+      `SELECT notify_matches, notify_messages, notify_likes, notify_superlikes FROM users WHERE id = ?`
     )
     .get(userId);
   return {
     matches: (r?.notify_matches ?? 1) === 1,
     messages: (r?.notify_messages ?? 1) === 1,
     likes: (r?.notify_likes ?? 1) === 1,
+    superlikes: (r?.notify_superlikes ?? 1) === 1,
   };
 }
 

@@ -3025,6 +3025,28 @@
   font-size: 14px;
 }
 
+/* Плавающее уведомление об ошибке для действий без своего экрана/шторки —
+   см. Toast.jsx и showToast в App.jsx. Над нижней навигацией, само пропадает. */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  padding: 11px 18px;
+  background: var(--surface);
+  border: 1px solid var(--nope);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.4;
+  text-align: center;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-lg);
+  z-index: 80;
+  cursor: pointer;
+  animation: fade-in 0.2s ease;
+}
+
 .geo-share {
   margin-top: 0;
 }

@@ -407,6 +407,21 @@ test('ссылка VK без протокола получает https://, оп�
   );
 });
 
+// ---------- настройки уведомлений ----------
+
+test('notifySuperlikes включён по умолчанию, updateSettings и getNotifyPrefs меняют его независимо от остальных', () => {
+  const user = makeUser();
+  assert.equal(model.getFullProfile(user).notifySuperlikes, true);
+  assert.equal(model.getNotifyPrefs(user).superlikes, true);
+
+  model.updateSettings(user, { notifySuperlikes: false });
+  assert.equal(model.getFullProfile(user).notifySuperlikes, false);
+  assert.equal(model.getNotifyPrefs(user).superlikes, false);
+  // остальные настройки уведомлений не затронуты
+  assert.equal(model.getNotifyPrefs(user).likes, true);
+  assert.equal(model.getNotifyPrefs(user).matches, true);
+});
+
 // ---------- напоминание об истечении Premium ----------
 
 test('getPremiumExpiringSoon находит только тех, кто в окне предупреждения, и не дублирует после отметки', () => {

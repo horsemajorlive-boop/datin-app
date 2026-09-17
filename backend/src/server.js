@@ -30,6 +30,8 @@ import { DATA_DIR } from './paths.js';
 import {
   notifyNewMatch,
   notifyNewLike,
+  notifyNewSuperlike,
+  notifyMutualSuperlike,
   notifyNewMessage,
 } from './notifications.js';
 import { startExpiryNotifier } from './expiryNotifier.js';
@@ -390,8 +392,12 @@ app.post('/api/swipes', swipeLimiter, (req, res) => {
     emitMatch([req.user.id, targetId]);
     notifyNewMatch(req.user.id, targetId);
   } else if (direction === 'like') {
-    notifyNewLike(req.user.id, targetId, { isSuper });
-    if (isSuper) emitSuperlike(targetId); // обновить вкладку "Суперлайки" у получателя
+    if (isSuper) {
+      notifyNewSuperlike(req.user.id, targetId, message);
+      emitSuperlike(targetId); // обновить вкладку "Суперлайки" у получателя
+    } else {
+      notifyNewLike(req.user.id, targetId);
+    }
   }
 });
 
@@ -412,7 +418,7 @@ app.post('/api/superlikes/:actorId/reciprocate', swipeLimiter, (req, res) => {
   }
   res.json(result);
   emitMatch([req.user.id, actorId]);
-  notifyNewMatch(req.user.id, actorId);
+  notifyMutualSuperlike(actorId, req.user.id);
 });
 
 // Отмена свайпа ("вернуть", только Premium): { targetId }

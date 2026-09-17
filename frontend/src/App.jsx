@@ -11,6 +11,7 @@ import SettingsScreen from './screens/SettingsScreen';
 import Onboarding from './screens/Onboarding';
 import MatchScreen from './components/MatchScreen';
 import MissedLikeNudge from './components/MissedLikeNudge';
+import Toast from './components/Toast';
 import ChatTab from './screens/ChatTab';
 import { initTelegram } from './telegram';
 import { api, normalizeProfile, normalizeMessage } from './api';
@@ -65,6 +66,18 @@ export default function App() {
   // какой экран показываем во вкладке "Профиль": view | edit | verify | admin
   const [profileView, setProfileView] = useState('view');
   const [filters, setFilters] = useState(loadFilters); // фильтры ленты (из localStorage)
+
+  // Плавающее уведомление об ошибке — для действий без своего экрана/шторки
+  // (свайп в колоде, "Взаимно" на суперлайк, фото в чате), где раньше сбой
+  // сети просто молча уходил в console.error. Одно сообщение за раз.
+  const [toast, setToast] = useState('');
+  const toastTimer = useRef(null);
+  const showToast = useCallback((text) => {
+    setToast(text);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(''), 3500);
+  }, []);
+  useEffect(() => () => clearTimeout(toastTimer.current), []);
 
   // таймеры авто-сброса статуса "печатает" по каждому чату
   const typingTimers = useRef({});
@@ -347,6 +360,7 @@ export default function App() {
       if (direction === 'like') loadMe();
     } catch (err) {
       console.error('swipe failed', err);
+      showToast(err.message || 'Не удалось выполнить действие — попробуйте ещё раз');
     }
   }
 
@@ -374,6 +388,7 @@ export default function App() {
       setMatchPopup({ ...normalizeProfile(res.withUser), matchId: res.matchId });
     } catch (err) {
       console.error('reciprocate superlike failed', err);
+      showToast(err.message || 'Не удалось ответить взаимностью — попробуйте ещё раз');
     } finally {
       setSuperlikeBusyId(null);
     }
@@ -622,6 +637,7 @@ export default function App() {
             onDeleteMessage={handleDeleteMessage}
             onTyping={handleTyping}
             onLeftChat={handleLeftChat}
+            onError={showToast}
           />
         )}
         {tab === 'me' && renderProfileTab()}
@@ -654,6 +670,8 @@ export default function App() {
         onDismiss={dismissMissedLikeNudge}
         onUpgrade={upgradeFromMissedLikeNudge}
       />
+
+      <Toast text={toast} onDismiss={() => setToast('')} />
     </div>
   );
 }

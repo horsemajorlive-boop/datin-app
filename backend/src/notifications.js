@@ -20,10 +20,44 @@ export function notifyNewMatch(userA, userB) {
   }
 }
 
-export function notifyNewLike(actorId, targetId, { isSuper = false } = {}) {
+export function notifyNewLike(actorId, targetId) {
   if (!away(targetId) || !getNotifyPrefs(targetId).likes) return;
-  const text = isSuper ? '🌟 Вас суперлайкнули!' : '💜 Вы кому-то понравились';
+  notify(targetId, '💜 Вы кому-то понравились', { buttonText: 'Посмотреть' });
+}
+
+// Суперлайк — отдельная настройка от обычных "симпатий" (notify_superlikes),
+// и, в отличие от обычного лайка, показываем превью сообщения — это и есть
+// весь смысл вкладки "Суперлайки" (см. getPendingSuperlikes в models.js).
+export const SUPERLIKE_PREVIEW_LEN = 80;
+
+export function notifyNewSuperlike(actorId, targetId, message) {
+  if (!away(targetId) || !getNotifyPrefs(targetId).superlikes) return;
+  const name = nameOf(actorId);
+  const trimmed = String(message || '').trim();
+  const preview =
+    trimmed.length > SUPERLIKE_PREVIEW_LEN
+      ? `${trimmed.slice(0, SUPERLIKE_PREVIEW_LEN)}…`
+      : trimmed;
+  const text = preview
+    ? `🌟 Суперлайк от ${name}: «${preview}»`
+    : `🌟 Суперлайк от ${name}!`;
   notify(targetId, text, { buttonText: 'Посмотреть' });
+}
+
+// Ответили взаимностью на ваш суперлайк ("Взаимно", см. respondToSuperlike) —
+// та же общая настройка notify_matches (это в первую очередь мэтч), но текст
+// отдельный: приятно знать, что сработал именно суперлайк, а не случайность.
+export function notifyMutualSuperlike(superlikerId, reciprocatorId) {
+  if (away(reciprocatorId) && getNotifyPrefs(reciprocatorId).matches) {
+    notify(reciprocatorId, `🎉 Новый мэтч — ${nameOf(superlikerId)}! Напишите первым.`, {
+      buttonText: 'Открыть',
+    });
+  }
+  if (away(superlikerId) && getNotifyPrefs(superlikerId).matches) {
+    notify(superlikerId, `🎉 ${nameOf(reciprocatorId)} ответил(а) взаимностью на ваш суперлайк!`, {
+      buttonText: 'Открыть',
+    });
+  }
 }
 
 export function notifyNewMessage(matchId, senderId) {

@@ -266,6 +266,17 @@ export default function SettingsScreen({
             onChange={(on) => patchSetting({ notifyLikes: on })}
           />
         </div>
+        <div className="set-row">
+          <span className="set-row__text">
+            Суперлайки
+            <small>Когда кто-то отправил суперлайк — с сообщением, если есть</small>
+          </span>
+          <Switch
+            checked={profile.notifySuperlikes}
+            disabled={savingSetting}
+            onChange={(on) => patchSetting({ notifySuperlikes: on })}
+          />
+        </div>
       </div>
 
       {/* ПРИВАТНОСТЬ */}

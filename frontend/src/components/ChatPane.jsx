@@ -46,6 +46,7 @@ import {
 //   onTyping  — сообщить собеседнику "я печатаю": onTyping(kind)
 //   onLeftChat — вызывается и после жалобы/блокировки, и после разматчивания —
 //                родителю в обоих случаях нужно закрыть чат и обновить списки
+//   onError   — показать пользователю текст ошибки (напр. не отправилось фото) — необязательно
 
 const REACTIONS = ['❤️', '😂', '😮', '😢', '👍', '🔥'];
 
@@ -81,6 +82,7 @@ export default function ChatPane({
   onDeleteMessage,
   onTyping,
   onLeftChat,
+  onError,
 }) {
   const [text, setText] = useState('');
   const [showWingman, setShowWingman] = useState(true);
@@ -92,6 +94,7 @@ export default function ChatPane({
   const [showReport, setShowReport] = useState(false);
   const [showUnmatch, setShowUnmatch] = useState(false);
   const [unmatching, setUnmatching] = useState(false);
+  const [unmatchError, setUnmatchError] = useState('');
   const [pickerFor, setPickerFor] = useState(null); // id сообщения с открытым меню (реакции/правка)
   const [pickerPos, setPickerPos] = useState(null); // { top, left, openUp } — куда его подвесить
   const [editingId, setEditingId] = useState(null); // id сообщения, которое сейчас редактируем
@@ -222,12 +225,14 @@ export default function ChatPane({
 
   async function confirmUnmatch() {
     setUnmatching(true);
+    setUnmatchError('');
     try {
       await api.post(`/matches/${matchId}/unmatch`);
       setShowUnmatch(false);
       onLeftChat?.();
     } catch (err) {
       console.error('не удалось разматчиться', err);
+      setUnmatchError(err.message || 'Не удалось разматчиться — попробуйте ещё раз');
       setUnmatching(false);
     }
   }
@@ -243,6 +248,7 @@ export default function ChatPane({
       onSend({ type: 'photo', photo: url });
     } catch (err) {
       console.error('не удалось отправить фото', err);
+      onError?.(err.message || 'Не удалось отправить фото — попробуйте ещё раз');
     }
   }
 
@@ -421,7 +427,14 @@ export default function ChatPane({
       )}
 
       {showUnmatch && (
-        <div className="sheet" onClick={() => !unmatching && setShowUnmatch(false)}>
+        <div
+          className="sheet"
+          onClick={() => {
+            if (unmatching) return;
+            setShowUnmatch(false);
+            setUnmatchError('');
+          }}
+        >
           <div className="sheet__card" onClick={(e) => e.stopPropagation()}>
             <div className="sheet__body">
               <h2>Разматчиться с {match.name}?</h2>
@@ -430,6 +443,7 @@ export default function ChatPane({
                 жалоба — если снова лайкнёте друг друга, сможете
                 переписываться заново.
               </p>
+              {unmatchError && <p className="form__error">{unmatchError}</p>}
               <button
                 className="btn-wide btn-wide--danger-solid"
                 disabled={unmatching}
@@ -440,7 +454,10 @@ export default function ChatPane({
               <button
                 className="btn-wide btn-wide--ghost"
                 disabled={unmatching}
-                onClick={() => setShowUnmatch(false)}
+                onClick={() => {
+                  setShowUnmatch(false);
+                  setUnmatchError('');
+                }}
               >
                 Отмена
               </button>

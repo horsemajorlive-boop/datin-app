@@ -22,6 +22,7 @@ import ScreenHeader from '../components/ScreenHeader';
 //   onBrowse     — уйти на вкладку «Поиск» (кнопка в пустом состоянии)
 //   onReciprocateSuperlike — ответить взаимностью на суперлайк: (profile)
 //   onPassSuperlike        — пропустить суперлайкнувшего: (profile)
+//   onError      — показать пользователю текст ошибки (см. Toast в App.jsx) — проброс в ChatPane
 //   onSend, onReact, onEditMessage, onDeleteMessage, onTyping, onLeftChat — проброс в ChatPane
 
 export default function ChatTab({
@@ -44,6 +45,7 @@ export default function ChatTab({
   onDeleteMessage,
   onTyping,
   onLeftChat,
+  onError,
 }) {
   const [subTab, setSubTab] = useState('messages'); // 'messages' | 'superlikes'
 
@@ -65,6 +67,7 @@ export default function ChatTab({
           onDeleteMessage={onDeleteMessage}
           onTyping={onTyping}
           onLeftChat={onLeftChat}
+          onError={onError}
         />
       </div>
     );

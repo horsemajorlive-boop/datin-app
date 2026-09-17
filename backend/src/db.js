@@ -185,4 +185,13 @@ try {
   /* колонка уже существует — ок */
 }
 
+// Уведомление о суперлайке — отдельная настройка от обычных "симпатий"
+// (см. notifyNewSuperlike в notifications.js).
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN notify_superlikes INTEGER NOT NULL DEFAULT 1`);
+  console.log('[db] миграция: добавлена колонка users.notify_superlikes');
+} catch {
+  /* колонка уже существует — ок */
+}
+
 console.log('[db] готова:', DB_PATH);
