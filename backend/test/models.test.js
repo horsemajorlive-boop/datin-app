@@ -223,6 +223,73 @@ test('getIncomingLikes скрывает личность без Premium', () => 
   assert.ok(full[0].name);
 });
 
+// ---------- суперлайки с сообщением ----------
+
+test('суперлайк с сообщением попадает в getPendingSuperlikes НЕ замаскированным без Premium', () => {
+  const actor = makeUser();
+  const me = makeUser();
+  model.recordSwipe(actor, me, 'like', { isSuper: true, message: '  Привет! Отличная анкета  ' });
+
+  const pending = model.getPendingSuperlikes(me);
+  assert.equal(pending.length, 1);
+  assert.equal(pending[0].masked, undefined);
+  assert.ok(pending[0].name);
+  assert.equal(pending[0].superlikeMessage, 'Привет! Отличная анкета');
+});
+
+test('сообщение суперлайка обрезается до SUPERLIKE_MESSAGE_MAX_LEN', () => {
+  const actor = makeUser();
+  const me = makeUser();
+  const long = 'x'.repeat(500);
+  model.recordSwipe(actor, me, 'like', { isSuper: true, message: long });
+
+  const pending = model.getPendingSuperlikes(me);
+  assert.equal(pending[0].superlikeMessage.length, model.SUPERLIKE_MESSAGE_MAX_LEN);
+});
+
+test('обычный лайк не пишет сообщение, даже если оно передано', () => {
+  const actor = makeUser();
+  const me = makeUser();
+  model.recordSwipe(actor, me, 'like', { message: 'тайное послание' });
+
+  const pending = model.getPendingSuperlikes(me);
+  assert.equal(pending.length, 0); // это не суперлайк — в списке его нет
+});
+
+test('respondToSuperlike создаёт мэтч без Premium и без учёта дневного лимита лайков', () => {
+  const actor = makeUser();
+  const me = makeUser();
+  model.recordSwipe(actor, me, 'like', { isSuper: true, message: 'Привет!' });
+
+  // исчерпываем обычный дневной лимит лайков у "me"
+  for (let i = 0; i < model.DAILY_LIKE_LIMIT; i++) {
+    model.recordSwipe(me, makeUser(), 'like');
+  }
+
+  const res = model.respondToSuperlike(me, actor);
+  assert.equal(res.match, true);
+  assert.ok(res.matchId);
+  assert.deepEqual(model.matchUsers(res.matchId).sort(), [actor, me].sort());
+
+  // и пропадает из ожидающих
+  assert.equal(model.getPendingSuperlikes(me).length, 0);
+});
+
+test('respondToSuperlike возвращает ошибку, если суперлайка не было', () => {
+  const actor = makeUser();
+  const me = makeUser();
+  const res = model.respondToSuperlike(me, actor);
+  assert.equal(res.error, 'not_found');
+});
+
+test('пропуск суперлайкнувшего убирает его из getPendingSuperlikes', () => {
+  const actor = makeUser();
+  const me = makeUser();
+  model.recordSwipe(actor, me, 'like', { isSuper: true, message: 'Привет!' });
+  model.recordSwipe(me, actor, 'pass');
+  assert.equal(model.getPendingSuperlikes(me).length, 0);
+});
+
 // ---------- остывание пропусков ----------
 
 test('свежий пропуск скрывает анкету из ленты', () => {

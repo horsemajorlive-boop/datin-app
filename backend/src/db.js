@@ -177,4 +177,12 @@ for (const col of ['show_telegram', 'show_instagram', 'show_vk']) {
   }
 }
 
+// Необязательное сообщение, отправленное вместе с суперлайком (вкладка "Суперлайки").
+try {
+  db.exec(`ALTER TABLE swipes ADD COLUMN message TEXT`);
+  console.log('[db] миграция: добавлена колонка swipes.message');
+} catch {
+  /* колонка уже существует — ок */
+}
+
 console.log('[db] готова:', DB_PATH);

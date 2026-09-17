@@ -451,6 +451,41 @@
   padding: 16px 0 20px;
 }
 
+.deck__super-wrap {
+  position: relative;
+}
+
+/* Разовая подсказка про кнопку суперлайка (см. showSuperHint в SwipeDeck) —
+   висит НАД кнопкой (та у самого низа экрана) и сама пропадает через
+   несколько секунд, тот же приём, что и у chat__social-hint. */
+.deck__super-hint {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 180px;
+  padding: 10px 12px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12.5px;
+  line-height: 1.4;
+  text-align: center;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  animation: react-pop-fade 0.2s ease;
+  z-index: 32;
+}
+
+.deck__super-hint-arrow {
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+}
+
 /* ================= Карточка анкеты ================= */
 
 .card {
@@ -608,6 +643,15 @@
   right: 20px;
   background: rgba(20, 14, 18, 0.55);
   transform: rotate(8deg);
+}
+
+/* Смахнули вверх — показываем, что жест распознан как суперлайк (карточка
+   пружинит обратно, дальше открывается составление сообщения). */
+.card__stamp--super {
+  left: 50%;
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--gold) 80%, transparent);
+  color: #1a1205;
 }
 
 /* Бейдж "Поднято" на карточке — видно другим, пока анкета в буст-приоритете. */
@@ -1656,6 +1700,158 @@
   color: #fff;
   background: var(--accent);
   border-color: transparent;
+}
+
+/* ================= Переключатель "Сообщения / Суперлайки" ================= */
+
+.chattabs {
+  display: flex;
+  gap: 6px;
+  margin: 2px 0 14px;
+}
+
+.chattabs__btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 9px 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chattabs__btn.is-on {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+}
+
+.chattabs__badge {
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--gold);
+  color: #1a1205;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+}
+
+/* ================= Вкладка "Суперлайки" ================= */
+
+.superlikes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.superlike-card {
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.superlike-card__top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.superlike-card__photo {
+  width: 52px;
+  height: 65px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.superlike-card__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.superlike-card__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.superlike-card__pass {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--line-2);
+  background: var(--surface-2);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.superlike-card__pass svg {
+  width: 16px;
+  height: 16px;
+}
+
+.superlike-card__pass:active {
+  transform: scale(0.92);
+}
+
+.superlike-card__msg {
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.superlike-card__mutual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 11px;
+  border: none;
+  border-radius: var(--radius);
+  background: linear-gradient(160deg, #fff3da, #f6dfa8);
+  color: #8a5a00;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.superlike-card__mutual svg {
+  width: 17px;
+  height: 17px;
+}
+
+.superlike-card__mutual:active {
+  transform: scale(0.985);
+}
+
+.superlike-card__mutual:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 /* ================= Список "Мэтчей" ================= */
@@ -4106,6 +4302,43 @@
 
 .report__note:focus {
   border-color: var(--accent);
+}
+
+/* ================= Составление суперлайка ================= */
+
+.superlike-sheet__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.superlike-sheet__icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8a5a00;
+  background: linear-gradient(160deg, #fff3da, #f6dfa8);
+}
+
+.superlike-sheet__icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.superlike-sheet__head h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.superlike-sheet__send {
+  color: #8a5a00;
+  background: linear-gradient(160deg, #fff3da, #f6dfa8);
+  box-shadow: none;
 }
 
 /* Меню "ещё" в шапке чата */

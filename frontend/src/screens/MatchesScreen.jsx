@@ -11,6 +11,9 @@ import { IconMessage } from '../components/icons';
 //   title      — заголовок экрана (по умолчанию "Мэтчи")
 //   emptyText  — текст, когда мэтчей нет
 //   onBrowse   — уйти на вкладку «Поиск» (кнопка в пустом состоянии)
+//   bare       — не рисовать свою шапку/обёртку .screen (когда её уже
+//                рисует родитель, см. ChatTab — там сверху ещё переключатель
+//                "Сообщения / Суперлайки")
 
 function previewText(last) {
   if (!last) return 'Вы мэтчнулись — напишите первым';
@@ -24,26 +27,18 @@ export default function MatchesScreen({
   title = 'Мэтчи',
   emptyText = 'Пока пусто. Мэтч случается, когда вы и другой человек лайкнули друг друга.',
   onBrowse,
+  bare = false,
 }) {
-  if (matches.length === 0) {
-    return (
-      <div className="screen">
-        <ScreenHeader title={title} />
-        <EmptyState
-          icon={<IconMessage />}
-          title="Пока нет диалогов"
-          text={emptyText}
-          actionLabel={onBrowse ? 'Листать анкеты' : undefined}
-          onAction={onBrowse}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className="screen">
-      <ScreenHeader title={title} count={matches.length} />
-
+  const content =
+    matches.length === 0 ? (
+      <EmptyState
+        icon={<IconMessage />}
+        title="Пока нет диалогов"
+        text={emptyText}
+        actionLabel={onBrowse ? 'Листать анкеты' : undefined}
+        onAction={onBrowse}
+      />
+    ) : (
       <div className="matchlist">
         {matches.map(({ matchId, profile, lastMessage, unread }) => (
           <button
@@ -77,6 +72,14 @@ export default function MatchesScreen({
           </button>
         ))}
       </div>
+    );
+
+  if (bare) return content;
+
+  return (
+    <div className="screen">
+      <ScreenHeader title={title} count={matches.length} />
+      {content}
     </div>
   );
 }

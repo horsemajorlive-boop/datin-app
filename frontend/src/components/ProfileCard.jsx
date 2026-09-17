@@ -25,8 +25,12 @@ import { cityWithDistance } from '../lib/location';
 //   onFlyEnd        — onFlyEnd(direction, meta) — вызывается, когда карточка
 //                     долетела до края и погасла; тут родитель уже фиксирует свайп
 //   onOpen          — открыть полную анкету
+//   onSuperlikeIntent — смахнули карточку вверх: карточка пружинит обратно
+//                     (сам свайп не фиксируется), а родитель открывает
+//                     составление сообщения к суперлайку
 
 const SWIPE_THRESHOLD = 120; // px — дальше этого считаем свайп завершённым
+const SWIPE_UP_THRESHOLD = 90; // px — свайп вверх (суперлайк) считаем короче, места меньше
 const TAP_MAX_MOVE = 10; // px — если сдвинулись меньше, это тап, а не перетаскивание
 const FLY_MS = 300; // должно совпадать с длительностью transition ниже
 const FLY_DISTANCE = 560; // px — насколько улетает карточка за край экрана
@@ -34,7 +38,7 @@ const FLY_DISTANCE = 560; // px — насколько улетает карто
 const REST_DRAG = { x: 0, y: 0, startX: 0, startY: 0, dragging: false };
 
 const ProfileCard = forwardRef(function ProfileCard(
-  { profile, active, onSwipeAttempt, onFlyEnd, onOpen },
+  { profile, active, onSwipeAttempt, onFlyEnd, onOpen, onSuperlikeIntent },
   ref
 ) {
   const [drag, setDrag] = useState(REST_DRAG);
@@ -77,6 +81,13 @@ const ProfileCard = forwardRef(function ProfileCard(
     const isTap =
       Math.abs(drag.x) < TAP_MAX_MOVE && Math.abs(drag.y) < TAP_MAX_MOVE;
 
+    // Преимущественно вертикальный свайп вверх — намерение на суперлайк.
+    // Саму карточку не улетаем: сперва дадим написать сообщение (см. onSuperlikeIntent).
+    if (!isTap && drag.y < -SWIPE_UP_THRESHOLD && Math.abs(drag.y) > Math.abs(drag.x)) {
+      setDrag(REST_DRAG);
+      onSuperlikeIntent?.();
+      return;
+    }
     if (drag.x > SWIPE_THRESHOLD) {
       startFly('right');
       return;
@@ -112,6 +123,9 @@ const ProfileCard = forwardRef(function ProfileCard(
   const showLike = isFlying ? flying.direction === 'right' : drag.x > 40;
   const showNope = isFlying ? flying.direction === 'left' : drag.x < -40;
   const stampOpacity = isFlying ? 1 : Math.min(1, Math.abs(drag.x) / 110);
+  const showSuper =
+    !isFlying && drag.y < -30 && Math.abs(drag.y) > Math.abs(drag.x);
+  const superStampOpacity = Math.min(1, Math.abs(drag.y) / SWIPE_UP_THRESHOLD);
 
   return (
     <div
@@ -138,6 +152,11 @@ const ProfileCard = forwardRef(function ProfileCard(
       {showNope && (
         <div className="card__stamp card__stamp--nope" style={{ opacity: stampOpacity }}>
           Пропустить
+        </div>
+      )}
+      {showSuper && (
+        <div className="card__stamp card__stamp--super" style={{ opacity: superStampOpacity }}>
+          🌟 Суперлайк
         </div>
       )}
 

@@ -13,6 +13,7 @@
 //   { type: 'typing',   matchId, kind }        — собеседник печатает/выбирает
 //   { type: 'presence', userId, online }       — кто-то зашёл/вышел
 //   { type: 'match' }                          — появился новый мэтч (перезагрузить список)
+//   { type: 'superlike' }                      — вас суперлайкнули (перезагрузить вкладку "Суперлайки")
 //   { type: 'read', matchId }                  — собеседник прочитал переписку
 //   { type: 'messageEdited', matchId, messageId, text, editedAt }
 //   { type: 'messageDeleted', matchId, messageId }
@@ -144,6 +145,10 @@ export function emitMessageDeleted(matchId, messageId, byUserId) {
 
 export function emitMatch(userIds) {
   for (const uid of userIds) sendToUser(uid, { type: 'match' });
+}
+
+export function emitSuperlike(targetId) {
+  sendToUser(targetId, { type: 'superlike' });
 }
 
 function broadcastPresence(userId, online) {

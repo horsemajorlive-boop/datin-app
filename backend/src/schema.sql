@@ -74,6 +74,8 @@ CREATE TABLE IF NOT EXISTS swipes (
   target_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   direction  TEXT    NOT NULL,              -- 'like' | 'pass'
   created_at INTEGER NOT NULL,
+  is_super   INTEGER NOT NULL DEFAULT 0,
+  message    TEXT,                          -- необязательное сообщение к суперлайку
   PRIMARY KEY (actor_id, target_id)
 );
 

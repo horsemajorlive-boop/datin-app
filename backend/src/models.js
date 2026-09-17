@@ -885,15 +885,96 @@ export function getIncomingLikes(userId) {
   }));
 }
 
+// Суперлайки с сообщением, которые ждут ответа (вкладка "Суперлайки" в чате).
+// В отличие от getIncomingLikes — НЕ маскируется без Premium: это отдельный,
+// свободный от пейволла способ получить мэтч (см. respondToSuperlike), иначе
+// сама механика теряет смысл. Пропадает из списка, как только получатель
+// свайпнул отправителя (взаимно или пропустил) — та же логика, что и у
+// обычных "Симпатий".
+export function getPendingSuperlikes(userId) {
+  const rows = db
+    .prepare(
+      `SELECT actor_id, message, created_at FROM swipes
+        WHERE target_id = :me AND direction = 'like' AND is_super = 1
+          AND actor_id NOT IN (
+            SELECT target_id FROM swipes WHERE actor_id = :me
+          )
+          AND actor_id NOT IN (
+            SELECT blocked_id FROM blocks WHERE blocker_id = :me
+            UNION
+            SELECT blocker_id FROM blocks WHERE blocked_id = :me
+          )
+        ORDER BY created_at DESC`
+    )
+    .all({ me: userId });
+
+  return rows.map((r) => ({
+    ...getFullProfile(r.actor_id, { forOther: true }),
+    superlikeMessage: r.message || null,
+    superlikeAt: r.created_at,
+  }));
+}
+
+// Ответить взаимностью прямо из карточки суперлайка ("Взаимно") — работает
+// БЕЗ Premium и без учёта дневного лимита лайков: это вознаграждение за то,
+// что кто-то уже выбрал тебя суперлайком, а не обычный свайп по ленте.
+// Возвращает { match: true, matchId, withUser } либо { error }.
+export function respondToSuperlike(targetId, actorId) {
+  const pending = db
+    .prepare(
+      `SELECT 1 FROM swipes WHERE actor_id = ? AND target_id = ? AND direction = 'like' AND is_super = 1`
+    )
+    .get(actorId, targetId);
+  if (!pending) return { error: 'not_found' };
+
+  if (isBlockedEitherWay(actorId, targetId)) return { error: 'not_found' };
+
+  const already = db
+    .prepare(`SELECT 1 FROM swipes WHERE actor_id = ? AND target_id = ?`)
+    .get(targetId, actorId);
+  if (already) return { error: 'already_resolved' };
+
+  const ts = now();
+  db.prepare(
+    `INSERT INTO swipes (actor_id, target_id, direction, is_super, created_at)
+     VALUES (?, ?, 'like', 0, ?)`
+  ).run(targetId, actorId, ts);
+
+  const a = Math.min(targetId, actorId);
+  const b = Math.max(targetId, actorId);
+  db.prepare(
+    `INSERT INTO matches (user_a, user_b, created_at) VALUES (?, ?, ?)
+     ON CONFLICT(user_a, user_b) DO NOTHING`
+  ).run(a, b, ts);
+
+  const m = db.prepare(`SELECT id FROM matches WHERE user_a = ? AND user_b = ?`).get(a, b);
+
+  return {
+    match: true,
+    matchId: m.id,
+    withUser: getFullProfile(actorId, { forOther: true }),
+  };
+}
 
 // ---------- Свайпы и мэтчи ----------
+
+// Небольшое сообщение, которое можно приложить к суперлайку — не письмо,
+// а скорее подпись под открыткой, поэтому и лимит скромный.
+export const SUPERLIKE_MESSAGE_MAX_LEN = 200;
 
 // Возвращает { match: boolean, matchId?: number, withUser?: profile }
 // либо { match: false, error: 'like_limit' | 'superlike_limit' }, если
 // дневная норма лайков/суперлайков уже исчерпана — тогда свайп НЕ пишем.
+// message — необязательное сопровождение суперлайка (см. SUPERLIKE_MESSAGE_MAX_LEN),
+// для обычных лайков/пропусков игнорируется.
 // now — необязательный override для тестов/симуляции (см. simulate-boosts.js),
 // в проде всегда реальное "сейчас".
-export function recordSwipe(actorId, targetId, direction, { isSuper = false, now: nowOverride } = {}) {
+export function recordSwipe(
+  actorId,
+  targetId,
+  direction,
+  { isSuper = false, message, now: nowOverride } = {}
+) {
   if (isBlockedEitherWay(actorId, targetId)) return { match: false };
 
   if (direction === 'like') {
@@ -908,12 +989,17 @@ export function recordSwipe(actorId, targetId, direction, { isSuper = false, now
     }
   }
 
+  const msg =
+    isSuper && direction === 'like' && message
+      ? String(message).trim().slice(0, SUPERLIKE_MESSAGE_MAX_LEN) || null
+      : null;
+
   const ts = nowOverride ?? now();
   db.prepare(
-    `INSERT INTO swipes (actor_id, target_id, direction, is_super, created_at)
-     VALUES (:a, :t, :d, :s, :ts)
-     ON CONFLICT(actor_id, target_id) DO UPDATE SET direction = :d, is_super = :s, created_at = :ts`
-  ).run({ a: actorId, t: targetId, d: direction, s: isSuper ? 1 : 0, ts });
+    `INSERT INTO swipes (actor_id, target_id, direction, is_super, message, created_at)
+     VALUES (:a, :t, :d, :s, :m, :ts)
+     ON CONFLICT(actor_id, target_id) DO UPDATE SET direction = :d, is_super = :s, message = :m, created_at = :ts`
+  ).run({ a: actorId, t: targetId, d: direction, s: isSuper ? 1 : 0, m: msg, ts });
 
   if (direction !== 'like') {
     // Пропустили того, кто уже лайкнул нас, — теперь он пропадёт из "Симпатий"

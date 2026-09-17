@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ProfileCard from './ProfileCard';
 import LikeFx from './LikeFx';
 import EmptyState from './EmptyState';
+import SuperlikeComposer from './SuperlikeComposer';
 import { IconX, IconHeart, IconHeartTriple, IconSearch } from './icons';
 
 // "Колода" карточек. Помнит только index — на какой анкете мы сейчас.
@@ -15,7 +16,7 @@ import { IconX, IconHeart, IconHeartTriple, IconSearch } from './icons';
 //
 // Props:
 //   profiles       — массив анкет (лента с сервера)
-//   onSwipe        — onSwipe(profile, 'like' | 'pass', { isSuper })
+//   onSwipe        — onSwipe(profile, 'like' | 'pass', { isSuper, message })
 //   onOpen         — открыть полную анкету
 //   onHint         — показать всплывающую подсказку: строка либо { text, cta, action } —
 //                    с cta подсказка кликабельна, action — что сделать по клику
@@ -36,6 +37,29 @@ export default function SwipeDeck({
   const [index, setIndex] = useState(0);
   const [likeFx, setLikeFx] = useState(0); // счётчик лайков — триггер для "салюта"
   const cardRef = useRef(null); // текущая верхняя карточка — для свайпа с кнопок
+  // Составление суперлайка (кнопка или свайп вверх) — сама карточка ещё не
+  // улетела, ждём подтверждения (см. SuperlikeComposer).
+  const [composing, setComposing] = useState(false);
+  // Разовая подсказка про кнопку суперлайка — см. localStorage-эффект ниже.
+  const [showSuperHint, setShowSuperHint] = useState(false);
+
+  useEffect(() => {
+    let seen = false;
+    try {
+      seen = localStorage.getItem('superlike-hint-seen') === '1';
+    } catch {
+      /* приватный режим и т.п. — просто не покажем подсказку */
+    }
+    if (seen) return;
+    setShowSuperHint(true);
+    const timer = setTimeout(() => setShowSuperHint(false), 5000);
+    try {
+      localStorage.setItem('superlike-hint-seen', '1');
+    } catch {
+      /* не критично */
+    }
+    return () => clearTimeout(timer);
+  }, []);
 
   // Можно ли вообще совершить этот свайп — спрашивает активная карточка,
   // ДО того как полететь за край; если нет — просто пружинит обратно.
@@ -66,7 +90,7 @@ export default function SwipeDeck({
     const kind = direction === 'right' ? 'like' : 'pass';
     const isSuper = kind === 'like' && !!meta.isSuper;
 
-    onSwipe(current, kind, { isSuper });
+    onSwipe(current, kind, { isSuper, message: meta.message });
     if (kind === 'like') setLikeFx((n) => n + 1); // запускаем сердечки
 
     setIndex((i) => i + 1);
@@ -77,8 +101,23 @@ export default function SwipeDeck({
     cardRef.current?.swipe(direction, meta);
   }
 
+  // Кнопка "Суперлайк" или свайп карточки вверх — сперва спрашиваем лимит
+  // (та же проверка, что и у startFly), и только если можно — открываем
+  // составление сообщения. Сама карточка летит уже после подтверждения.
+  function requestSuperlike() {
+    setShowSuperHint(false);
+    if (!handleSwipeAttempt('right', { isSuper: true })) return;
+    setComposing(true);
+  }
+
+  function confirmSuperlike(message) {
+    setComposing(false);
+    triggerSwipe('right', { isSuper: true, message });
+  }
+
   const visible = profiles.slice(index, index + 3);
   const hasCard = visible.length > 0;
+  const composingProfile = composing ? profiles[index] : null;
 
   return (
     <div className="deck">
@@ -102,6 +141,7 @@ export default function SwipeDeck({
                 onSwipeAttempt={handleSwipeAttempt}
                 onFlyEnd={handleFlyEnd}
                 onOpen={() => onOpen(profile)}
+                onSuperlikeIntent={i === 0 ? requestSuperlike : undefined}
               />
             </div>
           ))
@@ -125,15 +165,23 @@ export default function SwipeDeck({
         >
           <IconX />
         </button>
-        <button
-          className="btn btn--sm btn--super"
-          onClick={() => triggerSwipe('right', { isSuper: true })}
-          disabled={!hasCard}
-          aria-label="Суперлайк"
-        >
-          <IconHeartTriple filled />
-          {superlikesLeft > 0 && <span className="btn__badge">{superlikesLeft}</span>}
-        </button>
+        <div className="deck__super-wrap">
+          <button
+            className="btn btn--sm btn--super"
+            onClick={requestSuperlike}
+            disabled={!hasCard}
+            aria-label="Суперлайк"
+          >
+            <IconHeartTriple filled />
+            {superlikesLeft > 0 && <span className="btn__badge">{superlikesLeft}</span>}
+          </button>
+          {showSuperHint && (
+            <div className="deck__super-hint">
+              Суперлайк — заметная симпатия с сообщением. Можно смахнуть карточку вверх!
+              <span className="deck__super-hint-arrow" />
+            </div>
+          )}
+        </div>
         <button
           className="btn btn--like"
           onClick={() => triggerSwipe('right')}
@@ -143,6 +191,14 @@ export default function SwipeDeck({
           <IconHeart filled />
         </button>
       </div>
+
+      {composingProfile && (
+        <SuperlikeComposer
+          profile={composingProfile}
+          onCancel={() => setComposing(false)}
+          onConfirm={confirmSuperlike}
+        />
+      )}
     </div>
   );
 }

@@ -48,6 +48,8 @@ export default function App() {
   const [me, setMe] = useState(null); // null = ещё грузится
   const [feed, setFeed] = useState([]);
   const [incoming, setIncoming] = useState([]); // кто лайкнул меня
+  const [superlikes, setSuperlikes] = useState([]); // кто суперлайкнул и ждёт ответа (вкладка "Суперлайки")
+  const [superlikeBusyId, setSuperlikeBusyId] = useState(null); // id анкеты, для которой сейчас идёт запрос
   const [matches, setMatches] = useState([]);
   const [messages, setMessages] = useState({});
   const [activities, setActivities] = useState({});
@@ -80,6 +82,10 @@ export default function App() {
 
   const loadIncoming = useCallback(async () => {
     setIncoming((await api.get('/likes/incoming')).map(normalizeProfile));
+  }, []);
+
+  const loadSuperlikes = useCallback(async () => {
+    setSuperlikes((await api.get('/superlikes/incoming')).map(normalizeProfile));
   }, []);
 
   const loadMatches = useCallback(async () => {
@@ -124,8 +130,9 @@ export default function App() {
     initTelegram();
     loadMe();
     loadIncoming();
+    loadSuperlikes();
     loadMatches();
-  }, [loadMe, loadIncoming, loadMatches]);
+  }, [loadMe, loadIncoming, loadSuperlikes, loadMatches]);
 
   // Лента — при запуске и при каждом изменении фильтров.
   useEffect(() => {
@@ -236,7 +243,11 @@ export default function App() {
       onSocket('match', () => {
         loadMatches();
         loadIncoming(); // этот человек больше не «ждёт ответа»
+        loadSuperlikes(); // и мог быть в "Суперлайках" — тоже уберётся
       }),
+
+      // нас суперлайкнули — обновить вкладку "Суперлайки"
+      onSocket('superlike', () => loadSuperlikes()),
 
       // собеседник прочитал переписку — подтянуть partnerReadAt для "Прочитано"
       onSocket('read', () => loadMatches()),
@@ -273,7 +284,7 @@ export default function App() {
     ];
 
     return () => offs.forEach((off) => off());
-  }, [loadMatches, loadIncoming, loadChat, markRead, activeChatId]);
+  }, [loadMatches, loadIncoming, loadSuperlikes, loadChat, markRead, activeChatId]);
 
   // ---------- действия ----------
 
@@ -298,12 +309,13 @@ export default function App() {
     goToPremium();
   }
 
-  async function handleSwipe(profile, direction, { isSuper = false } = {}) {
+  async function handleSwipe(profile, direction, { isSuper = false, message } = {}) {
     try {
       const res = await api.post('/swipes', {
         targetId: profile.id,
         direction,
         superlike: isSuper,
+        message,
       });
       if (res.match) {
         await loadMatches();
@@ -344,11 +356,35 @@ export default function App() {
     await handleSwipe(profile, direction);
   }
 
+  // "Пропустить" на вкладке «Суперлайки» — обычный пропуск, тем же путём,
+  // что и «Симпатии»: сообщение просто пропадёт из списка.
+  async function handlePassSuperlike(profile) {
+    setSuperlikes((prev) => prev.filter((p) => p.id !== profile.id)); // сразу убираем
+    await handleSwipe(profile, 'pass');
+  }
+
+  // "Взаимно" на вкладке «Суперлайки» — мгновенный мэтч без Premium и без
+  // учёта дневного лимита лайков (см. respondToSuperlike на сервере).
+  async function handleReciprocateSuperlike(profile) {
+    setSuperlikeBusyId(profile.id);
+    try {
+      const res = await api.post(`/superlikes/${profile.id}/reciprocate`);
+      setSuperlikes((prev) => prev.filter((p) => p.id !== profile.id));
+      await loadMatches();
+      setMatchPopup({ ...normalizeProfile(res.withUser), matchId: res.matchId });
+    } catch (err) {
+      console.error('reciprocate superlike failed', err);
+    } finally {
+      setSuperlikeBusyId(null);
+    }
+  }
+
   // После жалобы/блокировки (сам запрос уже сделал компонент) — обновляем всё,
   // где мог остаться заблокированный человек.
   function refreshAfterBlock() {
     loadFeed();
     loadIncoming();
+    loadSuperlikes();
     loadMatches();
   }
 
@@ -568,6 +604,8 @@ export default function App() {
         {tab === 'chat' && (
           <ChatTab
             matches={matches}
+            superlikes={superlikes}
+            superlikeBusyId={superlikeBusyId}
             messages={messages}
             activities={activities}
             myProfile={me}
@@ -576,6 +614,8 @@ export default function App() {
             partnerReadAt={activeMatch?.partnerReadAt}
             onSelectChat={setActiveChatId}
             onBrowse={() => setTab('deck')}
+            onReciprocateSuperlike={handleReciprocateSuperlike}
+            onPassSuperlike={handlePassSuperlike}
             onSend={handleSend}
             onReact={handleReact}
             onEditMessage={handleEditMessage}

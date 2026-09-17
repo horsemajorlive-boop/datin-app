@@ -21,6 +21,7 @@ import {
   emitMessage,
   emitReaction,
   emitMatch,
+  emitSuperlike,
   emitRead,
   emitMessageEdited,
   emitMessageDeleted,
@@ -374,10 +375,11 @@ app.post('/api/swipes', swipeLimiter, (req, res) => {
   const targetId = Number(req.body?.targetId);
   const direction = req.body?.direction === 'like' ? 'like' : 'pass';
   const isSuper = direction === 'like' && !!req.body?.superlike;
+  const message = isSuper ? req.body?.message : undefined;
   if (!targetId || targetId === req.user.id) {
     return res.status(400).json({ error: 'bad targetId' });
   }
-  const result = model.recordSwipe(req.user.id, targetId, direction, { isSuper });
+  const result = model.recordSwipe(req.user.id, targetId, direction, { isSuper, message });
   if (result.error) {
     return res.status(429).json({ error: LIMIT_MESSAGES[result.error] || 'Лимит исчерпан' });
   }
@@ -389,7 +391,28 @@ app.post('/api/swipes', swipeLimiter, (req, res) => {
     notifyNewMatch(req.user.id, targetId);
   } else if (direction === 'like') {
     notifyNewLike(req.user.id, targetId, { isSuper });
+    if (isSuper) emitSuperlike(targetId); // обновить вкладку "Суперлайки" у получателя
   }
+});
+
+// Суперлайки, которые ждут ответа (вкладка "Суперлайки" в чате) — доступно
+// всем, не только Premium: это отдельный, бесплатный способ получить мэтч.
+app.get('/api/superlikes/incoming', (req, res) => {
+  res.json(model.getPendingSuperlikes(req.user.id));
+});
+
+// Ответить взаимностью на суперлайк ("Взаимно") — мгновенный мэтч без
+// Premium и без учёта дневного лимита лайков: { actorId в URL }.
+app.post('/api/superlikes/:actorId/reciprocate', swipeLimiter, (req, res) => {
+  const actorId = Number(req.params.actorId);
+  if (!actorId) return res.status(400).json({ error: 'bad actorId' });
+  const result = model.respondToSuperlike(req.user.id, actorId);
+  if (result.error) {
+    return res.status(400).json({ error: 'Суперлайк не найден или уже обработан' });
+  }
+  res.json(result);
+  emitMatch([req.user.id, actorId]);
+  notifyNewMatch(req.user.id, actorId);
 });
 
 // Отмена свайпа ("вернуть", только Premium): { targetId }
