@@ -16,7 +16,9 @@ export const DEFAULT_FILTERS = {
   smoking: '', // '' | 'no' | 'sometimes' | 'yes'
   drinking: '', // '' | 'no' | 'sometimes' | 'yes'
   verified: false, // true — только с подтверждённым фото
-  sort: '', // '' — сейчас активны (по умолчанию) | 'new' — новенькие (Premium)
+  // '' — сейчас активны | 'simple' — простой свайпинг (по умолчанию, без
+  // привязки к активности) | 'new' — новенькие (Premium) | 'random' — рандомайзер (Premium)
+  sort: 'simple',
   radiusKm: '', // радиус поиска "рядом" в км — работает только если поделились геопозицией
 };
 
@@ -78,7 +80,15 @@ export function buildFeedQuery(f) {
   return s ? `?${s}` : '';
 }
 
-// Есть ли хоть один активный фильтр (для индикатора на кнопке).
+// Есть ли хоть один НЕ дефолтный фильтр (для индикатора на кнопке).
+// Не через buildFeedQuery: sort теперь по умолчанию 'simple' (не пустая
+// строка) и всегда попадает в query — иначе сервер применил бы другую
+// сортировку по умолчанию ('' — "Сейчас активны") молча.
 export function isFilterActive(f) {
-  return buildFeedQuery(f) !== '';
+  return Object.keys(DEFAULT_FILTERS).some((key) => {
+    const def = DEFAULT_FILTERS[key];
+    return Array.isArray(def)
+      ? JSON.stringify(f[key]) !== JSON.stringify(def)
+      : f[key] !== def;
+  });
 }

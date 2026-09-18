@@ -967,6 +967,67 @@
   height: 20px;
 }
 
+/* Общий пейволл (см. Paywall.jsx) — тот же приём, что у missed-nudge:
+   блюрим весь экран под собой, а не просто затемняем. */
+.paywall-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 75;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: fade-in 0.2s ease;
+}
+
+.paywall-modal__card {
+  max-width: 300px;
+  padding: 26px 22px 22px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+
+.paywall-modal__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  color: #8a5a00;
+  background: linear-gradient(160deg, #fff3da, #f6dfa8);
+}
+
+.paywall-modal__icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.paywall-modal__card h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.paywall-modal__card p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* Widget-заблокированные чипы (см. FilterSheet) — визуально как :disabled,
+   но кликабельны: клик открывает пейволл, а не просто ничего не делает. */
+.chipbtn--locked {
+  opacity: 0.5;
+}
+
 /* Широкая кнопка (в анкете и профиле). */
 .btn-wide {
   width: 100%;

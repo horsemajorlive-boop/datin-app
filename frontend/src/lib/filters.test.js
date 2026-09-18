@@ -56,8 +56,8 @@ describe('loadFilters/saveFilters', () => {
 });
 
 describe('buildFeedQuery', () => {
-  test('пустые фильтры дают пустую строку', () => {
-    expect(buildFeedQuery(DEFAULT_FILTERS)).toBe('');
+  test('фильтры по умолчанию дают только sort=simple (его нужно слать явно)', () => {
+    expect(buildFeedQuery(DEFAULT_FILTERS)).toBe('?sort=simple');
   });
 
   test('возраст всегда проходит через clampAge (младше 18 не уйдёт в запрос)', () => {
@@ -81,16 +81,20 @@ describe('buildFeedQuery', () => {
   });
 
   test('пробелы в городе обрезаются, пустой город не попадает в запрос', () => {
-    expect(buildFeedQuery({ ...DEFAULT_FILTERS, city: '   ' })).toBe('');
+    expect(buildFeedQuery({ ...DEFAULT_FILTERS, city: '   ' })).toBe('?sort=simple');
   });
 });
 
 describe('isFilterActive', () => {
-  test('false для фильтров по умолчанию', () => {
+  test('false для фильтров по умолчанию (в т.ч. sort: "simple")', () => {
     expect(isFilterActive(DEFAULT_FILTERS)).toBe(false);
   });
 
   test('true, если задан хотя бы один фильтр', () => {
     expect(isFilterActive({ ...DEFAULT_FILTERS, sort: 'new' })).toBe(true);
+  });
+
+  test('true, если явно выбрана сортировка "Сейчас активны" (sort: "") — она больше не дефолт', () => {
+    expect(isFilterActive({ ...DEFAULT_FILTERS, sort: '' })).toBe(true);
   });
 });

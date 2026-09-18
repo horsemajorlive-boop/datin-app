@@ -108,6 +108,7 @@ export default function DeckScreen({
           onShareLocation={onShareLocation}
           onClearLocation={onClearLocation}
           isPremium={isPremium}
+          onUpgrade={onOpenPremium}
         />
       )}
     </div>

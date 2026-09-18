@@ -6,12 +6,17 @@ import { GOAL, KIDS } from '../data/goals';
 import { RADII_KM } from '../lib/location';
 import { requestLocation } from '../telegram';
 import CityInput from './CityInput';
+import Paywall from './Paywall';
 import { IconX } from './icons';
 
-// "Новенькие" — только с Premium (см. isPremium ниже).
+// "Новенькие" и "Рандомайзер" — только с Premium (см. isPremium ниже).
+// 'simple' ("Простой свайпинг") — значение по умолчанию (см. DEFAULT_FILTERS
+// в lib/filters.js): без привязки к активности, онлайн и оффлайн вперемешку.
 const SORTS = [
+  { code: 'simple', label: 'Простой свайпинг' },
   { code: '', label: 'Сейчас активны' },
-  { code: 'new', label: 'Новенькие' },
+  { code: 'new', label: 'Новенькие', pro: true },
+  { code: 'random', label: 'Рандомайзер', pro: true },
 ];
 
 const GENDERS = [
@@ -22,9 +27,11 @@ const GENDERS = [
 // Шторка с фильтрами ленты поиска.
 //
 // Props:
-//   value   - текущие фильтры
-//   onApply - применить: onApply(новыеФильтры)
-//   onClose - закрыть без изменений
+//   value     - текущие фильтры
+//   onApply   - применить: onApply(новыеФильтры)
+//   onClose   - закрыть без изменений
+//   isPremium - снимает блокировку с фильтра "Быт" и сортировок "Новенькие"/"Рандомайзер"
+//   onUpgrade - перейти к оформлению Premium (из пейволла — см. Paywall)
 
 // Секция фильтров: ярлык + панель.
 function Group({ title, children }) {
@@ -37,7 +44,9 @@ function Group({ title, children }) {
 }
 
 // Один ряд чипов "выбрать один код или ничего".
-function OneRow({ label, options, value, onPick, useLabel = false, disabled = false }) {
+// locked — вместо обычного выбора клик зовёт onLockedClick (пейволл), а не
+// просто ничего не делает: native disabled-кнопка вообще не ловит клики.
+function OneRow({ label, options, value, onPick, useLabel = false, locked = false, onLockedClick }) {
   return (
     <div className="field">
       <span>{label}</span>
@@ -46,9 +55,8 @@ function OneRow({ label, options, value, onPick, useLabel = false, disabled = fa
           <button
             key={o.code}
             type="button"
-            className={`chipbtn ${value === o.code ? 'is-on' : ''}`}
-            onClick={() => onPick(value === o.code ? '' : o.code)}
-            disabled={disabled}
+            className={`chipbtn ${value === o.code ? 'is-on' : ''} ${locked ? 'chipbtn--locked' : ''}`}
+            onClick={() => (locked ? onLockedClick?.() : onPick(value === o.code ? '' : o.code))}
           >
             {useLabel ? o.label : o.short || o.label}
           </button>
@@ -66,10 +74,14 @@ export default function FilterSheet({
   onShareLocation,
   onClearLocation,
   isPremium,
+  onUpgrade,
 }) {
   const [f, setF] = useState(value);
   const [geoBusy, setGeoBusy] = useState(false);
   const [geoError, setGeoError] = useState('');
+  // Клик по любой Premium-функции без Premium — не просто disabled-кнопка
+  // в никуда, а блюр экрана с предложением оформить (см. Paywall).
+  const [paywallText, setPaywallText] = useState('');
 
   const set = (patch) => setF((cur) => ({ ...cur, ...patch }));
 
@@ -107,6 +119,7 @@ export default function FilterSheet({
     });
 
   return (
+    <>
     <div className="sheet" onClick={onClose}>
       <div className="sheet__card" onClick={(e) => e.stopPropagation()}>
         <span className="sheet__grab" />
@@ -236,11 +249,14 @@ export default function FilterSheet({
                     <button
                       key={o.code}
                       type="button"
-                      className={`chipbtn ${
-                        f.housing.includes(o.code) ? 'is-on' : ''
+                      className={`chipbtn ${f.housing.includes(o.code) ? 'is-on' : ''} ${
+                        !isPremium ? 'chipbtn--locked' : ''
                       }`}
-                      onClick={() => toggleHousing(o.code)}
-                      disabled={!isPremium}
+                      onClick={() =>
+                        isPremium
+                          ? toggleHousing(o.code)
+                          : setPaywallText('Фильтр по жилью, авто и работе — с Premium')
+                      }
                     >
                       {o.short}
                     </button>
@@ -252,14 +268,16 @@ export default function FilterSheet({
                 options={CAR}
                 value={f.car}
                 onPick={(v) => set({ car: v })}
-                disabled={!isPremium}
+                locked={!isPremium}
+                onLockedClick={() => setPaywallText('Фильтр по жилью, авто и работе — с Premium')}
               />
               <OneRow
                 label="Работа"
                 options={EMPLOYMENT}
                 value={f.employment}
                 onPick={(v) => set({ employment: v })}
-                disabled={!isPremium}
+                locked={!isPremium}
+                onLockedClick={() => setPaywallText('Фильтр по жилью, авто и работе — с Premium')}
               />
             </Group>
 
@@ -318,17 +336,26 @@ export default function FilterSheet({
                 <span>Сортировка</span>
                 <div className="choice">
                   {SORTS.map((o) => {
-                    const locked = o.code === 'new' && !isPremium;
+                    const locked = o.pro && !isPremium;
                     return (
                       <button
                         key={o.code}
                         type="button"
-                        className={`chipbtn ${f.sort === o.code ? 'is-on' : ''}`}
-                        onClick={() => !locked && set({ sort: f.sort === o.code ? '' : o.code })}
-                        disabled={locked}
+                        className={`chipbtn ${f.sort === o.code ? 'is-on' : ''} ${
+                          locked ? 'chipbtn--locked' : ''
+                        }`}
+                        onClick={() =>
+                          locked
+                            ? setPaywallText(
+                                o.code === 'new'
+                                  ? '«Новенькие» — недавно зарегистрированные, без буст-приоритета. Доступно с Premium.'
+                                  : '«Рандомайзер» — совсем случайные анкеты, без буст-приоритета. Доступно с Premium.'
+                              )
+                            : set({ sort: o.code })
+                        }
                       >
                         {o.label}
-                        {locked && <span className="chipbtn__pro">PRO</span>}
+                        {o.pro && !isPremium && <span className="chipbtn__pro">PRO</span>}
                       </button>
                     );
                   })}
@@ -352,5 +379,19 @@ export default function FilterSheet({
         </div>
       </div>
     </div>
+
+    {/* ВНЕ .sheet — иначе клик по кнопкам пейволла всплыл бы до onClick={onClose}
+        самой шторки фильтров и закрывал бы её заодно с пейволлом. */}
+    <Paywall
+      show={!!paywallText}
+      text={paywallText}
+      onClose={() => setPaywallText('')}
+      onUpgrade={() => {
+        setPaywallText('');
+        onClose();
+        onUpgrade?.();
+      }}
+    />
+    </>
   );
 }

@@ -786,12 +786,29 @@ export function getFeed(userId, opts = {}) {
     where.push('u.verified_at IS NOT NULL');
   }
 
-  // Сортировка: по умолчанию — недавно активные; 'new' — недавно
-  // зарегистрированные, только для Premium (иначе тихо остаёмся на обычной).
-  const orderBy =
-    sort === 'new' && premium
-      ? 'u.created_at DESC, p.updated_at DESC'
-      : 'p.updated_at DESC';
+  // Сортировка ленты:
+  //   ''       — "Сейчас активны": недавно активные первыми (умолч. раньше).
+  //   'simple' — "Простой свайпинг": вообще без привязки к активности,
+  //              онлайн и оффлайн вперемешку — теперь именно этот режим
+  //              выставлен по умолчанию на фронте (см. DEFAULT_FILTERS).
+  //   'new'    — "Новенькие", только Premium: недавно зарегистрированные.
+  //   'random' — "Рандомайзер", только Premium: совсем случайный порядок.
+  // Без Premium 'new'/'random' тихо остаются на обычной сортировке —
+  // фронт и так не даёт их выбрать без Premium, это подстраховка на случай
+  // прямого вызова API.
+  let orderBy;
+  let boostExempt = false; // 'new' и 'random' — буст-приоритет их не касается
+  if (sort === 'new' && premium) {
+    orderBy = 'u.created_at DESC, p.updated_at DESC';
+    boostExempt = true;
+  } else if (sort === 'random' && premium) {
+    orderBy = 'RANDOM()';
+    boostExempt = true;
+  } else if (sort === 'simple') {
+    orderBy = 'p.user_id ASC';
+  } else {
+    orderBy = 'p.updated_at DESC';
+  }
 
   // Поднятые (boosted_until > now) анкеты идут первой группой. Внутри неё —
   // RANDOM(), а не жёсткий порядок: если бустится много людей одновременно,
@@ -800,12 +817,17 @@ export function getFeed(userId, opts = {}) {
   // симуляции в simulate-boosts.js — так распределение позиции #1 среди
   // одновременно поднятых остаётся близким к равномерному). Внутри
   // обычной группы (rnd = 0 у всех, поэтому RANDOM() её не трогает)
-  // сохраняется прежний порядок.
+  // сохраняется прежний порядок. "Новенькие" и "Рандомайзер" (boostExempt)
+  // из этого приоритета намеренно исключены — буст на них не действует.
   const isBoostedSql = `(u.boosted_until IS NOT NULL AND u.boosted_until > :now)`;
-  const orderByWithBoost =
-    `${isBoostedSql} DESC, ` +
-    `(CASE WHEN ${isBoostedSql} THEN RANDOM() ELSE 0 END) DESC, ` +
-    orderBy;
+  const orderByWithBoost = boostExempt
+    ? orderBy
+    : `${isBoostedSql} DESC, ` +
+      `(CASE WHEN ${isBoostedSql} THEN RANDOM() ELSE 0 END) DESC, ` +
+      orderBy;
+  // :now в params нужен только внутри isBoostedSql — без него node:sqlite
+  // ругается на "лишний" именованный параметр, которого нет в самом запросе.
+  if (boostExempt) delete params.now;
 
   const rows = db
     .prepare(
@@ -829,11 +851,17 @@ export function getFeed(userId, opts = {}) {
     if (Number.isFinite(radiusKm)) {
       profiles = profiles.filter((p) => p.distanceKm <= radiusKm);
     }
-    // "Рядом" считается в JS, поэтому и буст-приоритет здесь применяем
-    // отдельно: поднятые (перемешанные) впереди, остальные — по расстоянию.
-    const boosted = shuffle(profiles.filter((p) => p.isBoosted));
-    const rest = profiles.filter((p) => !p.isBoosted).sort((a, b) => a.distanceKm - b.distanceKm);
-    profiles = [...boosted, ...rest];
+    if (boostExempt) {
+      // "Новенькие"/"Рандомайзер" — буст сюда не лезет, только обрезаем по
+      // радиусу; порядок, заданный в SQL (RANDOM()/по дате регистрации),
+      // сохраняем как есть, а не пересортировываем по расстоянию.
+    } else {
+      // "Рядом" считается в JS, поэтому и буст-приоритет здесь применяем
+      // отдельно: поднятые (перемешанные) впереди, остальные — по расстоянию.
+      const boosted = shuffle(profiles.filter((p) => p.isBoosted));
+      const rest = profiles.filter((p) => !p.isBoosted).sort((a, b) => a.distanceKm - b.distanceKm);
+      profiles = [...boosted, ...rest];
+    }
   }
 
   return profiles.slice(0, rawLimit);

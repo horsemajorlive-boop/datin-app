@@ -205,6 +205,72 @@ test('поднятая анкета оказывается в приоритет
   assert.ok(boostedProfile?.isBoosted);
 });
 
+// ---------- сортировка ленты ----------
+
+// Тесты сортировки делят одну БД со всеми остальными тестами файла (см.
+// makeUser/nextId выше) — к этому моменту в ней уже могут быть сотни
+// пользователей из предыдущих тестов, а getFeed всегда режет результат по
+// 50 (см. rawLimit в models.js). Поэтому ниже проверяем не точный размер
+// выдачи, а конкретные, однозначно узнаваемые свойства — либо что запрос
+// вообще не падает, либо относительный порядок конкретных анкет.
+
+test('sort "simple" не требует Premium и не падает', () => {
+  const viewer = makeUser();
+  makeUser();
+  const feed = model.getFeed(viewer, { limit: 50, sort: 'simple' });
+  assert.ok(Array.isArray(feed) && feed.length > 0);
+});
+
+test('sort "new"/"random" без Premium не падают (тихо остаются на обычной сортировке)', () => {
+  const viewer = makeUser(); // без Premium
+  makeUser();
+  assert.ok(Array.isArray(model.getFeed(viewer, { limit: 50, sort: 'new' })));
+  assert.ok(Array.isArray(model.getFeed(viewer, { limit: 50, sort: 'random' })));
+});
+
+test('буст не действует на "Новенькие" — поднятая, но очень старая анкета вытесняется свежими за пределы страницы', () => {
+  const viewer = makeUser();
+  model.grantPremium(viewer, 30); // 'new' доступен только с Premium
+
+  const boostedOld = makeUser();
+  model.grantPremium(boostedOld, 30);
+  model.boostProfile(boostedOld);
+  db.prepare('UPDATE users SET created_at = ? WHERE id = ?').run(1000, boostedOld);
+
+  // Строго больше лимита выдачи (50) заведомо более свежих анкет: без
+  // буст-исключения boostedOld всё равно оказался бы в топе (буст всегда
+  // выигрывал бы первичный ключ сортировки) — а с ним его должно вытеснить
+  // за пределы страницы точно так же, как любую другую древнюю анкету.
+  for (let i = 0; i < 55; i++) {
+    const id = makeUser();
+    db.prepare('UPDATE users SET created_at = ? WHERE id = ?').run(9_000_000_000_000 + i, id);
+  }
+
+  const ids = model.getFeed(viewer, { limit: 50, sort: 'new' }).map((p) => p.id);
+  assert.equal(ids.indexOf(boostedOld), -1); // не попал даже на первую страницу
+});
+
+test('буст не действует на "Рандомайзер" — поднятая анкета не приклеена к началу списка', () => {
+  const viewer = makeUser();
+  model.grantPremium(viewer, 30); // 'random' доступен только с Premium
+
+  const boosted = makeUser();
+  model.grantPremium(boosted, 30);
+  model.boostProfile(boosted);
+  for (let i = 0; i < 20; i++) makeUser();
+
+  const TRIES = 25;
+  let alwaysFirst = true;
+  for (let i = 0; i < TRIES; i++) {
+    const feed = model.getFeed(viewer, { limit: 50, sort: 'random' });
+    if (feed[0]?.id !== boosted) {
+      alwaysFirst = false;
+      break;
+    }
+  }
+  assert.equal(alwaysFirst, false, 'бустнутый не должен ВСЕГДА оказываться первым при рандомайзере');
+});
+
 // ---------- маскировка без Premium ----------
 
 test('getIncomingLikes скрывает личность без Premium', () => {
