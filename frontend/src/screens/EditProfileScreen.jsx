@@ -140,6 +140,12 @@ export default function EditProfileScreen({ profile, onSave, onCancel }) {
             onChange={(next) => updateField('photos', next)}
             max={MAX_PHOTOS}
           />
+          {profile.verified && (
+            <p className="photo-verify-hint">
+              При смене главного фото галочку верификации нужно будет получить заново —
+              она подтверждает именно его. Остальные фото можно менять свободно.
+            </p>
+          )}
         </Section>
 
         <Section title="Основное">

@@ -154,15 +154,17 @@ app.put('/api/me', (req, res) => {
   model.saveProfile(req.user.id, req.body || {});
   if (Array.isArray(req.body?.photos)) {
     const nextPhotos = req.body.photos;
-    // фото поменялись — раньше подтверждённая галочка больше не действительна
-    const changed =
-      nextPhotos.length !== before.photos.length ||
-      nextPhotos.some((url, i) => url !== before.photos[i]);
+    // Верификация подтверждает именно ГЛАВНОЕ фото — остальные снимки на
+    // неё никак не влияют, их можно свободно добавлять/удалять/переставлять
+    // местами между собой. Галочка снимается только когда сменилось само
+    // главное фото (позиция 0) — иначе пришлось бы проходить верификацию
+    // заново при каждом добавлении обычного снимка в анкету.
+    const mainPhotoChanged = nextPhotos[0] !== before.photos[0];
     model.setPhotos(req.user.id, nextPhotos);
     // Старые файлы, которых больше нет в новом списке, никому не нужны —
     // без этого backend/uploads только растёт при каждой смене фото анкеты.
     deleteUploadUrls(before.photos.filter((url) => !nextPhotos.includes(url)));
-    if (changed && before.verified) model.revokeVerification(req.user.id);
+    if (mainPhotoChanged && before.verified) model.revokeVerification(req.user.id);
   }
   res.json({ ...model.getFullProfile(req.user.id), isAdmin: isAdmin(req.user.id) });
 });
