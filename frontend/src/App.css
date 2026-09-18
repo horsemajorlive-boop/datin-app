@@ -1063,6 +1063,8 @@
 .nav {
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: 10px;
   padding: 6px 16px calc(6px + env(safe-area-inset-bottom));
 }
 
@@ -1127,6 +1129,40 @@
 .nav__icon svg {
   width: 21px;
   height: 21px;
+}
+
+/* Кнопка "Группы" — отдельный кружок рядом с общей пилюлью, а не внутри неё. */
+.nav__groups {
+  position: relative;
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: none;
+  color: var(--faint);
+  background: color-mix(in srgb, var(--surface-2) 86%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.nav__groups svg {
+  width: 21px;
+  height: 21px;
+}
+
+.nav__groups.is-active {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.nav__badge--groups {
+  border-color: var(--surface);
 }
 
 /* ================= Всплывающая анкета (шторка) ================= */
@@ -2078,6 +2114,15 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
+  /* В GroupChatPane это <button> (тап открывает участников) — сбрасываем
+     браузерные стили кнопки, чтобы выглядело как обычный ряд шапки. */
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
 }
 
 .chat__avatar-wrap {
@@ -2090,6 +2135,108 @@
   height: 36px;
   border-radius: 50%;
   object-fit: cover;
+}
+
+/* Группа без обложки (необязательное поле при создании) — заглушка-иконка.
+   36px по умолчанию (шапка чата, её .chat__avatar-wrap сам размера не
+   задаёт — берёт его от содержимого); --lg — 52px для списков и карточек,
+   у которых контейнер уже фиксированного размера. */
+.group-avatar-fallback {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.group-avatar-fallback svg {
+  width: 18px;
+  height: 18px;
+}
+
+.group-avatar-fallback--lg {
+  width: 52px;
+  height: 52px;
+}
+
+.group-avatar-fallback--lg svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Имя автора над чужим сообщением в групповом чате (в 1:1-чате не нужно —
+   и так ясно, от кого). */
+.group-msg__author {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 2px;
+}
+
+/* ================= Участники группы (GroupMembersSheet) ================= */
+
+.grpmembers__desc {
+  margin-top: 2px;
+}
+
+.grpmembers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0 16px;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.grpmembers__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+}
+
+.grpmembers__ava {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--surface-2);
+}
+
+.grpmembers__name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grpmembers__owner {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.grpmembers__kick {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-2);
+  background: var(--surface-2);
+  color: var(--nope);
+  font-size: 12px;
+  cursor: pointer;
 }
 
 .chat__online-dot {
@@ -3201,6 +3348,158 @@
 .photos__add:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+/* Обложка группы (GroupCreateSheet) — одно фото, широкий прямоугольник
+   вместо портретной карточки анкеты (это обложка тусовки, не человек). */
+.group-cover-pick {
+  display: block;
+  width: 100%;
+  height: 120px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.group-cover-pick img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.group-cover-pick__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.group-cover-pick__empty svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ================= Вкладка "Группы" (GroupsScreen) ================= */
+
+.groups-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.groups-create-btn {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.groups-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.groupcard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.groupcard__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.groupcard__photo {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.groupcard__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.groupcard__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.groupcard__name {
+  font-size: 14.5px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.groupcard__desc {
+  font-size: 12.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.groupcard__meta {
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+.groupcard__join,
+.groupcard__joined {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  border: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.groupcard__join {
+  background: var(--accent);
+  color: #fff;
+}
+
+.groupcard__join:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.groupcard__joined {
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  color: var(--text);
 }
 
 /* ================= Редактор фото (кадрирование перед загрузкой) ================= */

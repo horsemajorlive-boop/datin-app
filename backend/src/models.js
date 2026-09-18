@@ -1312,6 +1312,315 @@ export function deleteMessage(messageId, userId) {
   return { id: messageId, matchId: msg.match_id };
 }
 
+// ---------- Группы по интересам ----------
+
+// Создание группы платное (см. /api/groups и /telegram/webhook в server.js —
+// оплата подтверждается тем же вебхуком, что и Premium), вступление бесплатно.
+export const GROUP_CREATE_PRICE_STARS = 50;
+export const GROUP_NAME_MAX_LEN = 60;
+export const GROUP_DESC_MAX_LEN = 300;
+export const GROUP_MESSAGE_MAX_LEN = 1000;
+
+function groupRow(userId, r) {
+  const memberCount = db
+    .prepare(`SELECT COUNT(*) AS n FROM group_members WHERE group_id = ?`)
+    .get(r.id).n;
+  const membership = userId
+    ? db
+        .prepare(`SELECT role FROM group_members WHERE group_id = ? AND user_id = ?`)
+        .get(r.id, userId)
+    : null;
+  return {
+    id: r.id,
+    name: r.name,
+    description: r.description,
+    city: r.city,
+    interest: r.interest,
+    photo: r.photo_url || null,
+    ownerId: r.owner_id,
+    createdAt: r.created_at,
+    memberCount,
+    isMember: !!membership,
+    isOwner: membership?.role === 'owner',
+  };
+}
+
+// Черновик группы — сразу с владельцем в участниках, но ещё НЕ оплачена
+// (paid_at = NULL) и потому не видна никому в listGroups. Возвращает id —
+// его кладут в payload счёта на оплату (см. /api/groups), а после успешной
+// оплаты вызывают finalizeGroupPayment(id, payerId).
+export function createGroupDraft(ownerId, { name, description, city, interest, photo }) {
+  const cleanName = String(name || '').trim().slice(0, GROUP_NAME_MAX_LEN);
+  const cleanCity = String(city || '').trim().slice(0, 60);
+  if (!cleanName || !cleanCity) return { error: 'bad_input' };
+
+  const ts = now();
+  const info = db
+    .prepare(
+      `INSERT INTO groups (name, description, city, interest, photo_url, owner_id, created_at)
+       VALUES (:name, :desc, :city, :interest, :photo, :owner, :ts)`
+    )
+    .run({
+      name: cleanName,
+      desc: String(description || '').trim().slice(0, GROUP_DESC_MAX_LEN),
+      city: cleanCity,
+      interest: String(interest || '').trim().slice(0, 40),
+      photo: photo ? String(photo).slice(0, 500) : null,
+      owner: ownerId,
+      ts,
+    });
+
+  const groupId = info.lastInsertRowid;
+  db.prepare(
+    `INSERT INTO group_members (group_id, user_id, role, joined_at) VALUES (?, ?, 'owner', ?)`
+  ).run(groupId, ownerId, ts);
+
+  return { groupId };
+}
+
+// Вызывается из /telegram/webhook после успешной оплаты. Проверяем, что
+// платит именно владелец черновика — иначе кто угодно, зная id группы из
+// чужого payload, мог бы её "оплатить" за автора.
+export function finalizeGroupPayment(groupId, payerId) {
+  const g = db.prepare(`SELECT owner_id, paid_at FROM groups WHERE id = ?`).get(groupId);
+  if (!g || g.owner_id !== payerId || g.paid_at != null) return { error: 'not_found' };
+  db.prepare(`UPDATE groups SET paid_at = ? WHERE id = ?`).run(now(), groupId);
+  return { ok: true, groupId };
+}
+
+// Список групп в городе (по умолчанию — свой город, см. фронт), плюс
+// опционально фильтр по интересу. Черновики (paid_at IS NULL) сюда не
+// попадают ни у кого, включая владельца, — недооплаченная группа просто
+// не существует для остальных до завершения оплаты.
+export function listGroups(userId, { city, interest } = {}) {
+  const where = ['paid_at IS NOT NULL'];
+  const params = {};
+  if (city) {
+    where.push('city = :city');
+    params.city = city;
+  }
+  if (interest) {
+    where.push('interest = :interest');
+    params.interest = interest;
+  }
+  const rows = db
+    .prepare(`SELECT * FROM groups WHERE ${where.join(' AND ')} ORDER BY created_at DESC`)
+    .all(params);
+  return rows.map((r) => groupRow(userId, r));
+}
+
+// Группы, в которых состоит пользователь — со сводкой по чату (как getMatches
+// для мэтчей): последнее сообщение и число непрочитанных.
+export function getMyGroups(userId) {
+  const rows = db
+    .prepare(
+      `SELECT g.* FROM groups g
+         JOIN group_members m ON m.group_id = g.id
+        WHERE m.user_id = :me AND g.paid_at IS NOT NULL
+        ORDER BY COALESCE(
+          (SELECT MAX(created_at) FROM group_messages WHERE group_id = g.id),
+          g.created_at
+        ) DESC`
+    )
+    .all({ me: userId });
+
+  const lastMsgStmt = db.prepare(
+    `SELECT type, text, sender_id FROM group_messages
+      WHERE group_id = ? ORDER BY created_at DESC LIMIT 1`
+  );
+  const unreadStmt = db.prepare(
+    `SELECT COUNT(*) AS n FROM group_messages
+      WHERE group_id = :g AND sender_id <> :me
+        AND created_at > COALESCE(
+          (SELECT last_read_at FROM group_reads WHERE group_id = :g AND user_id = :me), 0
+        )`
+  );
+
+  return rows.map((r) => {
+    const last = lastMsgStmt.get(r.id);
+    return {
+      ...groupRow(userId, r),
+      unread: unreadStmt.get({ g: r.id, me: userId }).n,
+      lastMessage: last
+        ? { type: last.type, text: last.text, fromMe: last.sender_id === userId }
+        : null,
+    };
+  });
+}
+
+// Полная карточка группы: сама группа + участники (для листа "Участники" в чате).
+// null, если группы нет вовсе или она ещё не оплачена (черновик чужой не видно).
+export function getGroup(userId, groupId) {
+  const r = db.prepare(`SELECT * FROM groups WHERE id = ?`).get(groupId);
+  if (!r || r.paid_at == null) return null;
+
+  const members = db
+    .prepare(
+      `SELECT user_id, role FROM group_members WHERE group_id = ? ORDER BY role, joined_at`
+    )
+    .all(groupId)
+    .map((m) => ({
+      ...getFullProfile(m.user_id, { forOther: true }),
+      role: m.role,
+    }));
+
+  return { ...groupRow(userId, r), members };
+}
+
+// Все id участников группы — используется только realtime.js для рассылки
+// сообщений всем, кто сейчас в группе.
+export function groupMemberIds(groupId) {
+  return db
+    .prepare(`SELECT user_id FROM group_members WHERE group_id = ?`)
+    .all(groupId)
+    .map((r) => r.user_id);
+}
+
+export function isGroupMember(groupId, userId) {
+  return !!db
+    .prepare(`SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?`)
+    .get(groupId, userId);
+}
+
+// Вступить — бесплатно, мгновенно. Нельзя вступить в неоплаченный черновик
+// (для остальных он как будто не существует) и нельзя вступить повторно.
+export function joinGroup(userId, groupId) {
+  const g = db.prepare(`SELECT paid_at FROM groups WHERE id = ?`).get(groupId);
+  if (!g || g.paid_at == null) return { error: 'not_found' };
+  if (isGroupMember(groupId, userId)) return { error: 'already_member' };
+  db.prepare(
+    `INSERT INTO group_members (group_id, user_id, role, joined_at) VALUES (?, ?, 'member', ?)`
+  ).run(groupId, userId, now());
+  return { ok: true };
+}
+
+// Выйти — доступно только обычным участникам. Владелец не может просто
+// "выйти" (группа осталась бы без хозяина) — ему нужно её удалить целиком
+// (см. deleteGroup), это осознанный выбор, а не случайный тап.
+export function leaveGroup(userId, groupId) {
+  const m = db
+    .prepare(`SELECT role FROM group_members WHERE group_id = ? AND user_id = ?`)
+    .get(groupId, userId);
+  if (!m) return { error: 'not_member' };
+  if (m.role === 'owner') return { error: 'owner_cannot_leave' };
+  db.prepare(`DELETE FROM group_members WHERE group_id = ? AND user_id = ?`).run(groupId, userId);
+  return { ok: true };
+}
+
+// Удалить группу целиком — только владелец. Участники/сообщения уходят каскадом.
+export function deleteGroup(ownerId, groupId) {
+  const g = db.prepare(`SELECT owner_id FROM groups WHERE id = ?`).get(groupId);
+  if (!g || g.owner_id !== ownerId) return { error: 'not_found' };
+  db.prepare(`DELETE FROM groups WHERE id = ?`).run(groupId);
+  return { ok: true };
+}
+
+// Исключить участника — только владелец, и не самого себя (для этого нет
+// смысла: см. deleteGroup/leaveGroup).
+export function kickMember(ownerId, groupId, targetId) {
+  const g = db.prepare(`SELECT owner_id FROM groups WHERE id = ?`).get(groupId);
+  if (!g || g.owner_id !== ownerId) return { error: 'not_found' };
+  if (targetId === ownerId) return { error: 'cannot_kick_self' };
+  db.prepare(`DELETE FROM group_members WHERE group_id = ? AND user_id = ?`).run(groupId, targetId);
+  return { ok: true };
+}
+
+export function markGroupRead(groupId, userId) {
+  if (!isGroupMember(groupId, userId)) return null;
+  db.prepare(
+    `INSERT INTO group_reads (group_id, user_id, last_read_at)
+     VALUES (:g, :u, :ts)
+     ON CONFLICT(group_id, user_id) DO UPDATE SET last_read_at = :ts`
+  ).run({ g: groupId, u: userId, ts: now() });
+  return { ok: true };
+}
+
+export function getGroupMessages(groupId, userId) {
+  if (!isGroupMember(groupId, userId)) return null;
+  const rows = db
+    .prepare(
+      `SELECT id, sender_id, type, text, photo_url, created_at, edited_at, deleted_at
+         FROM group_messages WHERE group_id = ? ORDER BY created_at`
+    )
+    .all(groupId);
+
+  return rows.map((r) => ({
+    id: r.id,
+    senderId: r.sender_id,
+    from: r.sender_id === userId ? 'me' : 'them',
+    type: r.type,
+    text: r.text,
+    photo: r.photo_url,
+    ts: r.created_at,
+    editedAt: r.edited_at,
+    deleted: r.deleted_at != null,
+  }));
+}
+
+export function addGroupMessage(groupId, senderId, { type = 'text', text, photo }) {
+  if (!isGroupMember(groupId, senderId)) return null;
+  touchUser(senderId);
+  const info = db
+    .prepare(
+      `INSERT INTO group_messages (group_id, sender_id, type, text, photo_url, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      groupId,
+      senderId,
+      type,
+      type === 'photo' ? null : String(text ?? '').slice(0, GROUP_MESSAGE_MAX_LEN),
+      type === 'photo' ? String(photo ?? '') : null,
+      now()
+    );
+
+  const r = db.prepare(`SELECT * FROM group_messages WHERE id = ?`).get(info.lastInsertRowid);
+  return {
+    id: r.id,
+    senderId: r.sender_id,
+    from: 'me',
+    type: r.type,
+    text: r.text,
+    photo: r.photo_url,
+    ts: r.created_at,
+    editedAt: r.edited_at,
+    deleted: false,
+  };
+}
+
+export function editGroupMessage(messageId, userId, text) {
+  const msg = db
+    .prepare(`SELECT group_id, sender_id, type, deleted_at FROM group_messages WHERE id = ?`)
+    .get(messageId);
+  if (!msg || msg.sender_id !== userId) return null;
+  if (msg.deleted_at != null) return { error: 'deleted' };
+  if (msg.type !== 'text') return { error: 'not_editable' };
+
+  const clean = String(text ?? '').trim().slice(0, GROUP_MESSAGE_MAX_LEN);
+  if (!clean) return { error: 'empty' };
+
+  const editedAt = now();
+  db.prepare(`UPDATE group_messages SET text = ?, edited_at = ? WHERE id = ?`).run(
+    clean,
+    editedAt,
+    messageId
+  );
+  return { id: messageId, groupId: msg.group_id, text: clean, editedAt };
+}
+
+export function deleteGroupMessage(messageId, userId) {
+  const msg = db
+    .prepare(`SELECT group_id, sender_id, deleted_at FROM group_messages WHERE id = ?`)
+    .get(messageId);
+  if (!msg || msg.sender_id !== userId) return null;
+  if (msg.deleted_at == null) {
+    db.prepare(
+      `UPDATE group_messages SET text = NULL, photo_url = NULL, deleted_at = ? WHERE id = ?`
+    ).run(now(), messageId);
+  }
+  return { id: messageId, groupId: msg.group_id };
+}
+
 // ---------- Верификация фото (ручная модерация) ----------
 
 // Пользователь прислал селфи на проверку. Новая заявка заменяет прошлую.

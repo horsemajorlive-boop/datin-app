@@ -13,8 +13,11 @@ import MatchScreen from './components/MatchScreen';
 import MissedLikeNudge from './components/MissedLikeNudge';
 import Toast from './components/Toast';
 import ChatTab from './screens/ChatTab';
+import GroupsScreen from './screens/GroupsScreen';
+import GroupChatPane from './components/GroupChatPane';
+import GroupMembersSheet from './components/GroupMembersSheet';
 import { initTelegram } from './telegram';
-import { api, normalizeProfile, normalizeMessage } from './api';
+import { api, normalizeProfile, normalizeMessage, normalizeGroup } from './api';
 import { connectSocket, onSocket, sendSocket } from './socket';
 import { loadFilters, saveFilters, buildFeedQuery } from './lib/filters';
 import './App.css';
@@ -54,6 +57,19 @@ export default function App() {
   const [matches, setMatches] = useState([]);
   const [messages, setMessages] = useState({});
   const [activities, setActivities] = useState({});
+
+  // Группы по интересам (вкладка "Группы" — отдельная кнопка в нижней навигации).
+  const [myGroups, setMyGroups] = useState([]);
+  const [browseGroups, setBrowseGroups] = useState([]);
+  const [browseCity, setBrowseCity] = useState(''); // по умолчанию подставится свой город — см. эффект ниже
+  const [browseInterest, setBrowseInterest] = useState('');
+  const [activeGroupId, setActiveGroupId] = useState(null);
+  const [activeGroup, setActiveGroup] = useState(null); // полная карточка (участники и т.п.) — грузится отдельно
+  const [groupMessages, setGroupMessages] = useState({});
+  const [groupJoinBusyId, setGroupJoinBusyId] = useState(null);
+  const [showGroupMembers, setShowGroupMembers] = useState(false);
+  const [groupActionBusy, setGroupActionBusy] = useState(false);
+  const [groupActionError, setGroupActionError] = useState('');
 
   const [activeChatId, setActiveChatId] = useState(null);
   const [matchPopup, setMatchPopup] = useState(null);
@@ -108,6 +124,35 @@ export default function App() {
     );
   }, []);
 
+  const loadMyGroups = useCallback(async () => {
+    setMyGroups((await api.get('/groups/mine')).map(normalizeGroup));
+  }, []);
+
+  const loadBrowseGroups = useCallback(async () => {
+    if (!browseCity) return setBrowseGroups([]);
+    const p = new URLSearchParams({ city: browseCity });
+    if (browseInterest) p.set('interest', browseInterest);
+    setBrowseGroups((await api.get(`/groups?${p.toString()}`)).map(normalizeGroup));
+  }, [browseCity, browseInterest]);
+
+  const loadGroupDetail = useCallback(async (groupId) => {
+    try {
+      setActiveGroup(normalizeGroup(await api.get(`/groups/${groupId}`)));
+    } catch (err) {
+      console.warn('группа недоступна', groupId, err.message);
+      setActiveGroupId((cur) => (cur === groupId ? null : cur));
+    }
+  }, []);
+
+  const loadGroupMessages = useCallback(async (groupId) => {
+    try {
+      const list = await api.get(`/groups/${groupId}/messages`);
+      setGroupMessages((prev) => ({ ...prev, [groupId]: list.map(normalizeMessage) }));
+    } catch (err) {
+      console.warn('сообщения группы недоступны', groupId, err.message);
+    }
+  }, []);
+
   const loadChat = useCallback(async (matchId) => {
     try {
       const list = await api.get(`/matches/${matchId}/messages`);
@@ -138,6 +183,16 @@ export default function App() {
     [loadMatches]
   );
 
+  // Отметить чат группы прочитанным — тот же приём, что и markRead у мэтчей.
+  const markGroupRead = useCallback(async (groupId) => {
+    setMyGroups((prev) => prev.map((g) => (g.id === groupId ? { ...g, unread: 0 } : g)));
+    try {
+      await api.post(`/groups/${groupId}/read`);
+    } catch {
+      /* не критично — счётчик поправится при следующей загрузке */
+    }
+  }, []);
+
   // Первая загрузка при запуске.
   useEffect(() => {
     initTelegram();
@@ -145,12 +200,34 @@ export default function App() {
     loadIncoming();
     loadSuperlikes();
     loadMatches();
-  }, [loadMe, loadIncoming, loadSuperlikes, loadMatches]);
+    loadMyGroups();
+  }, [loadMe, loadIncoming, loadSuperlikes, loadMatches, loadMyGroups]);
 
   // Лента — при запуске и при каждом изменении фильтров.
   useEffect(() => {
     loadFeed();
   }, [loadFeed]);
+
+  // Город обзора групп по умолчанию — свой город анкеты, один раз, как
+  // только анкета загрузилась (дальше пользователь может переключить сам).
+  useEffect(() => {
+    if (me?.city && !browseCity) setBrowseCity(me.city);
+  }, [me?.city, browseCity]);
+
+  // Список групп в городе — при первой загрузке города и при каждой смене
+  // города/интереса.
+  useEffect(() => {
+    loadBrowseGroups();
+  }, [loadBrowseGroups]);
+
+  // Открыт чат группы — подгружаем детали (участников) и сообщения, отмечаем прочитанным.
+  useEffect(() => {
+    if (tab === 'groups' && activeGroupId != null) {
+      loadGroupDetail(activeGroupId);
+      loadGroupMessages(activeGroupId);
+      markGroupRead(activeGroupId);
+    }
+  }, [tab, activeGroupId, loadGroupDetail, loadGroupMessages, markGroupRead]);
 
   // Оформили Premium прямо во время отсчёта до напоминания — оно больше
   // не нужно (всех, кто лайкнул, теперь и так видно во «Симпатиях»).
@@ -176,10 +253,10 @@ export default function App() {
   }, [tab, activeChatId, loadChat, markRead]);
 
   // Что сейчас на экране — для обработчика входящих сообщений (без пересборки сокета).
-  const viewRef = useRef({ tab, activeChatId });
+  const viewRef = useRef({ tab, activeChatId, activeGroupId });
   useEffect(() => {
-    viewRef.current = { tab, activeChatId };
-  }, [tab, activeChatId]);
+    viewRef.current = { tab, activeChatId, activeGroupId };
+  }, [tab, activeChatId, activeGroupId]);
 
   // ---------- живое соединение (WebSocket) ----------
 
@@ -294,10 +371,80 @@ export default function App() {
             : prev
         );
       }),
+
+      // новое сообщение в группе от кого-то из участников
+      onSocket('groupMessage', ({ groupId, message }) => {
+        const msg = normalizeMessage(message);
+        setGroupMessages((prev) => {
+          const thread = prev[groupId];
+          if (!thread) return prev; // чат не открыт — подтянется при открытии
+          if (thread.some((m) => m.id === msg.id)) return prev;
+          return { ...prev, [groupId]: [...thread, msg] };
+        });
+        const v = viewRef.current;
+        if (v.tab === 'groups' && v.activeGroupId === groupId) markGroupRead(groupId);
+        else loadMyGroups();
+      }),
+
+      onSocket('groupMessageEdited', ({ groupId, messageId, text, editedAt }) => {
+        setGroupMessages((prev) =>
+          prev[groupId]
+            ? {
+                ...prev,
+                [groupId]: prev[groupId].map((m) =>
+                  m.id === messageId ? { ...m, text, editedAt } : m
+                ),
+              }
+            : prev
+        );
+      }),
+
+      onSocket('groupMessageDeleted', ({ groupId, messageId }) => {
+        setGroupMessages((prev) =>
+          prev[groupId]
+            ? {
+                ...prev,
+                [groupId]: prev[groupId].map((m) =>
+                  m.id === messageId ? { ...m, deleted: true, text: null, photo: null } : m
+                ),
+              }
+            : prev
+        );
+      }),
+
+      // состав группы поменялся (вступил/вышел/исключили) — обновляем всё,
+      // где это видно: списки (счётчик участников) и открытую карточку.
+      onSocket('groupMembers', ({ groupId }) => {
+        loadMyGroups();
+        loadBrowseGroups();
+        if (viewRef.current.activeGroupId === groupId) loadGroupDetail(groupId);
+      }),
+
+      // группу удалили — если сейчас смотрим именно на неё, закрываем чат
+      onSocket('groupDeleted', ({ groupId }) => {
+        loadMyGroups();
+        loadBrowseGroups();
+        if (viewRef.current.activeGroupId === groupId) {
+          setActiveGroupId(null);
+          showToast('Эта группа была удалена');
+        }
+      }),
     ];
 
     return () => offs.forEach((off) => off());
-  }, [loadMatches, loadIncoming, loadSuperlikes, loadChat, markRead, activeChatId]);
+  }, [
+    loadMatches,
+    loadIncoming,
+    loadSuperlikes,
+    loadChat,
+    markRead,
+    activeChatId,
+    loadMyGroups,
+    loadBrowseGroups,
+    loadGroupDetail,
+    markGroupRead,
+    showToast,
+  ]);
 
   // ---------- действия ----------
 
@@ -479,6 +626,117 @@ export default function App() {
     loadMatches(); // если удалённое было последним в превью — обновить его
   }
 
+  // ---------- группы ----------
+
+  function handleOpenGroup(groupId) {
+    setActiveGroupId(groupId);
+  }
+
+  function handleBackFromGroup() {
+    setActiveGroupId(null);
+    setActiveGroup(null);
+  }
+
+  async function handleJoinGroup(group) {
+    setGroupJoinBusyId(group.id);
+    try {
+      await api.post(`/groups/${group.id}/join`);
+      await Promise.all([loadMyGroups(), loadBrowseGroups()]);
+      setActiveGroupId(group.id); // сразу открываем чат — вступление и так бесплатное и мгновенное
+    } catch (err) {
+      console.error('join group failed', err);
+      showToast(err.message || 'Не удалось вступить в группу');
+    } finally {
+      setGroupJoinBusyId(null);
+    }
+  }
+
+  // Оплата прошла (см. GroupCreateSheet) — группа уже реально создана на
+  // сервере, просто подтягиваем списки и сразу открываем её чат.
+  async function handleGroupCreated(groupId) {
+    await Promise.all([loadMyGroups(), loadBrowseGroups()]);
+    setActiveGroupId(groupId);
+  }
+
+  async function handleSendGroupMessage(payload) {
+    const groupId = activeGroupId;
+    const sent = await api.post(`/groups/${groupId}/messages`, payload);
+    setGroupMessages((prev) => ({
+      ...prev,
+      [groupId]: [...(prev[groupId] || []), normalizeMessage(sent)],
+    }));
+    loadMyGroups(); // обновить превью в списке
+  }
+
+  async function handleEditGroupMessage(messageId, text) {
+    const groupId = activeGroupId;
+    const res = await api.patch(`/group-messages/${messageId}`, { text });
+    setGroupMessages((prev) => ({
+      ...prev,
+      [groupId]: (prev[groupId] || []).map((m) =>
+        m.id === messageId ? { ...m, text: res.text, editedAt: res.editedAt } : m
+      ),
+    }));
+    loadMyGroups();
+  }
+
+  async function handleDeleteGroupMessage(messageId) {
+    const groupId = activeGroupId;
+    await api.del(`/group-messages/${messageId}`);
+    setGroupMessages((prev) => ({
+      ...prev,
+      [groupId]: (prev[groupId] || []).map((m) =>
+        m.id === messageId ? { ...m, deleted: true, text: null, photo: null } : m
+      ),
+    }));
+    loadMyGroups();
+  }
+
+  async function handleLeaveGroup() {
+    setGroupActionBusy(true);
+    setGroupActionError('');
+    try {
+      await api.post(`/groups/${activeGroupId}/leave`);
+      setShowGroupMembers(false);
+      handleBackFromGroup();
+      loadMyGroups();
+      loadBrowseGroups();
+    } catch (err) {
+      setGroupActionError(err.message || 'Не удалось выйти из группы');
+    } finally {
+      setGroupActionBusy(false);
+    }
+  }
+
+  async function handleDeleteGroupAction() {
+    setGroupActionBusy(true);
+    setGroupActionError('');
+    try {
+      await api.del(`/groups/${activeGroupId}`);
+      setShowGroupMembers(false);
+      handleBackFromGroup();
+      loadMyGroups();
+      loadBrowseGroups();
+    } catch (err) {
+      setGroupActionError(err.message || 'Не удалось удалить группу');
+    } finally {
+      setGroupActionBusy(false);
+    }
+  }
+
+  async function handleKickMember(userId) {
+    setGroupActionBusy(true);
+    setGroupActionError('');
+    try {
+      await api.post(`/groups/${activeGroupId}/kick`, { userId });
+      await loadGroupDetail(activeGroupId);
+    } catch (err) {
+      setGroupActionError(err.message || 'Не получилось исключить участника');
+    } finally {
+      setGroupActionBusy(false);
+    }
+  }
+
   // Пользователь печатает — сообщаем собеседнику (не чаще раза в 2 сек).
   const lastTypingSent = useRef(0);
   function handleTyping(kind = 'typing') {
@@ -503,6 +761,17 @@ export default function App() {
     () => matches.reduce((sum, m) => sum + (m.unread || 0), 0),
     [matches]
   );
+
+  // То же самое для кнопки «Группы».
+  const totalGroupsUnread = useMemo(
+    () => myGroups.reduce((sum, g) => sum + (g.unread || 0), 0),
+    [myGroups]
+  );
+
+  // Показываем то, что сейчас реально загружено и совпадает с открытым
+  // groupId — иначе на миг мелькнёт предыдущая (или ещё null) группа, пока
+  // loadGroupDetail не догрузит новую.
+  const openGroup = activeGroup?.id === activeGroupId ? activeGroup : null;
 
   function renderProfileTab() {
     if (!me) {
@@ -640,19 +909,69 @@ export default function App() {
             onError={showToast}
           />
         )}
+        {tab === 'groups' &&
+          (activeGroupId != null ? (
+            <div className="chattab">
+              {openGroup ? (
+                <GroupChatPane
+                  group={openGroup}
+                  messages={groupMessages[activeGroupId] || []}
+                  onBack={handleBackFromGroup}
+                  onSend={handleSendGroupMessage}
+                  onEditMessage={handleEditGroupMessage}
+                  onDeleteMessage={handleDeleteGroupMessage}
+                  onShowMembers={() => setShowGroupMembers(true)}
+                  onError={showToast}
+                />
+              ) : (
+                <p className="muted">Загрузка…</p>
+              )}
+            </div>
+          ) : (
+            <GroupsScreen
+              browseGroups={browseGroups}
+              myGroups={myGroups}
+              browseCity={browseCity}
+              onChangeBrowseCity={setBrowseCity}
+              browseInterest={browseInterest}
+              onChangeBrowseInterest={setBrowseInterest}
+              defaultCity={me?.city}
+              busyGroupId={groupJoinBusyId}
+              onJoin={handleJoinGroup}
+              onOpenGroup={handleOpenGroup}
+              onCreated={handleGroupCreated}
+            />
+          ))}
         {tab === 'me' && renderProfileTab()}
       </main>
 
       <BottomNav
         active={tab}
         chatBadge={totalUnread}
+        groupsBadge={totalGroupsUnread}
         onChange={(t) => {
-          // повторный тап по «Чат» из открытой переписки — назад к списку
+          // повторный тап по «Чат»/«Группы» из открытого чата — назад к списку
           if (t === 'chat' && tab === 'chat') setActiveChatId(null);
+          if (t === 'groups' && tab === 'groups') handleBackFromGroup();
           setTab(t);
           if (t !== 'me') setProfileView('view'); // ушли из профиля — сбрасываем подэкран
         }}
       />
+
+      {showGroupMembers && openGroup && (
+        <GroupMembersSheet
+          group={openGroup}
+          busy={groupActionBusy}
+          error={groupActionError}
+          onClose={() => {
+            setShowGroupMembers(false);
+            setGroupActionError('');
+          }}
+          onKick={handleKickMember}
+          onLeave={handleLeaveGroup}
+          onDeleteGroup={handleDeleteGroupAction}
+        />
+      )}
 
       <MatchScreen
         me={me}

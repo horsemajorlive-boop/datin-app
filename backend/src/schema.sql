@@ -152,3 +152,56 @@ CREATE INDEX IF NOT EXISTS idx_swipes_target ON swipes(target_id);
 CREATE INDEX IF NOT EXISTS idx_blocks_blocker ON blocks(blocker_id);
 CREATE INDEX IF NOT EXISTS idx_blocks_blocked ON blocks(blocked_id);
 CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status, created_at);
+
+-- Группы по интересам, разбиты по городам. Создание платное (см.
+-- GROUP_CREATE_PRICE_STARS в models.js) — paid_at NULL значит "черновик,
+-- оплата ещё не прошла", такую группу никому, кроме создателя, не видно
+-- (см. listGroups). Оплата подтверждается вебхуком Telegram, как и Premium.
+CREATE TABLE IF NOT EXISTS groups (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  name        TEXT    NOT NULL,
+  description TEXT    NOT NULL DEFAULT '',
+  city        TEXT    NOT NULL,
+  interest    TEXT    NOT NULL DEFAULT '',
+  photo_url   TEXT,
+  owner_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at  INTEGER NOT NULL,
+  paid_at     INTEGER
+);
+
+-- Участники группы. Создатель добавляется сразу с ролью 'owner' (ещё до
+-- оплаты — см. createGroupDraft), остальные — 'member', вступление бесплатно.
+CREATE TABLE IF NOT EXISTS group_members (
+  group_id  INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role      TEXT    NOT NULL DEFAULT 'member',
+  joined_at INTEGER NOT NULL,
+  PRIMARY KEY (group_id, user_id)
+);
+
+-- Сообщения в общем чате группы — та же форма, что и messages у мэтчей
+-- (текст/фото, редактирование и удаление своих), только без реакций и
+-- без привязки к паре пользователей.
+CREATE TABLE IF NOT EXISTS group_messages (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  group_id   INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  sender_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type       TEXT    NOT NULL DEFAULT 'text',
+  text       TEXT,
+  photo_url  TEXT,
+  created_at INTEGER NOT NULL,
+  edited_at  INTEGER,
+  deleted_at INTEGER
+);
+
+-- Докуда участник дочитал чат группы (для бейджа непрочитанного в "Моих группах").
+CREATE TABLE IF NOT EXISTS group_reads (
+  group_id     INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  last_read_at INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (group_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_groups_city ON groups(city, paid_at);
+CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_group_messages_group ON group_messages(group_id, created_at);

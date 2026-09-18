@@ -98,6 +98,17 @@ export function IconUser() {
   );
 }
 
+export function IconUsers() {
+  return (
+    <svg {...base}>
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3 20c0-3.4 2.8-5.2 6-5.2s6 1.8 6 5.2" />
+      <path d="M16 8.2a3 3 0 1 1 3.6 2.94" />
+      <path d="M21 20c0-2.9-2-4.6-4.5-5.1" />
+    </svg>
+  );
+}
+
 export function IconSliders() {
   return (
     <svg {...base}>

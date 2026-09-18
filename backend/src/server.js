@@ -25,6 +25,12 @@ import {
   emitRead,
   emitMessageEdited,
   emitMessageDeleted,
+  emitGroupMessage,
+  emitGroupMessageEdited,
+  emitGroupMessageDeleted,
+  emitGroupRead,
+  emitGroupMembers,
+  emitGroupDeleted,
 } from './realtime.js';
 import { DATA_DIR } from './paths.js';
 import {
@@ -130,8 +136,21 @@ app.post('/telegram/webhook', webhookLimiter, async (req, res) => {
       });
     } else if (update.message?.successful_payment) {
       const payerId = update.message.from.id;
-      const until = model.grantPremium(payerId);
-      console.log(`[premium] выдан по оплате: user ${payerId} до ${new Date(until).toISOString()}`);
+      const payload = update.message.successful_payment.invoice_payload || '';
+      // payload различает, ЗА ЧТО именно заплатили — см. createInvoiceLink
+      // в /api/premium/invoice и /api/groups ниже.
+      if (payload.startsWith('group:')) {
+        const groupId = Number(payload.slice('group:'.length));
+        const out = model.finalizeGroupPayment(groupId, payerId);
+        if (out.error) {
+          console.warn(`[groups] оплата пришла, но группа не найдена/уже оплачена: ${payload}`);
+        } else {
+          console.log(`[groups] группа ${groupId} оплачена: user ${payerId}`);
+        }
+      } else {
+        const until = model.grantPremium(payerId);
+        console.log(`[premium] выдан по оплате: user ${payerId} до ${new Date(until).toISOString()}`);
+      }
     }
   } catch (err) {
     console.warn('[telegram webhook]', err.message);
@@ -577,6 +596,154 @@ app.post('/api/upload', uploadLimiter, (req, res) => {
   const name = `${crypto.randomUUID()}.${ext}`;
   fs.writeFileSync(path.join(UPLOAD_DIR, name), buf);
   res.status(201).json({ url: `/uploads/${name}` });
+});
+
+// --- Группы по интересам ---
+
+// Список групп: ?city=&interest= (город — обязателен на фронте, но сервер
+// просто ничего не найдёт без него, а не откажет).
+app.get('/api/groups', (req, res) => {
+  res.json(
+    model.listGroups(req.user.id, {
+      city: req.query.city ? String(req.query.city).trim().slice(0, 60) : undefined,
+      interest: req.query.interest ? String(req.query.interest).trim().slice(0, 40) : undefined,
+    })
+  );
+});
+
+// Группы, в которых состоит пользователь (вкладка "Мои")
+app.get('/api/groups/mine', (req, res) => {
+  res.json(model.getMyGroups(req.user.id));
+});
+
+app.get('/api/groups/:id', (req, res) => {
+  const group = model.getGroup(req.user.id, Number(req.params.id));
+  if (!group) return res.status(404).json({ error: 'группа не найдена' });
+  res.json(group);
+});
+
+// Счёт на создание группы через Telegram Stars: { name, description?, city,
+// interest?, photo? }. Группа создаётся сразу черновиком (см.
+// createGroupDraft) — платёж просто "включает" её остальным (см. вебхук
+// выше и finalizeGroupPayment), тем же принципом, что и /api/premium/invoice.
+app.post('/api/groups', async (req, res) => {
+  if (!BOT_TOKEN) {
+    return res.status(503).json({ error: 'Оплата пока не настроена на сервере' });
+  }
+  const draft = model.createGroupDraft(req.user.id, req.body || {});
+  if (draft.error) return res.status(400).json({ error: 'Название и город обязательны' });
+
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Создание группы',
+        description: `Группа «${String(req.body?.name || '').slice(0, 80)}» — разовый платёж за создание`,
+        payload: `group:${draft.groupId}`,
+        currency: 'XTR',
+        prices: [{ label: 'Создание группы', amount: model.GROUP_CREATE_PRICE_STARS }],
+      }),
+    });
+    const data = await r.json();
+    if (!data.ok) return res.status(502).json({ error: 'Telegram отклонил запрос на счёт' });
+    res.json({ url: data.result, groupId: draft.groupId });
+  } catch (err) {
+    console.warn('[groups] createInvoiceLink', err.message);
+    res.status(502).json({ error: 'Не получилось создать счёт' });
+  }
+});
+
+app.post('/api/groups/:id/join', (req, res) => {
+  const groupId = Number(req.params.id);
+  const out = model.joinGroup(req.user.id, groupId);
+  if (out.error) {
+    return res
+      .status(400)
+      .json({ error: out.error === 'already_member' ? 'Вы уже в группе' : 'Группа не найдена' });
+  }
+  res.json(out);
+  emitGroupMembers(groupId);
+});
+
+app.post('/api/groups/:id/leave', (req, res) => {
+  const groupId = Number(req.params.id);
+  const out = model.leaveGroup(req.user.id, groupId);
+  if (out.error) {
+    return res.status(400).json({
+      error:
+        out.error === 'owner_cannot_leave'
+          ? 'Создатель не может просто выйти — удалите группу'
+          : 'Вы не состоите в этой группе',
+    });
+  }
+  res.json(out);
+  emitGroupMembers(groupId, [req.user.id]);
+});
+
+app.delete('/api/groups/:id', (req, res) => {
+  const groupId = Number(req.params.id);
+  const members = model.groupMemberIds(groupId); // до удаления — после группы уже не будет
+  const out = model.deleteGroup(req.user.id, groupId);
+  if (out.error) return res.status(403).json({ error: 'Удалить группу может только создатель' });
+  res.json(out);
+  emitGroupDeleted(members, groupId);
+});
+
+// Исключить участника — только владелец: { userId }
+app.post('/api/groups/:id/kick', (req, res) => {
+  const groupId = Number(req.params.id);
+  const targetId = Number(req.body?.userId);
+  if (!targetId) return res.status(400).json({ error: 'bad userId' });
+  const out = model.kickMember(req.user.id, groupId, targetId);
+  if (out.error) {
+    return res.status(403).json({
+      error: out.error === 'cannot_kick_self' ? 'Нельзя исключить самого себя' : 'Недоступно',
+    });
+  }
+  res.json(out);
+  emitGroupMembers(groupId, [targetId]);
+});
+
+app.get('/api/groups/:id/messages', (req, res) => {
+  const list = model.getGroupMessages(Number(req.params.id), req.user.id);
+  if (list === null) return res.status(403).json({ error: 'not a member' });
+  res.json(list);
+});
+
+app.post('/api/groups/:id/read', (req, res) => {
+  const groupId = Number(req.params.id);
+  const out = model.markGroupRead(groupId, req.user.id);
+  if (out === null) return res.status(403).json({ error: 'not a member' });
+  res.json(out);
+  emitGroupRead(groupId, req.user.id);
+});
+
+// Отправить сообщение в группу: { type, text?, photo? }
+app.post('/api/groups/:id/messages', messageLimiter, (req, res) => {
+  const groupId = Number(req.params.id);
+  const msg = model.addGroupMessage(groupId, req.user.id, req.body || {});
+  if (msg === null) return res.status(403).json({ error: 'not a member' });
+  res.status(201).json(msg);
+
+  emitGroupMessage(groupId, msg, req.user.id);
+});
+
+app.patch('/api/group-messages/:id', (req, res) => {
+  const out = model.editGroupMessage(Number(req.params.id), req.user.id, req.body?.text);
+  if (out === null) return res.status(403).json({ error: 'not your message' });
+  if (out.error) {
+    return res.status(400).json({ error: MESSAGE_EDIT_ERRORS[out.error] || 'Не удалось изменить' });
+  }
+  res.json(out);
+  emitGroupMessageEdited(out.groupId, out.id, out.text, out.editedAt, req.user.id);
+});
+
+app.delete('/api/group-messages/:id', (req, res) => {
+  const out = model.deleteGroupMessage(Number(req.params.id), req.user.id);
+  if (out === null) return res.status(403).json({ error: 'not your message' });
+  res.json(out);
+  emitGroupMessageDeleted(out.groupId, out.id, req.user.id);
 });
 
 // Отдаём собранный фронтенд, если он есть (npm run build в frontend/) —

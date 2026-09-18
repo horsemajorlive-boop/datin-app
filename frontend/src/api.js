@@ -90,3 +90,14 @@ export function normalizeProfile(p) {
 export function normalizeMessage(m) {
   return { ...m, photo: m.photo ? assetUrl(m.photo) : m.photo };
 }
+
+// Обложка группы (одна, не массив — см. groupRow в models.js) + участники,
+// если они пришли (только в полной карточке группы, см. getGroup).
+export function normalizeGroup(g) {
+  if (!g) return g;
+  return {
+    ...g,
+    photo: assetUrl(g.photo),
+    members: g.members ? g.members.map(normalizeProfile) : g.members,
+  };
+}

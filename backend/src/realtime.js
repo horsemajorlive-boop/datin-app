@@ -17,13 +17,25 @@
 //   { type: 'read', matchId }                  — собеседник прочитал переписку
 //   { type: 'messageEdited', matchId, messageId, text, editedAt }
 //   { type: 'messageDeleted', matchId, messageId }
+//   { type: 'groupMessage',  groupId, message }
+//   { type: 'groupMessageEdited', groupId, messageId, text, editedAt }
+//   { type: 'groupMessageDeleted', groupId, messageId }
+//   { type: 'groupRead', groupId }             — кто-то из участников прочитал чат группы
+//   { type: 'groupMembers', groupId }          — состав группы поменялся (вступил/вышел/исключили)
+//   { type: 'groupDeleted', groupId }          — группу удалили
 //
 // Событие клиента → серверу:
 //   { type: 'typing', matchId, kind }          — я печатаю в этом чате
 
 import { WebSocketServer } from 'ws';
 import { validateInitData } from './auth.js';
-import { matchUsers, matchPartners, partnerOf, touchUser } from './models.js';
+import {
+  matchUsers,
+  matchPartners,
+  partnerOf,
+  touchUser,
+  groupMemberIds,
+} from './models.js';
 
 const DEV_AUTH = process.env.ALLOW_DEV_AUTH === 'true';
 const clients = new Map();
@@ -106,6 +118,13 @@ function sendToMatch(matchId, payload, exceptUserId) {
   }
 }
 
+// Всем участникам группы, кроме exceptUserId.
+function sendToGroup(groupId, payload, exceptUserId) {
+  for (const uid of groupMemberIds(groupId)) {
+    if (uid !== exceptUserId) sendToUser(uid, payload);
+  }
+}
+
 // ---------- события (зовут server.js и bot.js) ----------
 
 export function emitMessage(matchId, message, senderId) {
@@ -149,6 +168,38 @@ export function emitMatch(userIds) {
 
 export function emitSuperlike(targetId) {
   sendToUser(targetId, { type: 'superlike' });
+}
+
+export function emitGroupMessage(groupId, message, senderId) {
+  sendToGroup(groupId, { type: 'groupMessage', groupId, message: { ...message, from: 'them' } }, senderId);
+}
+
+export function emitGroupMessageEdited(groupId, messageId, text, editedAt, byUserId) {
+  sendToGroup(groupId, { type: 'groupMessageEdited', groupId, messageId, text, editedAt }, byUserId);
+}
+
+export function emitGroupMessageDeleted(groupId, messageId, byUserId) {
+  sendToGroup(groupId, { type: 'groupMessageDeleted', groupId, messageId }, byUserId);
+}
+
+export function emitGroupRead(groupId, byUserId) {
+  sendToGroup(groupId, { type: 'groupRead', groupId }, byUserId);
+}
+
+// Группу удалили — рассылается ЯВНО переданному списку участников (сама
+// группа к этому моменту уже удалена из БД, groupMemberIds по ней ничего не вернёт).
+export function emitGroupDeleted(userIds, groupId) {
+  for (const uid of userIds) sendToUser(uid, { type: 'groupDeleted', groupId });
+}
+
+// Состав группы поменялся (вступил/вышел/исключили) — включая самого
+// exceptUserId по умолчанию: и вступившему, и исключённому нужно узнать
+// об этом, а не только остальным, поэтому тут (в отличие от sendToGroup)
+// нет параметра "кроме кого".
+export function emitGroupMembers(groupId, extraUserIds = []) {
+  const payload = { type: 'groupMembers', groupId };
+  const ids = new Set([...groupMemberIds(groupId), ...extraUserIds]);
+  for (const uid of ids) sendToUser(uid, payload);
 }
 
 function broadcastPresence(userId, online) {
