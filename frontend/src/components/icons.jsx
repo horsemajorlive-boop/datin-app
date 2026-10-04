@@ -1,6 +1,8 @@
 // Набор минималистичных линейных иконок (стиль Feather/Lucide).
 // Все рисуются линией цвета currentColor — цвет задаёт родитель через CSS.
 
+import { useId } from 'react';
+
 const base = {
   viewBox: '0 0 24 24',
   fill: 'none',
@@ -180,13 +182,21 @@ export function IconCheck() {
   );
 }
 
-// Двойная галочка ("прочитано") — тот же стиль, что и одиночная, просто
-// две галочки со сдвигом, как в Telegram/WhatsApp.
-export function IconChecks() {
+// Половинка сердца — "доставлено" в чате (контур, без заливки); как
+// прочитанное отмечаем целым сердцем (IconHeart filled) — та же фигура,
+// что и остальные сердца в приложении, просто обрезанная по вертикали
+// через clipPath, а не отдельная нарисованная вручную форма.
+export function IconHeartHalf() {
+  const clipId = useId();
   return (
     <svg {...base}>
-      <path d="M1 12l4 4L14 7" />
-      <path d="M7 12l4 4L22 7" />
+      <clipPath id={clipId}>
+        <rect x="0" y="0" width="12" height="24" />
+      </clipPath>
+      <path
+        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+        clipPath={`url(#${clipId})`}
+      />
     </svg>
   );
 }

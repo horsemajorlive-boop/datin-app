@@ -22,7 +22,8 @@ import {
   IconTrash,
   IconX,
   IconCheck,
-  IconChecks,
+  IconHeart,
+  IconHeartHalf,
 } from './icons';
 
 // Правая часть вкладки "Чат" — сама переписка.
@@ -585,8 +586,11 @@ export default function ChatPane({
                     {m.editedAt && !m.deleted && ' · изменено'}
                   </span>
                   {isMine && !m.deleted && (
-                    <span className={`chat__ticks ${isRead ? 'is-read' : ''}`}>
-                      {isRead ? <IconChecks /> : <IconCheck />}
+                    <span
+                      className={`chat__ticks ${isRead ? 'is-read' : ''}`}
+                      aria-label={isRead ? 'Прочитано' : 'Доставлено'}
+                    >
+                      {isRead ? <IconHeart filled /> : <IconHeartHalf />}
                     </span>
                   )}
                 </span>
