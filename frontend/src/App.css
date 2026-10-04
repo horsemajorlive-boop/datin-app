@@ -5,8 +5,14 @@
   max-width: 480px;
   margin: 0 auto;
   /* --tg-vh — реальная видимая высота внутри Telegram (см. syncViewportHeight
-     в telegram.js); 100dvh — запасной вариант вне Telegram/до первой синхронизации. */
+     в telegram.js); 100dvh — запасной вариант вне Telegram/до первой синхронизации.
+     --tg-safe-top/bottom (см. syncSafeArea) — место, которое поверх контента
+     занимает собственный UI Telegram (шапка/индикаторы) — border-box ОБЯЗАТЕЛЕН:
+     иначе этот отступ прибавился бы к height сверху, а не "откусывал" его изнутри. */
+  box-sizing: border-box;
   height: var(--tg-vh, 100dvh);
+  padding-top: var(--tg-safe-top, 0px);
+  padding-bottom: var(--tg-safe-bottom, 0px);
   display: flex;
   flex-direction: column;
   background: var(--bg);
@@ -3762,7 +3768,10 @@
   position: relative;
   max-width: 480px;
   margin: 0 auto;
+  box-sizing: border-box;
   height: var(--tg-vh, 100dvh);
+  padding-top: var(--tg-safe-top, 0px);
+  padding-bottom: var(--tg-safe-bottom, 0px);
   display: flex;
   flex-direction: column;
   background: var(--bg);

@@ -29,6 +29,23 @@ function syncViewportHeight() {
   document.documentElement.style.setProperty('--tg-vh', `${h}px`);
 }
 
+// Одной высоты недостаточно: на части Android-клиентов собственная шапка
+// Telegram (крестик/название/свернуть) не "выталкивает" контент вниз, а
+// ЛОЖИТСЯ ПОВЕРХ него — верх нашего приложения (шапка чата) оказывается
+// частично под ней, а значит низ (строка ввода) выталкивается за пределы
+// экрана ровно на ту же величину. contentSafeAreaInset — это официально
+// как раз про наложение СВОЕГО UI Telegram поверх контента мини-аппа
+// (в отличие от safeAreaInset — это про системные вырезы/плашки устройства).
+// Отступаем от обоих про запас — там, где они не нужны, значение просто 0.
+function syncSafeArea() {
+  const tg = getTelegram();
+  const safe = tg?.safeAreaInset || {};
+  const content = tg?.contentSafeAreaInset || {};
+  const root = document.documentElement.style;
+  root.setProperty('--tg-safe-top', `${(safe.top || 0) + (content.top || 0)}px`);
+  root.setProperty('--tg-safe-bottom', `${(safe.bottom || 0) + (content.bottom || 0)}px`);
+}
+
 if (typeof window !== 'undefined') {
   window.addEventListener('resize', syncViewportHeight);
   window.visualViewport?.addEventListener('resize', syncViewportHeight);
@@ -44,7 +61,10 @@ export function initTelegram() {
   tg.disableVerticalSwipes?.(); // свайп вниз не должен конфликтовать со скроллом чата/закрывать приложение
 
   syncViewportHeight();
+  syncSafeArea();
   tg.onEvent?.('viewportChanged', syncViewportHeight);
+  tg.onEvent?.('safeAreaChanged', syncSafeArea);
+  tg.onEvent?.('contentSafeAreaChanged', syncSafeArea);
 }
 
 // Подписанная строка initData для авторизации на сервере.

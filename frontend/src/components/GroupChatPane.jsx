@@ -112,17 +112,27 @@ export default function GroupChatPane({
     onDeleteMessage(m.id);
   }
 
+  // Защита от двойной отправки при быстром двойном тапе — см. тот же приём в ChatPane.jsx.
+  const sendingRef = useRef(false);
+
   function handleSubmit(e) {
     e.preventDefault();
+    if (sendingRef.current) return;
     const value = text.trim();
     if (!value) return;
+
+    sendingRef.current = true;
+    const release = () => {
+      sendingRef.current = false;
+    };
+
     if (editingId != null) {
-      onEditMessage(editingId, value);
+      Promise.resolve(onEditMessage(editingId, value)).finally(release);
       setEditingId(null);
       setText('');
       return;
     }
-    onSend({ type: 'text', text: value });
+    Promise.resolve(onSend({ type: 'text', text: value })).finally(release);
     setText('');
   }
 

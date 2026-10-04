@@ -141,18 +141,33 @@ export default function ChatPane({
     [myProfile, match, messages]
   );
 
+  // sendingRef — защита от двойной отправки ОДНОГО и того же сообщения.
+  // Раньше при быстром двойном тапе по "Отправить" (или двойном submit формы
+  // на некоторых мобильных клавиатурах) оба вызова успевали прочитать один и
+  // тот же text ДО того, как setText('') из первого применится — сообщение
+  // уходило в чат дважды. Ref синхронный и не зависит от батчинга React,
+  // поэтому ловит дубль надёжнее, чем проверка самого text.
+  const sendingRef = useRef(false);
+
   function handleSubmit(e) {
     e.preventDefault();
+    if (sendingRef.current) return;
     const value = text.trim();
     if (!value) return;
+
+    sendingRef.current = true;
+    const release = () => {
+      sendingRef.current = false;
+    };
+
     if (editingId != null) {
-      onEditMessage(editingId, value);
+      Promise.resolve(onEditMessage(editingId, value)).finally(release);
       setEditingId(null);
       setText('');
       return;
     }
     // если в сообщении нет букв/цифр — считаем его «эмодзи-сообщением» (крупнее)
-    onSend({ type: hasWords(value) ? 'text' : 'emoji', text: value });
+    Promise.resolve(onSend({ type: hasWords(value) ? 'text' : 'emoji', text: value })).finally(release);
     setText('');
     setShowEmoji(false);
   }
