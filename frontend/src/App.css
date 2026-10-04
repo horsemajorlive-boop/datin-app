@@ -2138,6 +2138,11 @@
 .chat__avatar-wrap {
   position: relative;
   flex-shrink: 0;
+  /* в ChatPane на фото висит долгое нажатие (открыть полный размер) — не даём
+     iOS/Android перехватить жест своим системным меню "Сохранить фото". */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .chat__avatar-wrap img {
@@ -2641,6 +2646,52 @@
     transform: translateY(-4px);
     opacity: 1;
   }
+}
+
+/* Полноразмерный просмотр фото — долгое нажатие на фото в шапке чата.
+   Затемнение сильнее и размытие сильнее, чем у .sheet: здесь это сам
+   фокус экрана, а не подложка для карточки снизу. */
+.lightbox {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(18px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 58;
+  padding: 24px;
+  animation: fade-in 0.2s ease;
+}
+
+.lightbox__img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: var(--radius);
+  object-fit: contain;
+  box-shadow: var(--shadow-lg);
+}
+
+.lightbox__close {
+  position: absolute;
+  top: calc(12px + var(--tg-safe-top, 0px));
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.lightbox__close svg {
+  width: 17px;
+  height: 17px;
 }
 
 .chat__inputbar {

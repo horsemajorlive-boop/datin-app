@@ -4,6 +4,8 @@ import DatePlanner from './DatePlanner';
 import EmojiPicker from './EmojiPicker';
 import VerifiedBadge from './VerifiedBadge';
 import ReportSheet from './ReportSheet';
+import ProfileSheet from './ProfileSheet';
+import PhotoLightbox from './PhotoLightbox';
 import { getSuggestions } from '../lib/wingman';
 import { fileToCompressedDataUrl } from '../lib/image';
 import { formatLastSeen } from '../lib/relativeTime';
@@ -93,6 +95,8 @@ export default function ChatPane({
   const [showSocialHint, setShowSocialHint] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [showUnmatch, setShowUnmatch] = useState(false);
+  const [showProfile, setShowProfile] = useState(false); // попап анкеты — тап по имени/фото в шапке
+  const [showLightbox, setShowLightbox] = useState(false); // полноразмерное фото — долгое нажатие на фото
   const [unmatching, setUnmatching] = useState(false);
   const [unmatchError, setUnmatchError] = useState('');
   const [pickerFor, setPickerFor] = useState(null); // id сообщения с открытым меню (реакции/правка)
@@ -103,6 +107,8 @@ export default function ChatPane({
   const fileRef = useRef(null);
   const msgRefs = useRef({}); // id сообщения -> DOM-узел, чтобы подвесить меню рядом
   const pressTimer = useRef(null); // таймер долгого нажатия (мобильные)
+  const avatarPressTimer = useRef(null); // таймер долгого нажатия на фото в шапке
+  const suppressPeerClick = useRef(false); // не даём клику открыть анкету сразу после долгого нажатия на фото
 
   // Прокрутка ленты вниз при новом сообщении или смене статуса.
   useEffect(() => {
@@ -209,6 +215,30 @@ export default function ChatPane({
     clearTimeout(pressTimer.current);
   }
 
+  // Тап по имени/фото в шапке — открыть анкету собеседника. Долгое нажатие
+  // именно на фото — открыть его полноразмерную версию (та же техника, что
+  // и у меню сообщений выше, но на отдельном таймере, т.к. это другой жест
+  // в другом месте экрана).
+  function openLightbox() {
+    clearTimeout(avatarPressTimer.current);
+    suppressPeerClick.current = true; // клик после отпускания пальца не должен ещё и открыть анкету
+    setShowLightbox(true);
+  }
+  function handleAvatarPressStart() {
+    clearTimeout(avatarPressTimer.current);
+    avatarPressTimer.current = setTimeout(openLightbox, 480);
+  }
+  function handleAvatarPressEnd() {
+    clearTimeout(avatarPressTimer.current);
+  }
+  function handlePeerClick() {
+    if (suppressPeerClick.current) {
+      suppressPeerClick.current = false;
+      return;
+    }
+    setShowProfile(true);
+  }
+
   function startEdit(m) {
     setEditingId(m.id);
     setText(m.text || '');
@@ -291,8 +321,18 @@ export default function ChatPane({
             <IconChevronLeft />
           </button>
         )}
-        <div className="chat__peer">
-          <span className="chat__avatar-wrap">
+        <button type="button" className="chat__peer" onClick={handlePeerClick}>
+          <span
+            className="chat__avatar-wrap"
+            onContextMenu={(e) => {
+              e.preventDefault();
+              openLightbox();
+            }}
+            onTouchStart={handleAvatarPressStart}
+            onTouchEnd={handleAvatarPressEnd}
+            onTouchMove={handleAvatarPressEnd}
+            onTouchCancel={handleAvatarPressEnd}
+          >
             <img src={match.photos[0]} alt={match.name} />
             {match.online && <span className="chat__online-dot" />}
           </span>
@@ -303,7 +343,7 @@ export default function ChatPane({
             </span>
             <span className={statusClass}>{statusText}</span>
           </span>
-        </div>
+        </button>
 
         <div className="chat__tools">
           <div className="chat__menu-wrap">
@@ -708,6 +748,24 @@ export default function ChatPane({
             </>
           );
         })()}
+
+      <ProfileSheet
+        profile={showProfile ? match : null}
+        myInterests={myProfile?.interests || []}
+        onClose={() => setShowProfile(false)}
+        onResolved={() => {
+          setShowProfile(false);
+          onLeftChat?.();
+        }}
+      />
+
+      {showLightbox && (
+        <PhotoLightbox
+          src={match.photos[0]}
+          alt={match.name}
+          onClose={() => setShowLightbox(false)}
+        />
+      )}
     </div>
   );
 }
