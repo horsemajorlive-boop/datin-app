@@ -783,6 +783,17 @@ export default function App() {
   // loadGroupDetail не догрузит новую.
   const openGroup = activeGroup?.id === activeGroupId ? activeGroup : null;
 
+  // Открыта конкретная переписка (1:1 или группа) на весь экран — прячем
+  // нижнюю навигацию совсем, а не просто пытаемся подвинуть её выше.
+  // На телефонах внутри Telegram (особенно Android) доступная высота
+  // непредсказуемо отличается от расчётной (см. telegram.js) — пилюля
+  // навигации и строка ввода чата конкурировали за одно и то же место
+  // внизу, и строка ввода проигрывала, уезжая за пределы экрана. Так делают
+  // и сам Telegram, и большинство мессенджеров: назад — явной кнопкой "‹" в
+  // шапке чата, а не повторным тапом по вкладке снизу.
+  const inFullChat =
+    (tab === 'chat' && activeChatId != null) || (tab === 'groups' && activeGroupId != null);
+
   function renderProfileTab() {
     if (!me) {
       return (
@@ -955,18 +966,20 @@ export default function App() {
         {tab === 'me' && renderProfileTab()}
       </main>
 
-      <BottomNav
-        active={tab}
-        chatBadge={totalUnread}
-        groupsBadge={totalGroupsUnread}
-        onChange={(t) => {
-          // повторный тап по «Чат»/«Группы» из открытого чата — назад к списку
-          if (t === 'chat' && tab === 'chat') setActiveChatId(null);
-          if (t === 'groups' && tab === 'groups') handleBackFromGroup();
-          setTab(t);
-          if (t !== 'me') setProfileView('view'); // ушли из профиля — сбрасываем подэкран
-        }}
-      />
+      {!inFullChat && (
+        <BottomNav
+          active={tab}
+          chatBadge={totalUnread}
+          groupsBadge={totalGroupsUnread}
+          onChange={(t) => {
+            // повторный тап по «Чат»/«Группы» из открытого чата — назад к списку
+            if (t === 'chat' && tab === 'chat') setActiveChatId(null);
+            if (t === 'groups' && tab === 'groups') handleBackFromGroup();
+            setTab(t);
+            if (t !== 'me') setProfileView('view'); // ушли из профиля — сбрасываем подэкран
+          }}
+        />
+      )}
 
       {showGroupMembers && openGroup && (
         <GroupMembersSheet
