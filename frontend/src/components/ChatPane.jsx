@@ -590,7 +590,7 @@ export default function ChatPane({
                       className={`chat__ticks ${isRead ? 'is-read' : ''}`}
                       aria-label={isRead ? 'Прочитано' : 'Доставлено'}
                     >
-                      {isRead ? <IconHeart filled /> : <IconHeartHalf />}
+                      {isRead ? <IconHeart /> : <IconHeartHalf />}
                     </span>
                   )}
                 </span>
