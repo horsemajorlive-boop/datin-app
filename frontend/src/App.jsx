@@ -469,6 +469,12 @@ export default function App() {
     goToPremium();
   }
 
+  // Возвращает true/false — удалось ли записать свайп на сервере. Вызывающие
+  // (SwipeDeck, "Симпатии", "Суперлайки") на false откатывают то, что успели
+  // убрать из списка оптимистично: иначе при сетевой ошибке/лимите карточка
+  // тихо пропадала из интерфейса, хотя сервер её не сохранил, и человек потом
+  // снова появлялся в ленте как не свайпнутый — выглядело как "лайкаю одного
+  // и того же бесконечно".
   async function handleSwipe(profile, direction, { isSuper = false, message } = {}) {
     try {
       const res = await api.post('/swipes', {
@@ -505,23 +511,27 @@ export default function App() {
       loadIncoming();
       // лайк потратил дневной лимит — обновим остаток
       if (direction === 'like') loadMe();
+      return true;
     } catch (err) {
       console.error('swipe failed', err);
       showToast(err.message || 'Не удалось выполнить действие — попробуйте ещё раз');
+      return false;
     }
   }
 
   // Решение на вкладке «Симпатии»: ответить взаимностью или пропустить.
   async function handleIncomingDecision(profile, direction) {
     setIncoming((prev) => prev.filter((p) => p.id !== profile.id)); // сразу убираем
-    await handleSwipe(profile, direction);
+    const ok = await handleSwipe(profile, direction);
+    if (!ok) loadIncoming(); // не получилось — подтягиваем актуальный список заново
   }
 
   // "Пропустить" на вкладке «Суперлайки» — обычный пропуск, тем же путём,
   // что и «Симпатии»: сообщение просто пропадёт из списка.
   async function handlePassSuperlike(profile) {
     setSuperlikes((prev) => prev.filter((p) => p.id !== profile.id)); // сразу убираем
-    await handleSwipe(profile, 'pass');
+    const ok = await handleSwipe(profile, 'pass');
+    if (!ok) loadSuperlikes();
   }
 
   // "Взаимно" на вкладке «Суперлайки» — мгновенный мэтч без Premium и без

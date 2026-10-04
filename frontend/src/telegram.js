@@ -12,6 +12,28 @@ export function getTelegram() {
   return window.Telegram?.WebApp;
 }
 
+// Реальная видимая высота окна внутри Telegram (CSS-переменная --tg-vh) —
+// 100dvh сам по себе на части клиентов (особенно Android-WebView) не
+// учитывает "родное" пространство Telegram (шапка, индикатор сворачивания),
+// из-за чего нижняя часть экрана — строка ввода в чате, панель подсказок —
+// визуально уезжала за пределы видимой области и наслаивалась на нижнюю
+// навигацию. Официальная рекомендация Telegram — ориентироваться на
+// viewportStableHeight и переотрисовывать при событии viewportChanged.
+function syncViewportHeight() {
+  const tg = getTelegram();
+  const h =
+    tg?.viewportStableHeight ||
+    tg?.viewportHeight ||
+    window.visualViewport?.height ||
+    window.innerHeight;
+  document.documentElement.style.setProperty('--tg-vh', `${h}px`);
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('resize', syncViewportHeight);
+  window.visualViewport?.addEventListener('resize', syncViewportHeight);
+}
+
 // Вызывается один раз при запуске приложения.
 export function initTelegram() {
   const tg = getTelegram();
@@ -19,6 +41,10 @@ export function initTelegram() {
 
   tg.ready();  // говорим Telegram: "интерфейс отрисован, можно показывать"
   tg.expand(); // разворачиваем окно на весь экран
+  tg.disableVerticalSwipes?.(); // свайп вниз не должен конфликтовать со скроллом чата/закрывать приложение
+
+  syncViewportHeight();
+  tg.onEvent?.('viewportChanged', syncViewportHeight);
 }
 
 // Подписанная строка initData для авторизации на сервере.

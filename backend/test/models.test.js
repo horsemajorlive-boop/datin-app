@@ -41,6 +41,28 @@ test.after(() => {
   fs.rmSync(process.env.DB_PATH, { force: true });
 });
 
+// ---------- демо-боты ----------
+
+test('isBotAccount: обычный пользователь — не бот, даже с id больше 900000', () => {
+  // Именно это раньше ломало продакшен: старая проверка "id >= 900000"
+  // считала ботом любого реального юзера с таким Telegram id (а это почти
+  // все) — теперь флаг явный и с диапазоном id вообще не связан.
+  const user = makeUser();
+  assert.equal(model.isBotAccount(user), false);
+  assert.equal(model.isBotAccount(950123456), false); // гипотетический реальный Telegram id
+});
+
+test('isBotAccount: true только после явной пометки is_bot = 1', () => {
+  const bot = makeUser();
+  assert.equal(model.isBotAccount(bot), false);
+  db.prepare('UPDATE users SET is_bot = 1 WHERE id = ?').run(bot);
+  assert.equal(model.isBotAccount(bot), true);
+});
+
+test('isBotAccount: несуществующий пользователь — не бот (не падает)', () => {
+  assert.equal(model.isBotAccount(123456789), false);
+});
+
 // ---------- свайпы и мэтчи ----------
 
 test('взаимный лайк создаёт мэтч, односторонний — нет', () => {

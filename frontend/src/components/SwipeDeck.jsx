@@ -83,16 +83,26 @@ export default function SwipeDeck({
   }
 
   // Карточка долетела до края и погасла — теперь фиксируем ход по-настоящему.
-  function handleFlyEnd(direction, meta = {}) {
+  // Индекс колоды сдвигаем ТОЛЬКО если свайп реально записался на сервере —
+  // раньше это делалось сразу, не дожидаясь ответа: при сетевой ошибке или
+  // 429 от лимитера карточка молча пропадала из колоды, свайп не
+  // сохранялся, и тот же человек потом снова появлялся в ленте — внешне
+  // выглядело как "лайкаю одного и того же бесконечно". Если не получилось —
+  // возвращаем карточку на место (см. reset() в ProfileCard), ход не считаем.
+  async function handleFlyEnd(direction, meta = {}) {
     const current = profiles[index];
     if (!current) return;
 
     const kind = direction === 'right' ? 'like' : 'pass';
     const isSuper = kind === 'like' && !!meta.isSuper;
 
-    onSwipe(current, kind, { isSuper, message: meta.message });
-    if (kind === 'like') setLikeFx((n) => n + 1); // запускаем сердечки
+    const ok = await onSwipe(current, kind, { isSuper, message: meta.message });
+    if (ok === false) {
+      cardRef.current?.reset();
+      return;
+    }
 
+    if (kind === 'like') setLikeFx((n) => n + 1); // запускаем сердечки
     setIndex((i) => i + 1);
   }
 

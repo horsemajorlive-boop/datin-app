@@ -48,6 +48,14 @@ export function upsertUser(tgUser) {
   });
 }
 
+// Демо-анкета из seed.js (см. is_bot в schema.sql) — только эти аккаунты
+// умеют автоматически отвечать в чате (scheduleBotReply в server.js, сама
+// функция включается отдельным флагом ENABLE_DEMO_BOTS).
+export function isBotAccount(userId) {
+  const r = db.prepare(`SELECT is_bot FROM users WHERE id = ?`).get(userId);
+  return !!r?.is_bot;
+}
+
 // ---------- Анкета ----------
 
 // Допустимые коды полей "образа жизни" и "здоровья".

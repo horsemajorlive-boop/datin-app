@@ -179,6 +179,10 @@ ALL_BOTS.forEach((bot, i) => {
   saveProfile(bot.id, bot.profile);
   setPhotos(bot.id, bot.photos.map(photoUrl));
 
+  // Явная пометка демо-анкеты — именно по ней, а не по диапазону id,
+  // scheduleBotReply (server.js) решает, можно ли автоматически отвечать.
+  db.prepare(`UPDATE users SET is_bot = 1 WHERE id = ?`).run(bot.id);
+
   // Присутствие: те, кто "лайкнул вас", — сейчас онлайн; остальные заходили недавно.
   const lastSeen = bot.likesYou
     ? Date.now()

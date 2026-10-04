@@ -117,6 +117,14 @@ app.get('/api/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
 const BOT_TOKEN = process.env.BOT_TOKEN || '';
 const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || '';
 
+// Демо-боты (автоответы сид-анкет из seed.js, см. bot.js) — по умолчанию
+// ВЫКЛЮЧЕНЫ. Раньше "это бот?" решалось по диапазону id (>= 900000), что на
+// проде ошибочно задевало реальных пользователей: их настоящий Telegram id
+// тоже почти всегда больше 900000, поэтому ботов слышали все подряд мэтчи,
+// а не только демо-анкеты. Включать явно (ENABLE_DEMO_BOTS=true) есть смысл
+// только в деве/на пустой базе без живых пользователей.
+const ENABLE_DEMO_BOTS = process.env.ENABLE_DEMO_BOTS === 'true';
+
 app.post('/telegram/webhook', webhookLimiter, async (req, res) => {
   if (
     TELEGRAM_WEBHOOK_SECRET &&
@@ -536,9 +544,13 @@ app.post('/api/matches/:id/messages', messageLimiter, (req, res) => {
   emitMessage(matchId, msg, req.user.id);
   notifyNewMessage(matchId, req.user.id);
 
-  // Демо: если собеседник — сид-бот (id >= 900000), он ответит через пару секунд.
-  const partner = model.partnerOf(matchId, req.user.id);
-  if (partner && partner >= 900000) scheduleBotReply(matchId, partner);
+  // Демо: если собеседник — сид-бот и автоответы включены, он ответит через
+  // пару секунд (см. ENABLE_DEMO_BOTS выше — на проде с реальными
+  // пользователями эта ветка не выполняется).
+  if (ENABLE_DEMO_BOTS) {
+    const partner = model.partnerOf(matchId, req.user.id);
+    if (partner && model.isBotAccount(partner)) scheduleBotReply(matchId, partner);
+  }
 });
 
 // Реакция на сообщение: { emoji }

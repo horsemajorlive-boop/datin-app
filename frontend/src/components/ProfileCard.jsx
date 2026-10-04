@@ -48,6 +48,7 @@ const ProfileCard = forwardRef(function ProfileCard(
   const photo = useCarousel(profile.photos.length);
 
   function startFly(direction, meta = {}) {
+    if (flying) return; // уже летит — повторный тап/клик (напр. случайный двойной) игнорируем
     if (!onSwipeAttempt(direction, meta)) {
       setDrag(REST_DRAG); // отказали (лимит и т.п.) — просто пружиним обратно
       return;
@@ -58,8 +59,16 @@ const ProfileCard = forwardRef(function ProfileCard(
   }
 
   // Кнопки под колодой свайпают активную карточку через этот же путь.
+  // reset() возвращает карточку на место (opacity/transform к исходным),
+  // когда onFlyEnd узнал, что свайп на сервере НЕ прошёл — см. SwipeDeck:
+  // без этого карточка так и осталась бы невидимой (flying уже true), хотя
+  // по сути никуда не делась, и место/счётчик второй раз на неё не нажать.
   useImperativeHandle(ref, () => ({
     swipe: (direction, meta) => startFly(direction, meta),
+    reset: () => {
+      setFlying(null);
+      setDrag(REST_DRAG);
+    },
   }));
 
   function handlePointerDown(e) {

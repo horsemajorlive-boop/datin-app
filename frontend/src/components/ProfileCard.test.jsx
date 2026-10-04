@@ -152,4 +152,33 @@ describe('ProfileCard — императивный swipe() (кнопки под 
     act(() => vi.advanceTimersByTime(300));
     expect(onFlyEnd).toHaveBeenCalledWith('right', { isSuper: true });
   });
+
+  test('повторный swipe() пока карточка "летит" игнорируется — защита от двойного тапа/клика', () => {
+    const ref = createRef();
+    const onSwipeAttempt = vi.fn(() => true);
+    render(
+      <ProfileCard ref={ref} profile={profile} active onSwipeAttempt={onSwipeAttempt} onFlyEnd={vi.fn()} onOpen={vi.fn()} />
+    );
+    act(() => ref.current.swipe('right'));
+    act(() => ref.current.swipe('right')); // "дубль" от быстрого повторного клика
+    expect(onSwipeAttempt).toHaveBeenCalledTimes(1);
+  });
+
+  test('reset() возвращает карточку в исходное состояние — после него swipe() снова работает', () => {
+    const ref = createRef();
+    const onSwipeAttempt = vi.fn(() => true);
+    render(
+      <ProfileCard ref={ref} profile={profile} active onSwipeAttempt={onSwipeAttempt} onFlyEnd={vi.fn()} onOpen={vi.fn()} />
+    );
+    act(() => ref.current.swipe('right'));
+    expect(onSwipeAttempt).toHaveBeenCalledTimes(1);
+
+    // без reset() карточка осталась бы "подвисшей" в летящем состоянии
+    act(() => ref.current.swipe('right'));
+    expect(onSwipeAttempt).toHaveBeenCalledTimes(1);
+
+    act(() => ref.current.reset());
+    act(() => ref.current.swipe('right'));
+    expect(onSwipeAttempt).toHaveBeenCalledTimes(2);
+  });
 });

@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS users (
   notify_matches     INTEGER NOT NULL DEFAULT 1, -- пуш о новом мэтче
   notify_messages    INTEGER NOT NULL DEFAULT 1, -- пуш о новом сообщении
   notify_likes       INTEGER NOT NULL DEFAULT 1, -- пуш о новой симпатии
-  notify_superlikes  INTEGER NOT NULL DEFAULT 1  -- пуш о суперлайке (отдельно от обычных симпатий)
+  notify_superlikes  INTEGER NOT NULL DEFAULT 1, -- пуш о суперлайке (отдельно от обычных симпатий)
+  is_bot             INTEGER NOT NULL DEFAULT 0  -- демо-анкета из seed.js (см. scheduleBotReply в server.js)
 );
 
 -- Заявки на верификацию фото. Одна активная на пользователя: новая заявка

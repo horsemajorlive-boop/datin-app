@@ -45,14 +45,57 @@ describe('SwipeDeck — кнопки под колодой', () => {
     expect(screen.getByLabelText('Лайк')).toBeDisabled();
   });
 
-  test('свайп фиксируется по ТЕКУЩЕЙ верхней карточке — после хода индекс сдвигается', () => {
+  test('свайп фиксируется по ТЕКУЩЕЙ верхней карточке — после хода индекс сдвигается', async () => {
     const onSwipe = vi.fn();
     render(<SwipeDeck profiles={profiles} onSwipe={onSwipe} onOpen={vi.fn()} onHint={vi.fn()} />);
     fireEvent.click(screen.getByLabelText('Пропустить'));
-    act(() => vi.advanceTimersByTime(300));
+    // handleFlyEnd теперь ждёт результат onSwipe (см. откат карточки при
+    // ошибке) — после сдвига таймера даём микротаскам реально прогнаться,
+    // иначе index ещё не успеет сдвинуться к моменту второго клика.
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
     fireEvent.click(screen.getByLabelText('Лайк'));
-    act(() => vi.advanceTimersByTime(300));
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
     expect(onSwipe).toHaveBeenNthCalledWith(1, profiles[0], 'pass', { isSuper: false, message: undefined });
+    expect(onSwipe).toHaveBeenNthCalledWith(2, profiles[1], 'like', { isSuper: false, message: undefined });
+  });
+});
+
+describe('SwipeDeck — откат при неудачном свайпе (сеть/лимит)', () => {
+  test('onSwipe вернул false — индекс НЕ сдвигается, следующий тап снова по той же анкете', async () => {
+    const onSwipe = vi.fn().mockResolvedValueOnce(false);
+    render(<SwipeDeck profiles={profiles} onSwipe={onSwipe} onOpen={vi.fn()} onHint={vi.fn()} />);
+
+    fireEvent.click(screen.getByLabelText('Лайк'));
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(onSwipe).toHaveBeenNthCalledWith(1, profiles[0], 'like', { isSuper: false, message: undefined });
+
+    // карточка возвращена (reset()) — повторный тап снова про profiles[0], а не profiles[1]
+    fireEvent.click(screen.getByLabelText('Лайк'));
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(onSwipe).toHaveBeenCalledTimes(2);
+    expect(onSwipe).toHaveBeenNthCalledWith(2, profiles[0], 'like', { isSuper: false, message: undefined });
+  });
+
+  test('onSwipe вернул true — индекс сдвигается как обычно, к следующей анкете', async () => {
+    const onSwipe = vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(true);
+    render(<SwipeDeck profiles={profiles} onSwipe={onSwipe} onOpen={vi.fn()} onHint={vi.fn()} />);
+
+    fireEvent.click(screen.getByLabelText('Лайк'));
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
+    fireEvent.click(screen.getByLabelText('Лайк'));
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+    });
     expect(onSwipe).toHaveBeenNthCalledWith(2, profiles[1], 'like', { isSuper: false, message: undefined });
   });
 });
