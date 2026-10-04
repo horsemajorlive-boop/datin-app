@@ -180,6 +180,17 @@ export function IconCheck() {
   );
 }
 
+// Двойная галочка ("прочитано") — тот же стиль, что и одиночная, просто
+// две галочки со сдвигом, как в Telegram/WhatsApp.
+export function IconChecks() {
+  return (
+    <svg {...base}>
+      <path d="M1 12l4 4L14 7" />
+      <path d="M7 12l4 4L22 7" />
+    </svg>
+  );
+}
+
 export function IconSettings() {
   // Симметричная заливная шестерня с центральным отверстием (Bootstrap Icons gear-fill).
   return (

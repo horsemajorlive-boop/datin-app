@@ -22,6 +22,7 @@ import {
   IconTrash,
   IconX,
   IconCheck,
+  IconChecks,
 } from './icons';
 
 // Правая часть вкладки "Чат" — сама переписка.
@@ -534,9 +535,13 @@ export default function ChatPane({
             </p>
           </div>
         ) : (
-          messages.map((m, i) => {
-            const isLastMine = m.from === 'me' && i === messages.length - 1;
-            const isRead = isLastMine && !!partnerReadAt && m.ts <= partnerReadAt;
+          messages.map((m) => {
+            const isMine = m.from === 'me';
+            // Галочки — как в Telegram/WhatsApp: одна — сообщение доставлено
+            // (оно есть в БД, иначе его бы не было в этом списке), две — до
+            // него дошло время прочтения собеседника (partnerReadAt, общее
+            // на всю переписку — см. меню сообщения, где показано точное время).
+            const isRead = isMine && !!partnerReadAt && m.ts <= partnerReadAt;
             return (
               <div
                 key={m.id}
@@ -546,7 +551,7 @@ export default function ChatPane({
                 }}
                 className={
                   'chat__msg ' +
-                  (m.from === 'me' ? 'chat__msg--me' : 'chat__msg--them') +
+                  (isMine ? 'chat__msg--me' : 'chat__msg--them') +
                   (m.type && m.type !== 'text' && !m.deleted ? ' chat__msg--bare' : '') +
                   (pickerFor === m.id ? ' is-picking' : '') +
                   (m.deleted ? ' chat__msg--deleted' : '')
@@ -574,10 +579,16 @@ export default function ChatPane({
                     {m.text}
                   </span>
                 )}
-                <span className="chat__time">
-                  {formatTime(m.ts)}
-                  {m.editedAt && !m.deleted && ' · изменено'}
-                  {isRead && ' · Прочитано'}
+                <span className="chat__meta">
+                  <span className="chat__time">
+                    {formatTime(m.ts)}
+                    {m.editedAt && !m.deleted && ' · изменено'}
+                  </span>
+                  {isMine && !m.deleted && (
+                    <span className={`chat__ticks ${isRead ? 'is-read' : ''}`}>
+                      {isRead ? <IconChecks /> : <IconCheck />}
+                    </span>
+                  )}
                 </span>
                 {m.reaction && !m.deleted && (
                   <span className="chat__reaction">{m.reaction}</span>
