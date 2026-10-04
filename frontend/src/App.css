@@ -2481,6 +2481,25 @@
   transform: scale(1.35);
 }
 
+/* Время прочтения — показываем только у своих сообщений в этом же меню. */
+.chat__ctxmenu-read {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px 9px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--line-2);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.chat__ctxmenu-read svg {
+  width: 13px;
+  height: 13px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
 .chat__ctxmenu-actions {
   display: flex;
   flex-direction: column;

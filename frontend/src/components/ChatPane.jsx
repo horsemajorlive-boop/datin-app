@@ -725,24 +725,39 @@ export default function ChatPane({
                   ))}
                 </div>
                 {isMine && (
-                  <div className="chat__ctxmenu-actions">
-                    {pickedMsg.type === 'text' && (
+                  <>
+                    {/* Прочитано/не прочитано — у нас один общий "водяной знак" времени
+                        на всю переписку (partnerReadAt), а не отметка на каждое сообщение
+                        отдельно, поэтому время прочтения одинаковое для всех сообщений
+                        до этой отметки — как в Telegram/WhatsApp. */}
+                    <div className="chat__ctxmenu-read">
+                      {partnerReadAt && pickedMsg.ts <= partnerReadAt ? (
+                        <>
+                          <IconCheck /> Прочитано в {formatTime(partnerReadAt)}
+                        </>
+                      ) : (
+                        'Пока не прочитано'
+                      )}
+                    </div>
+                    <div className="chat__ctxmenu-actions">
+                      {pickedMsg.type === 'text' && (
+                        <button
+                          type="button"
+                          className="chat__ctxmenu-item"
+                          onClick={() => startEdit(pickedMsg)}
+                        >
+                          <IconEdit /> Изменить
+                        </button>
+                      )}
                       <button
                         type="button"
-                        className="chat__ctxmenu-item"
-                        onClick={() => startEdit(pickedMsg)}
+                        className="chat__ctxmenu-item chat__ctxmenu-item--danger"
+                        onClick={() => handleDelete(pickedMsg)}
                       >
-                        <IconEdit /> Изменить
+                        <IconTrash /> Удалить
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      className="chat__ctxmenu-item chat__ctxmenu-item--danger"
-                      onClick={() => handleDelete(pickedMsg)}
-                    >
-                      <IconTrash /> Удалить
-                    </button>
-                  </div>
+                    </div>
+                  </>
                 )}
               </div>
             </>
