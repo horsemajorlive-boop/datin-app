@@ -2083,6 +2083,8 @@
 .chatpane {
   flex: 1;
   min-width: 0;
+  min-height: 0; /* иначе высота растёт под содержимое .chat__body вместо
+                    внутреннего скролла — и строка ввода уезжает за экран */
   display: flex;
   flex-direction: column;
   position: relative; /* якорь для выбора реакций */
