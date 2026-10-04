@@ -16,6 +16,7 @@ import ChatTab from './screens/ChatTab';
 import GroupsScreen from './screens/GroupsScreen';
 import GroupChatPane from './components/GroupChatPane';
 import GroupMembersSheet from './components/GroupMembersSheet';
+import DebugViewportBadge from './components/DebugViewportBadge';
 import { initTelegram } from './telegram';
 import { api, normalizeProfile, normalizeMessage, normalizeGroup } from './api';
 import { connectSocket, onSocket, sendSocket } from './socket';
@@ -878,6 +879,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <DebugViewportBadge />
       <main className="app__body">
         {tab === 'deck' && (
           <DeckScreen
