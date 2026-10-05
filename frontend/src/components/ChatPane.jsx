@@ -144,10 +144,44 @@ export default function ChatPane({
     return () => clearTimeout(timer);
   }, []);
 
-  const suggestions = useMemo(
+  // Эвристика — мгновенная (0мс) и всегда под рукой, см. lib/wingman.js.
+  const heuristicSuggestions = useMemo(
     () => getSuggestions({ myProfile, match, messages }),
     [myProfile, match, messages]
   );
+
+  // Поверх эвристики — просим более живые, контекстные варианты у LLM
+  // (backend/src/wingman.js). Пока ответ не пришёл (или не придёт вовсе —
+  // нет ключа, сеть легла, собеседник бот без сети и т.п.) показываем
+  // эвристику: никакого спиннера или состояния ошибки, просто тихий апгрейд,
+  // когда/если он случится. Перезапрашиваем на каждое НОВОЕ сообщение
+  // (messages.length), а не на реакции/правки/удаления — они длину не меняют.
+  //
+  // Небольшая задержка перед самим запросом: messages грузятся отдельно и на
+  // мгновение приходят пустыми, пока не подгрузится реальная история — без
+  // задержки это значило бы два запроса к LLM на каждое открытие чата (один
+  // вхолостую с пустым контекстом, почти сразу перекрытый вторым). Задержка
+  // даёт реальным сообщениям время подгрузиться и схлопывает оба в один запрос.
+  const [aiSuggestions, setAiSuggestions] = useState(null);
+  useEffect(() => {
+    setAiSuggestions(null);
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      api
+        .post(`/matches/${matchId}/wingman`)
+        .then((res) => {
+          if (!cancelled && res?.suggestions?.length) setAiSuggestions(res.suggestions);
+        })
+        .catch(() => {}); // тихо остаёмся на эвристике
+    }, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [matchId, messages.length]);
+
+  const suggestions =
+    aiSuggestions && aiSuggestions.length > 0 ? aiSuggestions : heuristicSuggestions;
 
   // sendingRef — защита от двойной отправки ОДНОГО и того же сообщения.
   // Раньше при быстром двойном тапе по "Отправить" (или двойном submit формы

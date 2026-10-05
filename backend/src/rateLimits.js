@@ -49,6 +49,14 @@ export const messageLimiter = limiter({
   message: 'Слишком много сообщений подряд, немного помедленнее',
 });
 
+// Вингман (подсказки от LLM) — каждый запрос стоит реальных денег (вызов
+// Anthropic API), поэтому лимит заметно жёстче, чем на обычные действия.
+export const wingmanLimiter = limiter({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: 'Слишком много запросов за подсказками, попробуйте позже',
+});
+
 // Жалобы — в норме редкое действие.
 export const reportLimiter = limiter({
   windowMs: 60 * 60 * 1000,

@@ -42,6 +42,7 @@ import {
 } from './notifications.js';
 import { startExpiryNotifier } from './expiryNotifier.js';
 import { startBackupSchedule } from './backup.js';
+import { getAiSuggestions } from './wingman.js';
 import {
   apiLimiter,
   uploadLimiter,
@@ -49,6 +50,7 @@ import {
   messageLimiter,
   reportLimiter,
   webhookLimiter,
+  wingmanLimiter,
 } from './rateLimits.js';
 
 // Что не отловил ни один try/catch (например, в setTimeout у bot.js) — раньше
@@ -514,6 +516,22 @@ app.get('/api/matches/:id/messages', (req, res) => {
   const list = model.getMessages(Number(req.params.id), req.user.id);
   if (list === null) return res.status(403).json({ error: 'not your match' });
   res.json(list);
+});
+
+// Подсказки для диалога от LLM — поверх эвристики на фронте (см. wingman.js).
+// Всегда 200: если ключ не настроен, сеть упала или ответ не распарсился —
+// suggestions просто пустой массив, и фронт тихо остаётся на своей эвристике.
+app.post('/api/matches/:id/wingman', wingmanLimiter, async (req, res) => {
+  const matchId = Number(req.params.id);
+  const partnerId = model.partnerOf(matchId, req.user.id);
+  if (partnerId === null) return res.status(403).json({ error: 'not your match' });
+
+  const me = model.getFullProfile(req.user.id);
+  const them = model.getFullProfile(partnerId, { forOther: true });
+  const messages = model.getMessages(matchId, req.user.id);
+
+  const suggestions = await getAiSuggestions({ me, them, messages });
+  res.json({ suggestions: suggestions || [] });
 });
 
 // Отметить переписку прочитанной (открыл чат / увидел новое сообщение).
